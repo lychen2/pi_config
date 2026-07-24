@@ -8,6 +8,7 @@ import {
   createReadToolDefinition,
   createWriteToolDefinition,
   keyHint,
+  AssistantMessageComponent,
   UserMessageComponent,
   type ExtensionAPI,
   type ToolDefinition,
@@ -15,7 +16,7 @@ import {
 import { Text, visibleWidth, type Component } from "@earendil-works/pi-tui";
 
 type Theme = {
-  fg(color: "accent" | "borderAccent" | "borderMuted" | "error" | "muted" | "toolOutput" | "toolTitle" | "warning", text: string): string;
+  fg(color: "accent" | "borderAccent" | "borderMuted" | "error" | "muted" | "text" | "toolOutput" | "toolTitle" | "warning", text: string): string;
   bg(color: "userMessageBg", text: string): string;
   bold(text: string): string;
 };
@@ -35,8 +36,18 @@ type UserMessagePatch = {
   patchedRender: UserMessageRender;
   owners: Set<symbol>;
 };
+type AssistantMessageRender = (this: AssistantMessageComponent, width: number) => string[];
+type AssistantMessagePatch = {
+  theme: Theme;
+  originalRender: AssistantMessageRender;
+  patchedRender: AssistantMessageRender;
+  owners: Set<symbol>;
+};
 
 const ANSI_ESCAPE = /\x1B(?:\][^\x07\x1B]*(?:\x07|\x1B\\)|\[[0-?]*[ -/]*[@-~]|[@-Z\\-_])/g;
+const LEADING_ANSI_SPACE = new RegExp(`^(?:${ANSI_ESCAPE.source})* `);
+const ASSISTANT_PATCH_MARK = Symbol.for("pi.toolRails.assistantMessagePatch");
+const ASSISTANT_MARKER = "\u25cf";
 const OSC133_START = "\x1b]133;A\x07";
 const OSC133_END = "\x1b]133;B\x07\x1b]133;C\x07";
 const USER_PATCH_MARK = Symbol.for("pi.toolRails.userMessagePatch");
@@ -44,6 +55,32 @@ const STYLED_BUILTINS = new Set(["bash", "edit", "find", "grep", "ls", "read", "
 const PREVIEW_LINES = 5;
 const HOME = homedir().replace(/\\/g, "/").replace(/\/$/, "");
 
+function addAssistantMarker(line: string, marker: string): string {
+  const prefix = LEADING_ANSI_SPACE.exec(line)?.[0];
+  return prefix ? `${prefix}${marker} ${line.slice(prefix.length)}` : `${marker} ${line}`;
+}
+function indentAssistantLine(line: string, indent: string): string {
+  const prefix = LEADING_ANSI_SPACE.exec(line)?.[0];
+  return prefix ? `${prefix}${indent}${line.slice(prefix.length)}` : `${indent}${line}`;
+}
+function assistantTextNeedle(component: AssistantMessageComponent): string | undefined {
+  const message = (component as unknown as { lastMessage?: { content?: unknown[] } }).lastMessage;
+  if (!Array.isArray(message?.content)) return undefined;
+  const block = message.content.find((item) => {
+    const content = record(item);
+    return content.type === "text" && typeof content.text === "string" && content.text.trim().length > 0;
+  });
+  const text = record(block).text;
+  if (typeof text !== "string") return undefined;
+  const firstLine = text.trim().split(/\r?\n/).find((line) => line.trim())?.trim();
+  if (!firstLine) return undefined;
+  const needle = firstLine
+    .replace(/^\s*(?:#{1,6}\s+|[-*+]\s+|>\s+)/, "")
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/[*_`~]/g, "")
+    .trim();
+  return needle ? needle.slice(0, 32) : undefined;
+}
 function record(value: unknown): RecordLike {
   return value && typeof value === "object" && !Array.isArray(value) ? value as RecordLike : {};
 }
@@ -256,7 +293,71 @@ function frameBottom(width: number, theme: Theme): string {
   return theme.fg("borderAccent", `╰${"─".repeat(Math.max(0, width - 2))}╯`);
 }
 
-function releaseUserFrame(shared: typeof globalThis & Record<symbol, unknown>, patch: UserMessagePatch, owner: symbol): void {
+function releaseAssistantMessage(
+  shared: typeof globalThis & Record<symbol, unknown>,
+  patch: AssistantMessagePatch,
+  owner: symbol,
+ ): void {
+  patch.owners.delete(owner);
+  if (patch.owners.size > 0) return;
+  if (AssistantMessageComponent.prototype.render === patch.patchedRender) {
+    AssistantMessageComponent.prototype.render = patch.originalRender;
+  }
+  if (shared[ASSISTANT_PATCH_MARK] === patch) delete shared[ASSISTANT_PATCH_MARK];
+}
+
+function installAssistantMarker(theme: Theme): () => void {
+  const shared = globalThis as typeof globalThis & Record<symbol, unknown>;
+  const owner = Symbol("pi.toolRails.assistantMarker");
+  const existing = shared[ASSISTANT_PATCH_MARK] as Partial<AssistantMessagePatch> | undefined;
+  if (existing?.originalRender && typeof existing.originalRender === "function") {
+    const patch = existing as AssistantMessagePatch;
+    patch.theme = theme;
+    patch.owners ??= new Set<symbol>();
+    patch.patchedRender ??= AssistantMessageComponent.prototype.render;
+    patch.owners.add(owner);
+    return () => releaseAssistantMessage(shared, patch, owner);
+  }
+
+  const state = { theme, originalRender: AssistantMessageComponent.prototype.render, owners: new Set<symbol>([owner]) };
+  const patchedRender: AssistantMessageRender = function (width: number): string[] {
+    if (width < 8 || (this as unknown as { hasToolCalls?: boolean }).hasToolCalls) {
+      return state.originalRender.call(this, width);
+    }
+    const textNeedle = assistantTextNeedle(this);
+    if (!textNeedle) return state.originalRender.call(this, width);
+    const lines = state.originalRender.call(this, width - 2);
+    if (!lines.length) return lines;
+    if (!lines[0].startsWith(OSC133_START)) return state.originalRender.call(this, width);
+    lines[0] = lines[0].slice(OSC133_START.length);
+    const last = lines.length - 1;
+    if (lines[last].startsWith(OSC133_END)) lines[last] = lines[last].slice(OSC133_END.length);
+
+    const markerIndex = lines.findIndex((line) => line.replace(ANSI_ESCAPE, "").includes(textNeedle));
+    if (markerIndex >= 0) {
+      lines[markerIndex] = addAssistantMarker(lines[markerIndex], state.theme.fg("text", ASSISTANT_MARKER));
+      for (let index = markerIndex + 1; index < lines.length; index++) {
+        if (lines[index].replace(ANSI_ESCAPE, "").trim().length > 0) {
+          lines[index] = indentAssistantLine(lines[index], "  ");
+        }
+      }
+    }
+
+    lines[0] = OSC133_START + lines[0];
+    lines[last] = OSC133_END + lines[last];
+    return lines;
+  };
+
+  const patch: AssistantMessagePatch = { ...state, patchedRender };
+  shared[ASSISTANT_PATCH_MARK] = patch;
+  AssistantMessageComponent.prototype.render = patchedRender;
+  return () => releaseAssistantMessage(shared, patch, owner);
+}
+function releaseUserFrame(
+  shared: typeof globalThis & Record<symbol, unknown>,
+  patch: UserMessagePatch,
+  owner: symbol,
+ ): void {
   patch.owners.delete(owner);
   if (patch.owners.size > 0) return;
   if (UserMessageComponent.prototype.render === patch.patchedRender) {
@@ -293,11 +394,10 @@ function installUserFrame(theme: Theme): () => void {
       ...lines.map((line) => {
         const padding = " ".repeat(Math.max(0, width - 4 - visibleWidth(line)));
         const edge = (s: string) => state.theme.fg("borderAccent", s);
-        // Paint the full row (border + content + pad) so the frame never sits on a different bg.
-        return state.theme.bg(
-          "userMessageBg",
-          `${edge("│")} ${line}${padding} ${edge("│")}`,
-        );
+        // The native content line resets its own background; restart it for the right side.
+        const left = state.theme.bg("userMessageBg", `${edge("│")} ${line}`);
+        const right = state.theme.bg("userMessageBg", `${padding} ${edge("│")}`);
+        return left + right;
       }),
       state.theme.bg("userMessageBg", frameBottom(width, state.theme)),
     ];
@@ -318,6 +418,7 @@ function isUnclaimedBuiltin(pi: ExtensionAPI, name: string): boolean {
 }
 
 export default function toolRails(pi: ExtensionAPI): void {
+  let cleanupAssistantMarker = () => {};
   let cleanupUserFrame = () => {};
   pi.on("session_start", (_event, ctx) => {
     if (ctx.mode !== "tui") return;
@@ -336,9 +437,11 @@ export default function toolRails(pi: ExtensionAPI): void {
         pi.registerTool(decorateTool(tool));
       }
     }
+    cleanupAssistantMarker = installAssistantMarker(ctx.ui.theme);
     cleanupUserFrame = installUserFrame(ctx.ui.theme);
   });
   pi.on("session_shutdown", () => {
+    cleanupAssistantMarker();
     cleanupUserFrame();
     cleanupUserFrame = () => {};
   });
