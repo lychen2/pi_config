@@ -25,7 +25,6 @@ cp config/deferred-tools.json "$HOME/.pi/agent/deferred-tools.json"
 for dir in extensions/pi-*/; do
   [ -f "$dir/package.json" ] && pi install "$(realpath "$dir")"
 done
-# 安装独立的 Matugen 扩展
 
 echo "恢复完成。重新启动 pi 后检查：pi list"
 ```
@@ -33,8 +32,130 @@ echo "恢复完成。重新启动 pi 后检查：pi list"
 `matugen-chrome.ts` 是单文件扩展。若希望它每次启动都自动加载，请将它复制到 pi 的 extensions 目录：
 
 ```bash
-cp extensions/matugen-chrome.ts "$HOME/.pi/agent/extensions/matugen-chrome.ts"
+mkdir -p "$HOME/.pi/agent/extensions"
+cp extensions/matugen-chrome.ts "$HOME/.pi/agent/extensions/"
 ```
+
+## Extensions
+
+扩展位于 `extensions/`。带有 `package.json` 的目录可以通过 `pi install` 安装；安装后由 pi 写入自己的扩展设置。
+
+### 可安装扩展
+
+| 扩展 | 作用 | 常用命令/配置 |
+| --- | --- | --- |
+| `pi-brand-header` | 在 TUI 启动区域显示模型、思考级别、工作目录、主题、技能数和工具数；窄终端会自动切换为堆叠布局。 | `/logo` 显示或隐藏 header。 |
+| `pi-manager-models` | 从 OpenAI-compatible provider 的 `/models` 接口刷新模型目录，同时保留 `models.json` 中的模型覆盖项。 | 配置 `baseUrl`；可用 `PI_MANAGER_MODELS_PROVIDER` 和 `PI_MANAGER_MODELS_CONFIG` 指定 provider/配置路径。需要用户自己配置 provider 凭据。 |
+| `pi-slim-skills` | 压缩模型可见的技能索引，降低 prompt 占用；技能仍可通过 `/skill:<name>` 调用。 | `/slim-skills`、`/slim-skills remove <name>`、`/slim-skills none`、`/slim-skills reset`；可设置 `SLIM_SKILLS_DISABLE=1` 临时关闭。 |
+| `pi-todo-guard` | 一次运行结束时，如果 Todo 中仍有 `pending` 或 `in_progress` 任务，提醒继续处理。 | 可用 `PI_TODO_GUARD_TOOL` 更换工具名，或 `PI_TODO_GUARD_DISABLE=1` 关闭。 |
+| `pi-tool-rails` | 为 TUI 提供工具标签、结果背景、shell/search 摘要、prompt 框和用户消息框；保留原生工具执行逻辑。 | 设置 `PI_TOOL_RAILS_DISABLE_USER_FRAME=1` 仅关闭用户消息框。 |
+
+### 独立扩展
+
+- `matugen-chrome.ts`：使用当前主题颜色重绘 footer 和 working indicator，显示模型、思考级别、Git 分支、上下文占用和 token 统计。复制到 `~/.pi/agent/extensions/` 后会被自动发现。命令 `/matugen-chrome` 可切换开关。
+
+### 安装、检查和卸载
+
+```bash
+# 从仓库目录安装一个扩展
+pi install "$(realpath extensions/pi-brand-header)"
+
+# 查看已安装扩展
+pi list
+
+# 删除一个已安装的扩展
+pi remove "$(realpath extensions/pi-brand-header)"
+```
+
+每个扩展目录的 README 还包含开发命令。开发或修改扩展时，可在对应目录执行：
+
+```bash
+npm install
+npm run typecheck
+npm pack --dry-run
+```
+
+## Skills
+
+技能位于 `skills/`，pi 默认会扫描 `~/.pi/agent/skills/`。恢复后，先重启 pi，再按技能名称调用：
+
+```text
+/skill:humanizer
+/skill:scientific-visualization
+/skill:mineru-file-processing
+```
+
+技能的调用名通常是目录名，不是 README 标题。可以在 pi 中用 `/skill:<name>` 直接调用，也可以在提示中描述任务，让 pi 根据技能说明自动选择。
+
+### 写作与交互
+
+| 技能 | 用途 | 使用方法 |
+| --- | --- | --- |
+| `humanizer` | 删除英文 AI 写作痕迹，保留原意并匹配目标语气。 | `/skill:humanizer`，随后粘贴或引用需要润色的文本。 |
+| `humanizer-zh` | 去除中文文本的 AI 写作痕迹，减少宣传腔、模板化连接词和不自然排比。 | `/skill:humanizer-zh`。 |
+| `i-have-adhd` | 将输出组织成可执行的小步骤，先给下一步动作，减少上下文负担。 | `/skill:i-have-adhd` 开启；输入 `stop adhd mode` 或 `normal mode` 关闭。 |
+| `paper-polish-workflow-skill` | 论文润色、反 AI 写作痕迹和双语写作的参考资料集合。 | 当前快照没有顶层 `SKILL.md`，不会自动注册为 `/skill:`；按其中 references 手动引用。 |
+| `posterskill` | 海报制作相关的参考目录和占位结构。 | 当前快照没有可自动发现的顶层 `SKILL.md`，不能直接作为 `/skill:posterskill` 使用。 |
+
+### 科学计算与可视化
+
+| 技能 | 用途 | 使用方法 |
+| --- | --- | --- |
+| `scientific-visualization` | 科研绘图、配色、期刊规范、Matplotlib 示例和图形导出。 | `/skill:scientific-visualization`；适合先确定图表规范，再编写绘图代码。 |
+| `sa.matplotlib` | Matplotlib 图表类型、样式和常见问题参考，以及绘图脚本。 | 当前快照只有 references/scripts，没有顶层 `SKILL.md`；作为参考资料使用。 |
+| `sa.sympy` | SymPy 符号计算、矩阵、物理和代码生成参考。 | `/skill:sa.sympy`。 |
+| `air.academic-plotting` | 为 ML/AI 论文生成架构图、流程图和数据图；数值坐标图使用 Matplotlib，框图/箭头图使用 Gemini 流程。 | `/skill:air.academic-plotting`；使用 Gemini 图像流程时，在目标机器通过环境变量配置 `GEMINI_API_KEY`，不要写入文件。 |
+| `sa.pptx` | PowerPoint 生成和编辑脚本、Office schema 与参考文档。 | 当前 `SKILL.md` 为禁用文件，不会自动发现；需手动使用 `scripts/` 和参考文档。 |
+
+### 文献与研究
+
+| 技能 | 用途 | 使用方法 |
+| --- | --- | --- |
+| `sa.citation-management` | DOI、PubMed/Scholar 检索、BibTeX 转换、去重、格式化和引用验证。 | `/skill:sa.citation-management`；运行脚本前检查其依赖和网络要求。 |
+| `air.research-manager` | 在任务结束后记录研究决策、实验、死路、主张和 provenance 到 `ara/`。 | `/skill:air.research-manager` 只在任务完成后调用，不要在执行任务中间调用。 |
+| `nature-skills` | Nature 风格科研工作流集合，包含文献、统计、写作、审稿、图表、实验记录、论文转 PPT 等子技能。 | 使用具体子技能，例如 `/skill:nature-literature-pipeline`、`/skill:nature-statistics`、`/skill:nature-writing`。 |
+
+`nature-skills` 当前包含这些主要子技能：`nature-academic-search`、`nature-citation`、`nature-data`、`nature-downloader`、`nature-experiment-log`、`nature-figure`、`nature-literature-pipeline`、`nature-paper2ppt`、`nature-paper-to-patent`、`nature-polishing`、`nature-proposal-writer`、`nature-reader`、`nature-ref-verifier`、`nature-response`、`nature-reviewer`、`nature-statistics`、`nature-writing`。
+
+### 文件处理
+
+| 技能 | 用途 | 使用方法 |
+| --- | --- | --- |
+| `mineru-file-processing` | 处理 PDF、图片、Word、PowerPoint、Excel 等文件，提取 Markdown、OCR、结构、表格、公式或可供 agent 阅读的文本。 | `/skill:mineru-file-processing`；根据文件类型和大小按本地 MinerU 配置执行。 |
+
+### Claude Science 技能集合
+
+`claude-science` 是一组生物信息学、科研计算和模型端点技能。需要按具体子技能调用，不要把集合目录名当成单个技能：
+
+- 科研与图形：`algorithmic-art`、`figure-composer`、`figure-style`、`literature-review`、`paper-narrative`、`pdf-explore`。
+- 计算环境与远程执行：`compute-env-setup`、`remote-compute-modal`、`remote-compute-ssh`。
+- 模型端点：`managed-model-endpoints`、`using-model-endpoint`。这些技能可能需要 `BASE_URL`、`INFER_API_KEY`、云服务凭据或远程环境；凭据必须在目标机器单独配置。
+- 生物信息学模型：`alphafold2`、`boltz`、`borzoi`、`chai1`、`diffdock`、`esmfold2`、`evo2`、`fair-esm2`、`ligandmpnn`、`openfold3`、`proteinmpnn`、`scgpt`、`scvi-tools`、`solublempnn`。部分子技能在当前快照中处于禁用状态。
+- 其他：`customize`、`learn`、`product-self-knowledge`、`self-awareness`。
+
+示例：
+
+```text
+/skill:figure-style
+/skill:literature-review
+/skill:remote-compute-ssh
+```
+
+### 其他技能
+
+- `andrej-karpathy-skills/karpathy-guidelines`：Karpathy 风格的编码和 agent 工作原则，调用 `/skill:karpathy-guidelines`。
+
+## 配置片段
+
+`config/` 中的文件可以直接复制：
+
+```bash
+cp config/slim-skills-whitelist.json "$HOME/.pi/agent/slim-skills-whitelist.json"
+cp config/deferred-tools.json "$HOME/.pi/agent/deferred-tools.json"
+```
+
+- `slim-skills-whitelist.json`：`pi-slim-skills` 的 allowlist 示例。
+- `deferred-tools.json`：browser、subagent 和 research 工具组的延迟加载定义。
 
 ## 分步恢复
 
@@ -51,19 +172,13 @@ rsync -a skills/ "$HOME/.pi/agent/skills/"
 for dir in extensions/pi-*/; do
   [ -f "$dir/package.json" ] && pi install "$(realpath "$dir")"
 done
+mkdir -p "$HOME/.pi/agent/extensions"
 cp extensions/matugen-chrome.ts "$HOME/.pi/agent/extensions/"
-```
-
-只恢复配置片段：
-
-```bash
-cp config/slim-skills-whitelist.json "$HOME/.pi/agent/"
-cp config/deferred-tools.json "$HOME/.pi/agent/"
 ```
 
 ## 恢复模型和密钥
 
-本仓库不会恢复 `models.json`、`auth.json` 或其他凭据。恢复后需要在目标机器上单独配置 provider 和环境变量，例如：
+本仓库不会恢复 `models.json`、`auth.json` 或其他凭据。恢复后需要在目标机器上单独配置 provider 和环境变量：
 
 ```bash
 pi
@@ -78,6 +193,16 @@ pi
 ```bash
 cd ~/.pi_config
 git pull --ff-only
+```
+
+## 隐私边界
+
+仓库不会跟踪 credentials、provider/model registry、auth 文件、sessions、cache、backups、subagent 状态、本机路径、依赖目录、生成素材或本机符号链接。提交新内容前检查：
+
+```bash
+git status
+git diff --check
+git grep -n -I -i -E 'BEGIN (RSA|OPENSSH|PRIVATE)|api[_-]?key|token|secret|password|/home/'
 ```
 
 ## 仓库内容
