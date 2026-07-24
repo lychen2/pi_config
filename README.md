@@ -1,6 +1,14 @@
 # pi 配置备份与恢复
 
 这个仓库保存可复用的 pi extensions、skills 和不含隐私的配置片段。它**不包含** API key、token、密码、私钥、模型注册表、会话记录或本机运行状态。
+## TUI 效果预览
+
+以下截图来自实际 pi TUI，展示主题化启动信息、footer、工具面板和工作区布局：
+
+![pi TUI 主界面](docs/images/pi-tui-overview.png)
+
+![pi TUI 工具界面](docs/images/pi-tui-tools.png)
+
 
 ## 快速恢复
 
