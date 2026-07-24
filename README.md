@@ -18,6 +18,13 @@
 git clone https://github.com/lychen2/pi_config.git ~/.pi_config
 cd ~/.pi_config
 
+# pi-rtk-optimizer 依赖官方 rtk 二进制
+curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh
+export PATH="$HOME/.local/bin:$PATH"
+rtk --version
+
+
+
 # 先备份当前 pi 配置，避免覆盖现有内容
 backup="$HOME/.pi-backup-$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$backup"
@@ -101,6 +108,30 @@ npm pack --dry-run
 | 交互辅助 | `@juicesharp/rpiv-ask-user-question`、`@narumitw/pi-btw`、`pi-slopchop` | 结构化提问、补充信息和输出整理。 |
 | 性能与上下文 | `pi-hashline-edit-pro`、`pi-rtk-optimizer`、`pi-cache-optimizer` | 哈希行编辑、工具结果压缩和缓存优化。 |
 | 研究与其他 | `pi-autoresearch` | 实验初始化、运行和记录。 |
+
+### `pi-rtk-optimizer` 的额外依赖
+
+`pi-rtk-optimizer` 是 pi 扩展；它本身不会捆绑官方 `rtk` 二进制。缺少二进制时会显示：
+
+```text
+Warning: pi-rtk-optimizer: rtk binary unavailable, command rewrite bypassed
+```
+
+在 Linux/macOS 上安装官方 RTK：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh
+export PATH="$HOME/.local/bin:$PATH"
+rtk --version
+```
+
+如果使用 Bash 或 Zsh，需要把 PATH 永久写入对应 shell 配置；Fish 用户可执行：
+
+```fish
+fish_add_path ~/.local/bin
+```
+
+确认 `rtk --version` 能找到命令后，重启 pi。进入 TUI 后可用 `/rtk verify` 检查扩展是否能找到 RTK。RTK 二进制不放入仓库，恢复时必须在目标机器单独安装。
 
 ### 批量安装外部 package
 
