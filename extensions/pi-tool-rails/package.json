@@ -1,0 +1,21 @@
+{
+  "name": "pi-tool-rails",
+  "version": "0.1.0",
+  "description": "Quiet themed tool rendering, message framing, and prompt framing for Pi's TUI",
+  "license": "MIT",
+  "type": "module",
+  "keywords": ["pi-package", "pi", "tools", "theme", "tui"],
+  "files": ["index.ts", "compact-shell.ts", "result-bridge.ts", "prompt-frame.ts", "README.md", "LICENSE"],
+  "pi": { "extensions": ["./compact-shell.ts", "./index.ts", "./result-bridge.ts", "./prompt-frame.ts"] },
+  "scripts": { "typecheck": "tsc --noEmit" },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "^0.82.0",
+    "@earendil-works/pi-tui": "^0.82.0",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0"
+  }
+}

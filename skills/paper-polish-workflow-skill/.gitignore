@@ -1,0 +1,27 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Node
+node_modules/
+*.tgz
+
+# GSD / Planning (internal development state)
+.planning/
+.sisyphus/
+
+# Claude Code local (dev use only, not part of plugin)
+.claude/
+paper-polish-workflow/
+examples/
+.npmrc
+
+# Stackdumps
+*.stackdump
+package.json

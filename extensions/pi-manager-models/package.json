@@ -1,0 +1,17 @@
+{
+  "name": "pi-manager-models",
+  "version": "0.1.0",
+  "description": "Refresh an OpenAI-compatible Pi provider model catalog",
+  "license": "MIT",
+  "type": "module",
+  "keywords": ["pi-package", "pi", "models", "provider", "discovery"],
+  "files": ["index.ts", "README.md", "LICENSE"],
+  "pi": { "extensions": ["./index.ts"] },
+  "scripts": { "typecheck": "tsc --noEmit" },
+  "peerDependencies": { "@earendil-works/pi-coding-agent": "*" },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "^0.82.0",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0"
+  }
+}

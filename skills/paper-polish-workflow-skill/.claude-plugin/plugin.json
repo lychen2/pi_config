@@ -1,0 +1,19 @@
+{
+  "name": "paper-polish-workflow",
+  "description": "16-Skill Claude Code plugin for academic paper writing, polishing, and submission.",
+  "version": "2.3.1",
+  "author": {
+    "name": "Lylll9436"
+  },
+  "homepage": "https://github.com/Lylll9436/Paper-Polish-Workflow-skill",
+  "repository": "https://github.com/Lylll9436/Paper-Polish-Workflow-skill",
+  "license": "MIT",
+  "keywords": [
+    "academic-writing",
+    "paper-polishing",
+    "latex",
+    "translation",
+    "peer-review"
+  ],
+  "skills": "./skills/"
+}

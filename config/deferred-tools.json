@@ -1,0 +1,23 @@
+{
+  "loader": {
+    "name": "load_tools",
+    "label": "Load Tools"
+  },
+  "groups": [
+    {
+      "id": "browser",
+      "description": "Browse and interact with web pages",
+      "tools": ["agent_browser"]
+    },
+    {
+      "id": "subagent",
+      "description": "Delegate work to subagents",
+      "tools": ["subagent", "subagent_spawn", "subagent_send", "subagent_manage", "subagent_mailbox"]
+    },
+    {
+      "id": "research",
+      "description": "Run and log autoresearch experiments",
+      "tools": ["init_experiment", "run_experiment", "log_experiment"]
+    }
+  ]
+}

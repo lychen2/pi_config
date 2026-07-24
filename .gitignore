@@ -1,0 +1,33 @@
+# Credentials and private runtime data
+**/*auth*
+**/*secret*
+**/*token*
+**/*password*
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/models.json
+**/auth.json
+**/sessions/
+**/cache/
+**/backups/
+**/node_modules/
+**/.env
+**/.env.*
+
+# Local/runtime state
+**/pi-subagents-state/
+**/*.sqlite
+**/*.sqlite-*
+**/*.db
+**/*.db-*
+**/*.log
+**/*.tmp
+**/*.catalog_stamp
+
+# Generated or machine-specific material
+**/assets/
+**/dist/
+**/build/
+.DS_Store

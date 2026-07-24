@@ -1,0 +1,12 @@
+{
+  "mode": "allowlist",
+  "whitelist": [
+    "figure-style",
+    "humanizer",
+    "humanizer-zh",
+    "karpathy-guidelines",
+    "mineru",
+    "mineru-file-processing",
+    "scientific-visualization"
+  ]
+}
