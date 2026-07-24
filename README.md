@@ -26,6 +26,13 @@ for dir in extensions/pi-*/; do
   [ -f "$dir/package.json" ] && pi install "$(realpath "$dir")"
 done
 
+# 恢复 npm/Git 扩展
+while IFS= read -r package; do
+  case "$package" in
+    ""|\#*) continue ;;
+    *) pi install "$package" ;;
+  esac
+done < config/external-packages.txt
 echo "恢复完成。重新启动 pi 后检查：pi list"
 ```
 
@@ -73,6 +80,48 @@ pi remove "$(realpath extensions/pi-brand-header)"
 npm install
 npm run typecheck
 npm pack --dry-run
+```
+## 外部 npm/Git Extensions
+
+除了仓库内的自定义扩展，原 pi 配置还安装了外部 package。完整、可编辑的安装清单位于 [`config/external-packages.txt`](config/external-packages.txt)。它只记录包名和版本，不包含 npm/Git 凭据。
+
+| 类别 | Package | 用途 |
+| --- | --- | --- |
+| TUI 与显示 | `pi-markdown-preview`、`@victor-software-house/pi-curated-themes`、`@monotykamary/pi-tps`、`pi-cometix-footer` | Markdown 预览、主题、TUI 状态和 footer。 |
+| 工具与搜索 | `@ff-labs/pi-fff`、`pi-agent-browser-native`、`pi-add-dir`、`@tmustier/pi-raw-paste` | 文件/搜索增强、浏览器、添加目录和原始粘贴。 |
+| 计划与任务 | `@narumitw/pi-plan-mode`、`@narumitw/pi-goal`、`@juicesharp/rpiv-todo`、`@narumitw/pi-subagents` | 计划、目标、Todo 和子 agent 工作流。 |
+| 交互辅助 | `@juicesharp/rpiv-ask-user-question`、`@narumitw/pi-btw`、`pi-slopchop` | 结构化提问、补充信息和输出整理。 |
+| 性能与上下文 | `pi-hashline-edit-pro`、`pi-rtk-optimizer`、`pi-cache-optimizer` | 哈希行编辑、工具结果压缩和缓存优化。 |
+| 研究与其他 | `pi-autoresearch` | 实验初始化、运行和记录。 |
+
+### 批量安装外部 package
+
+恢复到新机器并完成基础恢复后，在仓库根目录执行：
+
+```bash
+while IFS= read -r package; do
+  case "$package" in
+    ""|\#*) continue ;;
+    *) pi install "$package" ;;
+  esac
+done < config/external-packages.txt
+```
+
+这会从 npm 或 GitHub 重新下载外部扩展。安装前可以编辑 `config/external-packages.txt` 删除不需要的包。包的实际配置仍由 pi 写入自己的 settings；如果某个包需要 API key 或环境变量，请只在目标机器单独配置。
+
+原配置中的两个本地引用没有放入清单的可执行部分：`../../Projects/pi-deferred-tools` 和 `../../pi-translate-submit`。它们依赖原机器上的本地源码；需要时先恢复对应项目，再分别执行 `pi install /absolute/path/to/project`。
+
+### 外部 package 的检查和卸载
+
+```bash
+# 查看已安装扩展，包括 npm/Git package
+pi list
+
+# 卸载一个外部 package
+pi remove npm:pi-markdown-preview@0.10.0
+
+# 更新已安装 package
+pi update
 ```
 
 ## Skills

@@ -1,0 +1,25 @@
+# External pi packages recorded from ~/.pi/agent/settings.json
+# Uncomment or remove packages as needed before installing.
+npm:pi-markdown-preview@0.10.0
+npm:@ff-labs/pi-fff@0.9.6
+npm:@narumitw/pi-plan-mode
+npm:@juicesharp/rpiv-ask-user-question
+npm:pi-hashline-edit-pro
+npm:pi-slopchop
+npm:@narumitw/pi-goal
+npm:@narumitw/pi-subagents
+npm:@juicesharp/rpiv-todo
+npm:@narumitw/pi-btw
+npm:pi-rtk-optimizer
+npm:pi-cache-optimizer
+npm:pi-agent-browser-native
+npm:pi-add-dir
+npm:@tmustier/pi-raw-paste
+npm:@victor-software-house/pi-curated-themes
+npm:pi-autoresearch
+npm:@monotykamary/pi-tps
+git:github.com/Xichun123/pi-cometix-footer
+
+# Local-only packages from the original machine. Their source is not in this repo.
+# ../../Projects/pi-deferred-tools
+# ../../pi-translate-submit
