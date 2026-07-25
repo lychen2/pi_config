@@ -6,6 +6,7 @@ Quiet TUI styling for Pi:
 - a theme `text` separator (`REPLACE │`, `READ    │`) with exactly one layout space on its right
 - full-block pending, success, and error backgrounds from the active Pi theme
 - compact summaries and expandable previews for shell and search tools
+- numbered, side-by-side `replace` diffs with old lines on the left, new lines on the right, and multiple change groups
 - native execution, hashline output, and rich diff renderers remain intact
 - one blank line between tool blocks
 - a persistent framed `prompt` editor and framed user messages
@@ -26,6 +27,7 @@ Pi also lacks public renderer hooks for the common shell and user-message presen
 
 ```bash
 npm install
+npm test
 npm run typecheck
 npm pack --dry-run
 ```
