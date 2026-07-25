@@ -36,7 +36,7 @@ type ExecutionState = {
 
 const ANSI_ESCAPE = /\x1B(?:\][^\x07\x1B]*(?:\x07|\x1B\\)|\[[0-?]*[ -/]*[@-~]|[@-Z\\-_])/g;
 const SHELL_PATCH = Symbol.for("pi.toolRails.labeledShellPatch");
-const LABEL_WIDTH = 8;
+const LABEL_WIDTH = 9;
 const PREFIX_WIDTH = LABEL_WIDTH + 3;
 
 function release(
@@ -64,7 +64,12 @@ function labelText(name: string): string {
   const upper = name.toUpperCase();
   return visibleWidth(upper) <= LABEL_WIDTH
     ? upper
-    : `${truncateToWidth(upper, LABEL_WIDTH - 1, "")}…`;
+    : `${plain(truncateToWidth(upper, LABEL_WIDTH - 1, ""))}…`;
+}
+
+export function labelLines(name: string): string[] {
+  const words = name.split("_").filter(Boolean);
+  return words.length > 1 ? words.map(labelText) : [labelText(name)];
 }
 
 function removeRepeatedToolName(line: string, name: string): string {
@@ -81,6 +86,10 @@ function removeRepeatedToolName(line: string, name: string): string {
   return leftoverGap < 0
     ? withoutName
     : `${withoutName.slice(0, leftoverGap)}${withoutName.slice(leftoverGap + 1)}`;
+}
+
+export function isStandaloneToolNameLine(line: string, name: string): boolean {
+  return plain(line).trim().toLowerCase() === name.toLowerCase();
 }
 
 /** chalk.bold / nested theme.fg can emit full SGR reset and drop the tool-row background mid-line. */
@@ -169,18 +178,26 @@ function installLabeledShell(theme: ToolTheme): () => void {
         ? "error"
         : "toolTitle";
     const name = execution.toolName ?? "tool";
-    const visibleLabel = labelText(name);
-    const totalLabelPadding = Math.max(0, LABEL_WIDTH - visibleWidth(visibleLabel));
-    const leftLabelPadding = " ".repeat(Math.floor(totalLabelPadding / 2));
-    const rightLabelPadding = " ".repeat(Math.ceil(totalLabelPadding / 2));
+    const labels = labelLines(name);
     const separator = state.theme.fg("text", "│");
-    const firstPrefix = ` ${leftLabelPadding}${boldLabel(visibleLabel, state.theme, labelColor)}${rightLabelPadding}${separator} `;
-    const nextPrefix = ` ${" ".repeat(LABEL_WIDTH)}${separator} `;
+    const prefixFor = (label: string): string => {
+      const totalLabelPadding = Math.max(0, LABEL_WIDTH - visibleWidth(label));
+      const leftLabelPadding = " ".repeat(Math.floor(totalLabelPadding / 2));
+      const rightLabelPadding = " ".repeat(Math.ceil(totalLabelPadding / 2));
+      return ` ${leftLabelPadding}${boldLabel(label, state.theme, labelColor)}${rightLabelPadding}${separator} `;
+    };
 
-    const contentEnd = Math.min(lines.length, firstContent + contentLines.length);
-    const body = lines.slice(firstContent, contentEnd).map((line, index) => {
-      const content = index === 0 ? removeRepeatedToolName(line, name) : line;
-      return backgroundLine(`${index === 0 ? firstPrefix : nextPrefix}${content}`, width, background, state.theme);
+    const hasStandaloneHeader =
+      isStandaloneToolNameLine(lines[firstContent], name) &&
+      isStandaloneToolNameLine(contentLines[0] ?? "", name);
+    const contentStart = firstContent + (hasStandaloneHeader ? 1 : 0);
+    const renderedContentLineCount = Math.max(0, contentLines.length - (hasStandaloneHeader ? 1 : 0));
+    const contentEnd = Math.min(lines.length, contentStart + renderedContentLineCount);
+    const body = Array.from({ length: Math.max(renderedContentLineCount, labels.length) }, (_, index) => {
+      const content = index < renderedContentLineCount
+        ? lines[contentStart + index]
+        : "";
+      return backgroundLine(`${prefixFor(labels[index] ?? "")}${content}`, width, background, state.theme);
     });
     const blank = backgroundLine("", width, background, state.theme);
 
