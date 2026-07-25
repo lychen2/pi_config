@@ -36,7 +36,7 @@ type ExecutionState = {
 
 const ANSI_ESCAPE = /\x1B(?:\][^\x07\x1B]*(?:\x07|\x1B\\)|\[[0-?]*[ -/]*[@-~]|[@-Z\\-_])/g;
 const SHELL_PATCH = Symbol.for("pi.toolRails.labeledShellPatch");
-const LABEL_WIDTH = 9;
+const LABEL_WIDTH = 10;
 const PREFIX_WIDTH = LABEL_WIDTH + 3;
 
 function release(
@@ -70,6 +70,11 @@ function labelText(name: string): string {
 export function labelLines(name: string): string[] {
   const words = name.split("_").filter(Boolean);
   return words.length > 1 ? words.map(labelText) : [labelText(name)];
+}
+
+export function labelPadding(label: string): { left: number; right: number } {
+  const total = Math.max(0, LABEL_WIDTH - visibleWidth(label));
+  return { left: Math.floor(total / 2), right: Math.ceil(total / 2) };
 }
 
 function removeRepeatedToolName(line: string, name: string): string {
@@ -181,9 +186,9 @@ function installLabeledShell(theme: ToolTheme): () => void {
     const labels = labelLines(name);
     const separator = state.theme.fg("text", "│");
     const prefixFor = (label: string): string => {
-      const totalLabelPadding = Math.max(0, LABEL_WIDTH - visibleWidth(label));
-      const leftLabelPadding = " ".repeat(Math.floor(totalLabelPadding / 2));
-      const rightLabelPadding = " ".repeat(Math.ceil(totalLabelPadding / 2));
+      const padding = labelPadding(label);
+      const leftLabelPadding = " ".repeat(padding.left);
+      const rightLabelPadding = " ".repeat(padding.right);
       return ` ${leftLabelPadding}${boldLabel(label, state.theme, labelColor)}${rightLabelPadding}${separator} `;
     };
 

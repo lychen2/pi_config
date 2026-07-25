@@ -39,7 +39,7 @@ type ReplaceDiffEntry = {
 type ReplaceDiffRow = { left?: ReplaceDiffEntry; right?: ReplaceDiffEntry; meta?: string };
 
 const ANSI_ESCAPE = /\x1B(?:\][^\x07\x1B]*(?:\x07|\x1B\\)|\[[0-?]*[ -/]*[@-~]|[@-Z\\-_])/g;
-const HASHLINE_DIFF = /^([ +\-])([A-Za-z0-9_-]{3})│(.*)$/;
+const HASHLINE_DIFF = /^([ +\-])((?:[A-Za-z0-9_-]{3}| {3}))│(.*)$/;
 const RESULT_PATCH = Symbol.for("pi.toolRails.resultRendererPatch");
 const REPLACE_LINE_NUMBERS = "toolRailsNewLineNumbers";
 const REPLACE_FINAL_LINE_COUNT = "toolRailsFinalLineCount";
