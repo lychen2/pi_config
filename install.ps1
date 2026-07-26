@@ -62,6 +62,18 @@ function Update-ProcessPath {
             $env:Path = "$entry;$env:Path"
         }
     }
+
+    if (Get-Command node -ErrorAction SilentlyContinue) {
+        try {
+            $nodePath = (& node -p "process.execPath").Trim()
+            $nodeDirectory = Split-Path $nodePath -Parent
+            if ((Test-Path $nodeDirectory) -and ($env:Path -notlike "*$nodeDirectory*")) {
+                $env:Path = "$nodeDirectory;$env:Path"
+            }
+        } catch {
+            # Install-Prerequisites reports an actionable error after bootstrap.
+        }
+    }
 }
 
 function Test-SupportedNode {
@@ -136,6 +148,10 @@ function Install-Prerequisites {
 
     if (-not (Test-SupportedNode)) {
         throw "Node.js 22.19.0 or newer is unavailable after installation. Open a new PowerShell window and rerun."
+    }
+    & cmd.exe /d /c "node --version" *> $null
+    if ($LASTEXITCODE -ne 0) {
+        throw "node.exe is available in PowerShell but unavailable to cmd.exe child processes."
     }
     $npmCommand = Get-Command npm.cmd -ErrorAction SilentlyContinue
     if (-not $npmCommand) {
