@@ -44,7 +44,7 @@ Run in PowerShell:
 irm https://raw.githubusercontent.com/lychen2/pi_config/main/install.ps1 | iex
 ```
 
-The Windows bootstrap uses WinGet to install Node.js LTS and Git for Windows. Git Bash is required by Pi on native Windows.
+The Windows bootstrap uses WinGet to install Node.js LTS and Git for Windows. Git Bash is required by Pi on native Windows. It also installs the checksum-verified RTK release binary to `~/.local/bin/rtk.exe`.
 
 ### From an existing clone
 
@@ -79,7 +79,7 @@ Recommended defaults are designed for a clean installation:
 | --- | --- | --- |
 | External Pi packages | Install | Reproduces the tools listed in `config/external-packages.txt` |
 | Browser runtime | Skip | Downloads a separate browser and system dependencies |
-| RTK | Skip | Optional optimizer; unavailable on native Windows |
+| RTK binary | Install | Required by `pi-rtk-optimizer` for command rewriting; prebuilt releases support Windows, Linux, and macOS |
 | Provider/model defaults | Keep current | The repository's `manager` provider requires machine-local configuration |
 
 ### Options
@@ -92,7 +92,7 @@ Pass options to a local script or directly to `install.mjs`:
 | `--dry-run` | Print planned actions without changing files or installing packages |
 | `--with-external` / `--skip-external` | Enable or skip the external package manifest |
 | `--with-browser` / `--skip-browser` | Enable or skip `agent-browser` installation |
-| `--with-rtk` / `--skip-rtk` | Enable or skip RTK on Linux and macOS |
+| `--with-rtk` / `--skip-rtk` | Enable or skip the RTK binary used by `pi-rtk-optimizer` |
 | `--with-model-defaults` / `--skip-model-defaults` | Apply or preserve provider/model defaults |
 
 Examples:
@@ -101,8 +101,8 @@ Examples:
 # Inspect every action without changing the machine
 ./install.sh --dry-run --yes
 
-# Install everything supported on Linux or macOS
-./install.sh --yes --with-browser --with-rtk --with-model-defaults
+# Install every optional component
+./install.sh --yes --with-browser --with-model-defaults
 
 # Restore only repository-owned files and local packages
 ./install.sh --yes --skip-external
@@ -144,6 +144,7 @@ npm exec --prefix (Join-Path $HOME ".pi\agent\npm") -- pi-agent-browser-doctor
 ```
 
 ```text
+rtk --version
 /rtk verify
 /sensitive-guard status
 ```
@@ -162,7 +163,7 @@ The initial tool set should include `load_tools`. Tools managed by deferred exte
 | [`pi-todo-guard`](extensions/pi-todo-guard/) | Continues runs while Todo contains unfinished tasks | `PI_TODO_GUARD_DISABLE=1` |
 | [`pi-tool-rails`](extensions/pi-tool-rails/) | Adds themed tool labels, result panels, and prompt framing | `PI_TOOL_RAILS_DISABLE_USER_FRAME=1` |
 | [`adhd-mode.ts`](extensions/adhd-mode.ts) | Adds session-persistent ADHD response rules | `/adhd` |
-| [`matugen-chrome.ts`](extensions/matugen-chrome.ts) | Shows model, Git, context, and token status in the footer | `/matugen-chrome` |
+| [`matugen-chrome.ts`](extensions/matugen-chrome.ts) | Renders a Cometix-style footer with the active Pi theme | `/matugen-chrome` |
 
 A typical package check looks like this:
 
@@ -192,7 +193,7 @@ Some directories are reference collections without a top-level `SKILL.md`. Pi do
 - file search, browser automation, previews, and external-directory access
 - planning, goals, Todo management, structured questions, and subagents
 - hash-anchored editing, output compaction, caching, and research workflows
-- sensitive-file protection, themes, footer status, token speed, and raw-paste support
+- sensitive-file protection, themes, token speed, and raw-paste support
 
 Package credentials and package-owned settings remain on the target machine.
 

@@ -74,6 +74,7 @@ function Update-ProcessPath {
     }
 
     $extraPaths = @(
+        (Join-Path $HOME ".local\bin"),
         (Join-Path $env:APPDATA "npm"),
         (Join-Path $env:ProgramFiles "nodejs"),
         (Join-Path $env:ProgramFiles "Git\cmd"),
@@ -299,3 +300,4 @@ Write-Step "Running the pi_config installer"
 if ($LASTEXITCODE -ne 0) {
     throw "pi_config installation failed (exit code $LASTEXITCODE)."
 }
+Update-ProcessPath

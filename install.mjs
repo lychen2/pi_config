@@ -21,6 +21,9 @@ const isWindows = process.platform === "win32";
 const homeDir = os.homedir();
 const defaultAgentDir = path.join(homeDir, ".pi", "agent");
 const agentDir = path.resolve(process.env.PI_CODING_AGENT_DIR || defaultAgentDir);
+const retiredPackageSources = new Set([
+  "git:github.com/Xichun123/pi-cometix-footer",
+]);
 
 function normalizeChildPath() {
   const pathKey = Object.keys(process.env).find((key) => key.toLowerCase() === "path") || "PATH";
@@ -124,8 +127,8 @@ Options:
       --skip-external      Skip external Pi packages
       --with-browser       Install agent-browser and its browser runtime
       --skip-browser       Skip browser automation
-      --with-rtk           Install RTK (Linux and macOS only)
-      --skip-rtk           Skip RTK
+      --with-rtk           Install the RTK binary used by pi-rtk-optimizer
+      --skip-rtk           Skip the RTK binary
       --with-model-defaults  Apply provider/model defaults from public settings
       --skip-model-defaults  Keep the machine's provider/model selection
   -h, --help               Show this help
@@ -192,6 +195,12 @@ function isPlainObject(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
+function configuredPackageSource(value) {
+  if (typeof value === "string") return value;
+  if (isPlainObject(value) && typeof value.source === "string") return value.source;
+  return undefined;
+}
+
 function mergeObjects(base, overlay) {
   const merged = { ...base };
   for (const [key, value] of Object.entries(overlay)) {
@@ -249,9 +258,8 @@ async function resolveChoices() {
       (await promptYesNo(rl, "Install the external Pi package manifest?", true));
     const browser = installerOptions.browser ??
       (await promptYesNo(rl, "Install browser automation?", false));
-    const rtk = isWindows
-      ? false
-      : installerOptions.rtk ?? (await promptYesNo(rl, "Install RTK support?", false));
+    const rtk = installerOptions.rtk ??
+      (await promptYesNo(rl, "Install the RTK binary used by pi-rtk-optimizer?", true));
     const modelDefaults = installerOptions.modelDefaults ??
       (await promptYesNo(
         rl,
@@ -259,9 +267,6 @@ async function resolveChoices() {
         false,
       ));
 
-    if (installerOptions.rtk && isWindows) {
-      console.warn("RTK installation is unavailable on native Windows and will be skipped.");
-    }
 
     return { external, browser, rtk, modelDefaults };
   } finally {
@@ -329,13 +334,22 @@ async function mergePublicSettings(includeModelDefaults) {
     console.log("  keeping the machine's provider and model defaults");
   }
 
+
+  const currentSettings = await readJson(settingsPath);
+  const mergedSettings = mergeObjects(currentSettings, publicSettings);
+  if (Array.isArray(mergedSettings.packages)) {
+    const packageCount = mergedSettings.packages.length;
+    mergedSettings.packages = mergedSettings.packages.filter(
+      (entry) => !retiredPackageSources.has(configuredPackageSource(entry)),
+    );
+    if (mergedSettings.packages.length !== packageCount) {
+      console.log("  removed retired fixed-color footer package");
+    }
+  }
   if (installerOptions.dryRun) {
     console.log(`  merge ${publicSettingsPath} -> ${settingsPath}`);
     return;
   }
-
-  const currentSettings = await readJson(settingsPath);
-  const mergedSettings = mergeObjects(currentSettings, publicSettings);
   await mkdir(agentDir, { recursive: true });
   await writeFile(settingsPath, `${JSON.stringify(mergedSettings, null, 2)}\n`, "utf8");
 }
@@ -406,13 +420,26 @@ async function installOptionalTools(choices) {
 
   if (choices.rtk) {
     installedAny = true;
-    run(
-      "sh",
-      [
-        "-c",
-        "curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh",
-      ],
-    );
+    if (isWindows) {
+      run(
+        "powershell.exe",
+        [
+          "-NoProfile",
+          "-ExecutionPolicy",
+          "Bypass",
+          "-File",
+          path.join(repoDir, "scripts", "install-rtk.ps1"),
+        ],
+      );
+    } else {
+      run(
+        "sh",
+        [
+          "-c",
+          "curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh",
+        ],
+      );
+    }
   }
 
   if (!installedAny) {
@@ -438,7 +465,7 @@ console.log(`  repository: ${repoDir}`);
 console.log(`  target: ${agentDir}`);
 console.log(`  external packages: ${choices.external ? "yes" : "no"}`);
 console.log(`  browser automation: ${choices.browser ? "yes" : "no"}`);
-console.log(`  RTK: ${choices.rtk ? "yes" : "no"}`);
+console.log(`  RTK binary: ${choices.rtk ? "yes" : "no"}`);
 console.log(`  provider/model defaults: ${choices.modelDefaults ? "apply" : "keep current"}`);
 if (installerOptions.dryRun) {
   console.log("  mode: dry run");

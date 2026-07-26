@@ -44,7 +44,7 @@ curl -fsSL https://raw.githubusercontent.com/lychen2/pi_config/main/install.sh |
 irm https://raw.githubusercontent.com/lychen2/pi_config/main/install.ps1 | iex
 ```
 
-Windows 引导脚本使用 WinGet 安装 Node.js LTS 和 Git for Windows。Pi 在原生 Windows 上需要 Git Bash。
+Windows 引导脚本使用 WinGet 安装 Node.js LTS 和 Git for Windows。Pi 在原生 Windows 上需要 Git Bash。脚本还会把经过 SHA-256 校验的 RTK release binary 安装到 `~/.local/bin/rtk.exe`。
 
 ### 从本地仓库安装
 
@@ -79,7 +79,7 @@ provider 凭据、模型注册表、API key、会话和环境变量继续保留�
 | --- | --- | --- |
 | 外部 Pi package | 安装 | 恢复 `config/external-packages.txt` 中记录的工具 |
 | 浏览器运行时 | 跳过 | 需要额外下载浏览器和系统依赖 |
-| RTK | 跳过 | 属于可选优化器，原生 Windows 暂不支持 |
+| RTK binary | 安装 | `pi-rtk-optimizer` 的命令改写依赖该 binary；Windows、Linux 和 macOS 均有预编译 release |
 | provider/model 默认值 | 保留本机值 | 仓库中的 `manager` provider 依赖本机配置 |
 
 ### 安装选项
@@ -92,7 +92,7 @@ provider 凭据、模型注册表、API key、会话和环境变量继续保留�
 | `--dry-run` | 只显示计划，不修改文件或安装 package |
 | `--with-external` / `--skip-external` | 安装或跳过外部 package 清单 |
 | `--with-browser` / `--skip-browser` | 安装或跳过 `agent-browser` |
-| `--with-rtk` / `--skip-rtk` | 在 Linux 和 macOS 上安装或跳过 RTK |
+| `--with-rtk` / `--skip-rtk` | 安装或跳过 `pi-rtk-optimizer` 使用的 RTK binary |
 | `--with-model-defaults` / `--skip-model-defaults` | 应用仓库值或保留本机 provider/model 默认值 |
 
 示例：
@@ -101,8 +101,8 @@ provider 凭据、模型注册表、API key、会话和环境变量继续保留�
 # 查看全部操作，不修改当前机器
 ./install.sh --dry-run --yes
 
-# 在 Linux 或 macOS 上安装所有受支持组件
-./install.sh --yes --with-browser --with-rtk --with-model-defaults
+# 安装全部可选组件
+./install.sh --yes --with-browser --with-model-defaults
 
 # 只恢复仓库文件和本地 package
 ./install.sh --yes --skip-external
@@ -144,6 +144,7 @@ npm exec --prefix (Join-Path $HOME ".pi\agent\npm") -- pi-agent-browser-doctor
 ```
 
 ```text
+rtk --version
 /rtk verify
 /sensitive-guard status
 ```
@@ -162,7 +163,7 @@ npm exec --prefix (Join-Path $HOME ".pi\agent\npm") -- pi-agent-browser-doctor
 | [`pi-todo-guard`](extensions/pi-todo-guard/) | Todo 存在未完成任务时继续当前运行 | `PI_TODO_GUARD_DISABLE=1` |
 | [`pi-tool-rails`](extensions/pi-tool-rails/) | 添加主题化工具标签、结果面板和输入框样式 | `PI_TOOL_RAILS_DISABLE_USER_FRAME=1` |
 | [`adhd-mode.ts`](extensions/adhd-mode.ts) | 添加可跨会话保持的 ADHD 响应规则 | `/adhd` |
-| [`matugen-chrome.ts`](extensions/matugen-chrome.ts) | 在 footer 显示模型、Git、上下文和 token 状态 | `/matugen-chrome` |
+| [`matugen-chrome.ts`](extensions/matugen-chrome.ts) | 使用当前 Pi theme 渲染 Cometix 风格 footer | `/matugen-chrome` |
 
 常用的 package 检查命令如下：
 
@@ -192,7 +193,7 @@ npm pack --dry-run
 - 文件搜索、浏览器自动化、预览和外部目录访问
 - 计划、目标、Todo、结构化提问和 subagent
 - 哈希锚点编辑、输出压缩、缓存和研究工作流
-- 敏感文件保护、主题、footer 状态、token 速度和 raw paste
+- 敏感文件保护、主题、token 速度和 raw paste
 
 package 凭据和各 package 自己维护的设置会保留在目标机器上。
 
