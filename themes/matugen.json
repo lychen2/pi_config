@@ -2,25 +2,25 @@
   "$schema": "https://raw.githubusercontent.com/earendil-works/pi/main/packages/coding-agent/src/modes/interactive/theme/theme-schema.json",
   "name": "matugen",
   "vars": {
-    "primary": "#feb877",
-    "primaryBright": "#ffdcc0",
-    "secondary": "#e2c0a5",
-    "secondaryContainer": "#59422d",
-    "tertiary": "#c2cc98",
+    "primary": "#bfc2ff",
+    "primaryBright": "#e0e0ff",
+    "secondary": "#c5c4dd",
+    "secondaryContainer": "#444559",
+    "tertiary": "#e8b9d4",
     "errorColor": "#ffb4ab",
-    "foreground": "#efe0d5",
-    "foregroundMuted": "#d5c3b6",
-    "outline": "#9e8e82",
-    "outlineMuted": "#51443a",
-    "surface": "#19120c",
-    "surfaceLowest": "#130d07",
-    "surfaceLow": "#221a14",
-    "surfaceContainer": "#261e18",
-    "surfaceHigh": "#312822",
-    "surfaceHighest": "#3c332c",
-    "surfaceBright": "#403730",
-    "surfaceVariant": "#51443a",
-    "tertiaryContainer": "#424a23",
+    "foreground": "#e4e1e9",
+    "foregroundMuted": "#c7c5d0",
+    "outline": "#918f9a",
+    "outlineMuted": "#46464f",
+    "surface": "#131318",
+    "surfaceLowest": "#0e0e13",
+    "surfaceLow": "#1b1b21",
+    "surfaceContainer": "#1f1f25",
+    "surfaceHigh": "#2a292f",
+    "surfaceHighest": "#35343a",
+    "surfaceBright": "#39393f",
+    "surfaceVariant": "#46464f",
+    "tertiaryContainer": "#5e3c52",
     "errorContainer": "#93000a"
   },
   "colors": {
@@ -78,8 +78,8 @@
     "bashMode": "primary"
   },
   "export": {
-    "pageBg": "#19120c",
-    "cardBg": "#261e18",
-    "infoBg": "#312822"
+    "pageBg": "#131318",
+    "cardBg": "#1f1f25",
+    "infoBg": "#2a292f"
   }
 }
