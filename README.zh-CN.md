@@ -78,7 +78,7 @@ provider 凭据、模型注册表、API key、会话和环境变量继续保留�
 | 组件 | 默认行为 | 原因 |
 | --- | --- | --- |
 | 外部 Pi package | 安装 | 恢复 `config/external-packages.txt` 中记录的工具 |
-| 浏览器运行时 | 跳过 | 需要额外下载浏览器和系统依赖 |
+| 浏览器运行时 | 安装 | 默认安装的 `pi-agent-browser-native` 依赖该运行时；已有 Chrome runtime 时会直接复用 |
 | RTK binary | 安装 | `pi-rtk-optimizer` 的命令改写依赖该 binary；Windows、Linux 和 macOS 均有预编译 release |
 | provider/model 默认值 | 保留本机值 | 仓库中的 `manager` provider 依赖本机配置 |
 
@@ -101,17 +101,17 @@ provider 凭据、模型注册表、API key、会话和环境变量继续保留�
 # 查看全部操作，不修改当前机器
 ./install.sh --dry-run --yes
 
-# 安装全部可选组件
-./install.sh --yes --with-browser --with-model-defaults
+# 同时应用仓库中的 provider/model 默认值
+./install.sh --yes --with-model-defaults
 
-# 只恢复仓库文件和本地 package
-./install.sh --yes --skip-external
+# 跳过外部 package 和可选命令行 runtime
+./install.sh --yes --skip-external --skip-browser --skip-rtk
 ```
 
 PowerShell 使用对应的 switch 名称：
 
 ```powershell
-.\install.ps1 -Yes -WithBrowser -WithModelDefaults
+.\install.ps1 -Yes -WithModelDefaults
 ```
 
 ### 验证安装

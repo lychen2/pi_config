@@ -257,7 +257,7 @@ async function resolveChoices() {
     const external = installerOptions.external ??
       (await promptYesNo(rl, "Install the external Pi package manifest?", true));
     const browser = installerOptions.browser ??
-      (await promptYesNo(rl, "Install browser automation?", false));
+      (await promptYesNo(rl, "Install browser automation?", true));
     const rtk = installerOptions.rtk ??
       (await promptYesNo(rl, "Install the RTK binary used by pi-rtk-optimizer?", true));
     const modelDefaults = installerOptions.modelDefaults ??

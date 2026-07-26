@@ -78,7 +78,7 @@ Recommended defaults are designed for a clean installation:
 | Component | Default | Reason |
 | --- | --- | --- |
 | External Pi packages | Install | Reproduces the tools listed in `config/external-packages.txt` |
-| Browser runtime | Skip | Downloads a separate browser and system dependencies |
+| Browser runtime | Install | Required by the default `pi-agent-browser-native` package; reuses an existing Chrome runtime when available |
 | RTK binary | Install | Required by `pi-rtk-optimizer` for command rewriting; prebuilt releases support Windows, Linux, and macOS |
 | Provider/model defaults | Keep current | The repository's `manager` provider requires machine-local configuration |
 
@@ -101,17 +101,17 @@ Examples:
 # Inspect every action without changing the machine
 ./install.sh --dry-run --yes
 
-# Install every optional component
-./install.sh --yes --with-browser --with-model-defaults
+# Apply the repository's provider/model defaults too
+./install.sh --yes --with-model-defaults
 
-# Restore only repository-owned files and local packages
-./install.sh --yes --skip-external
+# Skip external packages and optional command-line runtimes
+./install.sh --yes --skip-external --skip-browser --skip-rtk
 ```
 
 PowerShell uses matching switch names:
 
 ```powershell
-.\install.ps1 -Yes -WithBrowser -WithModelDefaults
+.\install.ps1 -Yes -WithModelDefaults
 ```
 
 ### Verify
