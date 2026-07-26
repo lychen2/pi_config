@@ -53,7 +53,9 @@ function Update-ProcessPath {
         (Join-Path $env:APPDATA "npm"),
         (Join-Path $env:ProgramFiles "nodejs"),
         (Join-Path $env:ProgramFiles "Git\cmd"),
-        (Join-Path $env:ProgramFiles "Git\bin")
+        (Join-Path $env:ProgramFiles "Git\bin"),
+        (Join-Path $env:LOCALAPPDATA "Programs\Git\cmd"),
+        (Join-Path $env:LOCALAPPDATA "Programs\Git\bin")
     )
     foreach ($entry in $extraPaths) {
         if ((Test-Path $entry) -and ($env:Path -notlike "*$entry*")) {
@@ -75,6 +77,29 @@ function Test-SupportedNode {
     }
 }
 
+function Test-BashAvailable {
+    if (Get-Command bash.exe -ErrorAction SilentlyContinue) {
+        return $true
+    }
+
+    $candidates = @(
+        (Join-Path $env:ProgramFiles "Git\bin\bash.exe"),
+        (Join-Path $env:LOCALAPPDATA "Programs\Git\bin\bash.exe")
+    )
+    $git = Get-Command git.exe -ErrorAction SilentlyContinue
+    if ($git) {
+        $gitRoot = Split-Path (Split-Path $git.Source -Parent) -Parent
+        $candidates += Join-Path $gitRoot "bin\bash.exe"
+    }
+
+    foreach ($candidate in $candidates) {
+        if (Test-Path $candidate) {
+            return $true
+        }
+    }
+    return $false
+}
+
 function Install-WinGetPackage([string]$Id, [string]$Name) {
     Write-Step "Installing $Name with WinGet"
     & winget install --id $Id --exact --accept-package-agreements --accept-source-agreements
@@ -87,8 +112,8 @@ function Install-WinGetPackage([string]$Id, [string]$Name) {
 function Install-Prerequisites {
     Update-ProcessPath
     $needsNode = -not (Test-SupportedNode)
-    $needsGit = -not (Get-Command git -ErrorAction SilentlyContinue)
-    $needsBash = -not (Test-Path (Join-Path $env:ProgramFiles "Git\bin\bash.exe"))
+    $needsGit = -not (Get-Command git.exe -ErrorAction SilentlyContinue)
+    $needsBash = -not (Test-BashAvailable)
 
     if ($needsNode -or $needsGit -or $needsBash) {
         if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
@@ -106,24 +131,33 @@ function Install-Prerequisites {
     if (-not (Test-SupportedNode)) {
         throw "Node.js 22.19.0 or newer is unavailable after installation. Open a new PowerShell window and rerun."
     }
-    if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
-        throw "npm is unavailable after installing Node.js. Open a new PowerShell window and rerun."
+    $npmCommand = Get-Command npm.cmd -ErrorAction SilentlyContinue
+    if (-not $npmCommand) {
+        throw "npm.cmd is unavailable after installing Node.js. Open a new PowerShell window and rerun."
+    }
+    if (-not (Test-BashAvailable)) {
+        throw "A supported Bash shell is unavailable after installing Git for Windows."
     }
 }
 
 function Install-Pi {
-    if (Get-Command pi -ErrorAction SilentlyContinue) {
+    if (Get-Command pi.cmd -ErrorAction SilentlyContinue) {
         return
     }
 
+    $npmCommand = Get-Command npm.cmd -ErrorAction SilentlyContinue
+    if (-not $npmCommand) {
+        throw "npm.cmd is unavailable. Reinstall Node.js LTS or open a new PowerShell window."
+    }
+
     Write-Step "Installing Pi"
-    & npm install -g --ignore-scripts "@earendil-works/pi-coding-agent"
+    & $npmCommand.Source install -g --ignore-scripts "@earendil-works/pi-coding-agent"
     if ($LASTEXITCODE -ne 0) {
-        throw "npm failed to install Pi (exit code $LASTEXITCODE)."
+        throw "npm.cmd failed to install Pi (exit code $LASTEXITCODE)."
     }
     Update-ProcessPath
-    if (-not (Get-Command pi -ErrorAction SilentlyContinue)) {
-        throw "Pi was installed but is not on PATH. Open a new PowerShell window and rerun."
+    if (-not (Get-Command pi.cmd -ErrorAction SilentlyContinue)) {
+        throw "Pi was installed but pi.cmd is not on PATH. Open a new PowerShell window and rerun."
     }
 }
 
