@@ -340,29 +340,9 @@ async function mergePublicSettings(includeModelDefaults) {
   await writeFile(settingsPath, `${JSON.stringify(mergedSettings, null, 2)}\n`, "utf8");
 }
 
-const LEGACY_FOOTER_PACKAGE = "git:github.com/Xichun123/pi-cometix-footer";
-
-function packageSource(entry) {
-  if (typeof entry === "string") {
-    return entry;
-  }
-  return entry && typeof entry === "object" ? entry.source : undefined;
-}
-
-async function removeLegacyFooter() {
-  const settings = await readJson(path.join(agentDir, "settings.json"));
-  const packages = Array.isArray(settings.packages) ? settings.packages : [];
-  if (!packages.some((entry) => packageSource(entry) === LEGACY_FOOTER_PACKAGE)) {
-    return;
-  }
-
-  console.log("  removing pi-cometix-footer (fixed ANSI colors conflict with Matugen)");
-  run(commandName("pi"), ["remove", LEGACY_FOOTER_PACKAGE]);
-}
 
 async function installLocalPackages() {
   console.log("\n[4/6] Installing local Pi packages");
-  await removeLegacyFooter();
   const extensionsDir = path.join(repoDir, "extensions");
   const entries = await readdir(extensionsDir, { withFileTypes: true });
   const packageDirs = [];
@@ -479,5 +459,5 @@ if (installerOptions.dryRun) {
   if (backupDir) {
     console.log(`Backup: ${backupDir}`);
   }
-  console.log("Next: run pi, then use /login to authenticate a provider.");
+  console.log("Next: run pi, use /provider add to configure a provider, then select it with /model.");
 }

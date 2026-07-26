@@ -71,8 +71,6 @@ node install.mjs
 4. 恢复技能、主题、独立扩展和公开配置。
 5. 安装仓库内 package 和已检查的外部 package 清单。
 
-升级时，安装器会移除旧版 `pi-cometix-footer` package。它使用固定 ANSI 颜色，并会与支持主题联动的 `matugen-chrome` footer 争夺渲染控制权。
-
 provider 凭据、模型注册表、API key、会话和环境变量继续保留在各台机器上。
 
 推荐默认值适合全新安装：
@@ -125,11 +123,12 @@ pi --version
 pi list
 ```
 
-启动 Pi 并登录 provider：
+启动 Pi，使用 `pi-provider` 配置自定义 provider，然后选择对应模型：
 
 ```text
 pi
-/login
+/provider add
+/model
 ```
 
 启用浏览器自动化或 RTK 后，运行对应检查：

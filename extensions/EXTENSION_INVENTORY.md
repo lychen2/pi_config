@@ -46,6 +46,8 @@ Eight package directories install from this repository.
 | `@tmustier/pi-raw-paste` | 0.1.3 | One-shot raw paste support |
 | `pi-autoresearch` | 1.6.2 | Autonomous experiment loop |
 | `@monotykamary/pi-tps` | 1.3.3 | Token-generation speed display |
+| `pi-cometix-footer` | 1.0.4 | Footer data source overridden by the theme-aware `matugen-chrome` renderer |
+| `pi-provider` | 1.3.1 | Interactive custom-provider configuration and capability checks |
 
 ## Resource-Only Package
 
