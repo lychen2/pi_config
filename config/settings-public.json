@@ -1,17 +1,11 @@
 {
   "defaultProvider": "manager",
-  "defaultModel": "gpt-5.6-sol",
-  "defaultThinkingLevel": "xhigh",
+  "defaultModel": "gpt-5.6-terra",
+  "defaultThinkingLevel": "high",
   "theme": "matugen",
   "quietStartup": true,
   "hideThinkingBlock": false,
   "enableSkillCommands": true,
-  "skills": [
-    "~/.claude/plugins/cache/academic-research-skills/academic-research-skills/3.10.0/academic-paper-reviewer",
-    "~/.claude/plugins/cache/academic-research-skills/academic-research-skills/3.10.0/academic-paper",
-    "~/.claude/plugins/cache/academic-research-skills/academic-research-skills/3.10.0/academic-pipeline",
-    "~/.claude/plugins/cache/academic-research-skills/academic-research-skills/3.10.0/deep-research"
-  ],
   "desktopSkillOverrides": {
     "name:alphafold2": false,
     "name:boltz": false,

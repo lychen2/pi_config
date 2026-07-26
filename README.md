@@ -22,7 +22,13 @@ A portable backup of extensions, skills, themes, and public configuration for th
 | `skills/` | 58 `SKILL.md` definitions, including nested collections | Sync to `~/.pi/agent/skills/` |
 | `config/` | Public Pi settings, system guidance, extension state, and the external package manifest | Review, then copy or merge individual files |
 | `themes/` | 2 Matugen themes | Copy to `~/.pi/agent/themes/` |
-| `docs/images/` | README screenshots | No installation required |
+| `docs/` | Onboarding Wiki, extension and skill catalogs, plus README screenshots | Open [`docs/WIKI.zh-CN.md`](docs/WIKI.zh-CN.md) |
+
+## Documentation
+
+- [Quick-start Wiki (Simplified Chinese)](docs/WIKI.zh-CN.md)
+- [Extension catalog (Simplified Chinese)](docs/extensions.zh-CN.md)
+- [Skill catalog (Simplified Chinese)](docs/skills.zh-CN.md)
 
 ## Install
 

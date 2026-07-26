@@ -22,7 +22,13 @@
 | `skills/` | 58 个 `SKILL.md` 定义，包含嵌套技能集合 | 同步到 `~/.pi/agent/skills/` |
 | `config/` | Pi 公开设置、系统规则、扩展状态和外部 package 清单 | 检查后按需复制或合并 |
 | `themes/` | 2 个 Matugen 主题 | 复制到 `~/.pi/agent/themes/` |
-| `docs/images/` | README 截图 | 无需安装 |
+| `docs/` | 上手 Wiki、扩展和技能目录，以及 README 截图 | 打开 [`docs/WIKI.zh-CN.md`](docs/WIKI.zh-CN.md) |
+
+## Wiki
+
+- [快速上手](docs/WIKI.zh-CN.md)
+- [扩展目录](docs/extensions.zh-CN.md)
+- [技能目录](docs/skills.zh-CN.md)
 
 ## 安装
 

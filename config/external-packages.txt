@@ -14,7 +14,6 @@ npm:@narumitw/pi-btw
 npm:pi-rtk-optimizer
 npm:pi-cache-optimizer
 npm:pi-agent-browser-native
-npm:pi-sensitive-guard
 npm:pi-add-dir
 npm:@tmustier/pi-raw-paste
 npm:@victor-software-house/pi-curated-themes

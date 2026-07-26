@@ -42,7 +42,6 @@ Eight package directories install from this repository.
 | `pi-rtk-optimizer` | 0.9.0 | RTK command and output compaction |
 | `pi-cache-optimizer` | 2.6.22 | Prompt and provider-cache optimization |
 | `pi-agent-browser-native` | 0.2.72 | Native bridge to the upstream `agent-browser` CLI |
-| `pi-sensitive-guard` | 0.5.0 | Sensitive-file protection and optional output redaction |
 | `pi-add-dir` | 1.3.1 | External-directory context loading |
 | `@tmustier/pi-raw-paste` | 0.1.3 | One-shot raw paste support |
 | `pi-autoresearch` | 1.6.2 | Autonomous experiment loop |
