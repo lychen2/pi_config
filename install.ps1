@@ -36,7 +36,19 @@ $PiConfigHome = if ($env:PI_CONFIG_HOME) {
 $ArchiveUrl = if ($env:PI_CONFIG_ARCHIVE_URL) {
     $env:PI_CONFIG_ARCHIVE_URL
 } else {
-    "https://github.com/lychen2/pi_config/archive/refs/heads/main.zip"
+    try {
+        $headers = @{
+            Accept = "application/vnd.github+json"
+            "User-Agent" = "pi-config-installer"
+        }
+        $latestCommit = Invoke-RestMethod `
+            -Uri "https://api.github.com/repos/lychen2/pi_config/commits/main" `
+            -Headers $headers `
+            -UseBasicParsing
+        "https://github.com/lychen2/pi_config/archive/$($latestCommit.sha).zip"
+    } catch {
+        throw "Failed to resolve the latest pi_config commit: $($_.Exception.Message)"
+    }
 }
 
 function Write-Step([string]$Message) {
