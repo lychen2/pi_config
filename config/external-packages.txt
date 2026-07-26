@@ -6,6 +6,7 @@ npm:@narumitw/pi-plan-mode
 npm:@juicesharp/rpiv-ask-user-question
 npm:pi-hashline-edit-pro
 npm:pi-slopchop
+npm:pi-workspace-history
 npm:@narumitw/pi-goal
 npm:@narumitw/pi-subagents
 npm:@juicesharp/rpiv-todo

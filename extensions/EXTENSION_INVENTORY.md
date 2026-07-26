@@ -34,6 +34,7 @@ Eight package directories install from this repository.
 | `@juicesharp/rpiv-ask-user-question` | 2.1.0 | Structured user questions |
 | `pi-hashline-edit-pro` | 0.17.9 | Hash-anchored read and replace tools |
 | `pi-slopchop` | 0.10.1 | Terminal code review and annotations |
+| `pi-workspace-history` | 0.2.2 | Workspace undo/redo history |
 | `@narumitw/pi-goal` | 0.31.0 | Autonomous goal workflow |
 | `@narumitw/pi-subagents` | 0.31.0 | Isolated subagent delegation |
 | `@juicesharp/rpiv-todo` | 2.1.0 | Persistent Todo tool and overlay |
