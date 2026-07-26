@@ -71,6 +71,8 @@ The installer performs these steps in order:
 4. Restores skills, themes, standalone extensions, and public configuration.
 5. Installs local packages and the reviewed external package manifest.
 
+During upgrades, the installer removes the legacy `pi-cometix-footer` package. It uses fixed ANSI colors and competes with the theme-aware `matugen-chrome` footer.
+
 Provider credentials, model registries, API keys, sessions, and environment variables remain local to each machine.
 
 Recommended defaults are designed for a clean installation:
