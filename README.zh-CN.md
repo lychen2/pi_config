@@ -24,9 +24,10 @@
 
 | 路径 | 内容 | 恢复方式 |
 | --- | --- | --- |
-| `extensions/` | 6 个可安装的本地扩展、1 个独立 TUI 扩展，以及扩展专用配置 | 使用 `pi install` 安装本地 package，并复制独立扩展文件 |
-| `skills/` | 43 个可发现技能和若干纯参考技能集合 | 同步到 `~/.pi/agent/skills/` |
-| `config/` | slim-skills 和外部 package 清单 | 复制 JSON 配置并安装 package 清单 |
+| `extensions/` | 7 个可安装的本地扩展、2 个独立扩展，以及扩展专用配置 | 使用 `pi install` 安装本地 package，并复制独立扩展文件 |
+| `skills/` | 57 个可发现技能和若干纯参考技能集合 | 同步到 `~/.pi/agent/skills/` |
+| `config/` | 公开运行偏好、系统指导、deferred/slim/翻译状态和外部 package 清单 | 按文档复制或合并 |
+| `themes/` | 当前使用的 2 个 Matugen 主题 | 复制到 `~/.pi/agent/themes/` |
 | `docs/images/` | README 截图 | 仅用于文档 |
 
 ## 在新机器上恢复
@@ -49,9 +50,18 @@ cp -a "$HOME/.pi/agent" "$backup/agent" 2>/dev/null || true
 ### 2. 恢复技能与无敏感配置
 
 ```bash
-mkdir -p "$HOME/.pi/agent/skills" "$HOME/.pi/agent"
+mkdir -p "$HOME/.pi/agent/skills" "$HOME/.pi/agent/extensions" "$HOME/.pi/agent/themes"
 rsync -a skills/ "$HOME/.pi/agent/skills/"
+cp config/APPEND_SYSTEM.md "$HOME/.pi/agent/APPEND_SYSTEM.md"
 cp config/slim-skills-whitelist.json "$HOME/.pi/agent/slim-skills-whitelist.json"
+cp config/translate-submit.json "$HOME/.pi/agent/translate-submit.json"
+cp themes/*.json "$HOME/.pi/agent/themes/"
+
+settings="$HOME/.pi/agent/settings.json"
+test -f "$settings" || printf '{}\n' > "$settings"
+tmp=$(mktemp)
+jq -s '.[0] * .[1]' "$settings" config/settings-public.json > "$tmp"
+mv "$tmp" "$settings"
 ```
 
 ### 3. 安装仓库内扩展
@@ -62,7 +72,7 @@ for dir in extensions/pi-*/; do
 done
 
 mkdir -p "$HOME/.pi/agent/extensions"
-cp extensions/matugen-chrome.ts "$HOME/.pi/agent/extensions/"
+cp extensions/adhd-mode.ts extensions/matugen-chrome.ts "$HOME/.pi/agent/extensions/"
 ```
 
 ### 4. 安装命令行依赖
@@ -117,7 +127,7 @@ pi list
 npm exec --prefix "$HOME/.pi/agent/npm" -- pi-agent-browser-doctor
 ```
 
-安装后启动新的 Pi 会话。启用 RTK 支持时可运行 `/rtk verify`，并用 `/sensitive-guard status` 查看当前保护策略。
+安装后启动新的 Pi 会话。启用 RTK 时运行 `/rtk verify`，并用 `/sensitive-guard status` 查看保护策略。初始工具集应包含 `load_tools`；已配置 extension 的工具保持隐藏，直到 `load_tools` 精确激活其中一个工具。
 
 ## 本地扩展
 
@@ -125,10 +135,12 @@ npm exec --prefix "$HOME/.pi/agent/npm" -- pi-agent-browser-doctor
 | --- | --- | --- |
 | [`pi-brand-header`](extensions/pi-brand-header/) | 显示模型、主题、工作区、技能数和工具数，并适配窄终端 | `/logo` |
 | [`pi-agent-browser-compat`](extensions/pi-agent-browser-compat/) | 归一化 provider 填充的 `agent_browser` 字段，不修改第三方 wrapper | `PI_AGENT_BROWSER_COMPAT_DISABLE=1` |
+| [`pi-deferred-tools`](extensions/pi-deferred-tools/) | 按 extension 自动归组，每次 loader 调用只激活一个延迟工具 | `/deferred-tools` |
 | [`pi-manager-models`](extensions/pi-manager-models/) | 刷新 OpenAI-compatible provider 的模型目录，同时保留本地覆盖项 | provider `baseUrl` 与可选环境变量 |
-| [`pi-slim-skills`](extensions/pi-slim-skills/) | 压缩模型可见的技能索引，同时保留技能调用能力 | `/slim-skills` |
+| [`pi-slim-skills`](extensions/pi-slim-skills/) | 压缩技能索引，并可在每个 prompt 中去重注入指定技能正文 | `/slim-skills` |
 | [`pi-todo-guard`](extensions/pi-todo-guard/) | Todo 中仍有未完成任务时自动继续当前运行 | `PI_TODO_GUARD_DISABLE=1` |
 | [`pi-tool-rails`](extensions/pi-tool-rails/) | 添加主题化工具标签、结果面板以及消息和输入框样式 | `PI_TOOL_RAILS_DISABLE_USER_FRAME=1` |
+| [`adhd-mode.ts`](extensions/adhd-mode.ts) | 注入 ADHD 响应规则，并提供会话持久化开关 | `/adhd` |
 | [`matugen-chrome.ts`](extensions/matugen-chrome.ts) | 绘制主题化 footer 和 working indicator，显示模型、Git、上下文和 token 状态 | `/matugen-chrome` |
 
 每个 package 目录都包含独立的配置和开发说明。常用检查命令：
@@ -146,11 +158,11 @@ npm pack --dry-run
 
 | 类别 | 示例 |
 | --- | --- |
-| 写作与交互 | `humanizer`、`humanizer-zh`、`i-have-adhd` |
-| 科研与可视化 | `scientific-visualization`、`sa.sympy`、`air.academic-plotting` |
-| 文献与研究 | `sa.citation-management`、`air.research-manager`、`nature-skills` |
-| 文件处理 | `mineru-file-processing` |
-| Agent 与编码指导 | `karpathy-guidelines` 和部分 Claude Science 技能 |
+| 写作与交互 | `humanizer`、`humanizer-zh`、`i-have-adhd`、`academic-paper` |
+| 科研与可视化 | `scientific-visualization`、`sa.sympy`、`air.academic-plotting`、`mineru` |
+| 文献与研究 | `sa.citation-management`、`air.research-manager`、`nature-skills`、`deep-research` |
+| 文件处理 | `mineru-file-processing`、`pubmed-database`、`literature-search-openalex` |
+| Agent 与编码指导 | `karpathy-guidelines`、`agents-progressive-disclosure`、`workflow-skill-creator` |
 
 按目录名调用可发现技能：
 

@@ -1,0 +1,21 @@
+{
+  "name": "pi-deferred-tools",
+  "version": "0.1.0",
+  "description": "Extension-aware single-tool deferred loader for Pi",
+  "license": "MIT",
+  "type": "module",
+  "keywords": ["pi-package", "pi", "deferred-tools", "tool-loading"],
+  "files": ["extensions", "README.md", "config.example.json", "LICENSE"],
+  "pi": { "extensions": ["./extensions/deferred-tools.ts"] },
+  "scripts": { "typecheck": "tsc --noEmit" },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "typebox": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "^0.82.0",
+    "@types/node": "^24.0.0",
+    "typebox": "^1.1.0",
+    "typescript": "^5.9.0"
+  }
+}

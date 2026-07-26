@@ -8,5 +8,8 @@
     "mineru",
     "mineru-file-processing",
     "scientific-visualization"
+  ],
+  "inject": [
+    "i-have-adhd"
   ]
 }

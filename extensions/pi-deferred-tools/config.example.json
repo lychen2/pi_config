@@ -1,0 +1,10 @@
+{
+  "loader": {
+    "name": "load_tools",
+    "label": "Load Tools"
+  },
+  "extensions": [
+    "npm:@narumitw/pi-subagents",
+    "npm:pi-agent-browser-native"
+  ]
+}

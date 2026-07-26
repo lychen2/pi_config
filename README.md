@@ -24,9 +24,10 @@ A public backup of reusable extensions, skills, and configuration snippets for t
 
 | Path | Contents | Restore method |
 | --- | --- | --- |
-| `extensions/` | Six installable local extensions, one standalone TUI extension, and package-specific configuration | Install local packages with `pi install`; copy the standalone file |
-| `skills/` | 43 discoverable skills plus reference-only skill collections | Sync into `~/.pi/agent/skills/` |
-| `config/` | Slim-skill and external-package manifests | Copy the JSON file and install the package list |
+| `extensions/` | Seven installable local extensions, two standalone extensions, and package-specific configuration | Install local packages with `pi install`; copy the standalone files |
+| `skills/` | 57 discoverable skills plus reference-only skill collections | Sync into `~/.pi/agent/skills/` |
+| `config/` | Public runtime preferences, system guidance, deferred/slim/translation state, and the external-package manifest | Copy or merge the documented files |
+| `themes/` | Two current Matugen themes | Copy into `~/.pi/agent/themes/` |
 | `docs/images/` | README screenshots | Documentation only |
 
 ## Restore on a new machine
@@ -49,9 +50,18 @@ cp -a "$HOME/.pi/agent" "$backup/agent" 2>/dev/null || true
 ### 2. Restore skills and safe configuration
 
 ```bash
-mkdir -p "$HOME/.pi/agent/skills" "$HOME/.pi/agent"
+mkdir -p "$HOME/.pi/agent/skills" "$HOME/.pi/agent/extensions" "$HOME/.pi/agent/themes"
 rsync -a skills/ "$HOME/.pi/agent/skills/"
+cp config/APPEND_SYSTEM.md "$HOME/.pi/agent/APPEND_SYSTEM.md"
 cp config/slim-skills-whitelist.json "$HOME/.pi/agent/slim-skills-whitelist.json"
+cp config/translate-submit.json "$HOME/.pi/agent/translate-submit.json"
+cp themes/*.json "$HOME/.pi/agent/themes/"
+
+settings="$HOME/.pi/agent/settings.json"
+test -f "$settings" || printf '{}\n' > "$settings"
+tmp=$(mktemp)
+jq -s '.[0] * .[1]' "$settings" config/settings-public.json > "$tmp"
+mv "$tmp" "$settings"
 ```
 
 ### 3. Install the repository extensions
@@ -62,7 +72,7 @@ for dir in extensions/pi-*/; do
 done
 
 mkdir -p "$HOME/.pi/agent/extensions"
-cp extensions/matugen-chrome.ts "$HOME/.pi/agent/extensions/"
+cp extensions/adhd-mode.ts extensions/matugen-chrome.ts "$HOME/.pi/agent/extensions/"
 ```
 
 ### 4. Install command-line dependencies
@@ -117,7 +127,7 @@ pi list
 npm exec --prefix "$HOME/.pi/agent/npm" -- pi-agent-browser-doctor
 ```
 
-Start a new Pi session after installation. Run `/rtk verify` inside the TUI if RTK support is enabled, and `/sensitive-guard status` to inspect the active protection policy.
+Start a new Pi session after installation. Run `/rtk verify` if RTK support is enabled and `/sensitive-guard status` to inspect protection. The initial tool set should include `load_tools`; tools owned by configured deferred extensions stay hidden until `load_tools` activates one exact tool.
 
 ## Local extensions
 
@@ -125,10 +135,12 @@ Start a new Pi session after installation. Run `/rtk verify` inside the TUI if R
 | --- | --- | --- |
 | [`pi-brand-header`](extensions/pi-brand-header/) | Responsive startup header with model, theme, workspace, skill, and tool information | `/logo` |
 | [`pi-agent-browser-compat`](extensions/pi-agent-browser-compat/) | Normalizes provider-filled `agent_browser` fields without modifying the third-party wrapper | `PI_AGENT_BROWSER_COMPAT_DISABLE=1` |
+| [`pi-deferred-tools`](extensions/pi-deferred-tools/) | Auto-groups tools by extension and activates one deferred tool per loader call | `/deferred-tools` |
 | [`pi-manager-models`](extensions/pi-manager-models/) | Refreshes an OpenAI-compatible provider's model catalog while preserving local overrides | Provider `baseUrl` and optional environment variables |
-| [`pi-slim-skills`](extensions/pi-slim-skills/) | Reduces the model-visible skill index while keeping skills callable | `/slim-skills` |
+| [`pi-slim-skills`](extensions/pi-slim-skills/) | Compresses the skill index and can inject selected skill bodies once per prompt | `/slim-skills` |
 | [`pi-todo-guard`](extensions/pi-todo-guard/) | Continues a run when Todo still contains unfinished tasks | `PI_TODO_GUARD_DISABLE=1` |
 | [`pi-tool-rails`](extensions/pi-tool-rails/) | Adds themed tool labels, result panels, and message/prompt framing | `PI_TOOL_RAILS_DISABLE_USER_FRAME=1` |
+| [`adhd-mode.ts`](extensions/adhd-mode.ts) | Injects the ADHD response rules and provides a session-persistent toggle | `/adhd` |
 | [`matugen-chrome.ts`](extensions/matugen-chrome.ts) | Draws a themed footer and working indicator with model, Git, context, and token status | `/matugen-chrome` |
 
 Each package directory contains its own development and configuration notes. Typical checks are:
@@ -146,11 +158,11 @@ Skills are grouped by the work they support:
 
 | Area | Examples |
 | --- | --- |
-| Writing and interaction | `humanizer`, `humanizer-zh`, `i-have-adhd` |
-| Scientific work and visualization | `scientific-visualization`, `sa.sympy`, `air.academic-plotting` |
-| Literature and research | `sa.citation-management`, `air.research-manager`, `nature-skills` |
-| File processing | `mineru-file-processing` |
-| Agent and coding guidance | `karpathy-guidelines` and selected Claude Science skills |
+| Writing and interaction | `humanizer`, `humanizer-zh`, `i-have-adhd`, `academic-paper` |
+| Scientific work and visualization | `scientific-visualization`, `sa.sympy`, `air.academic-plotting`, `mineru` |
+| Literature and research | `sa.citation-management`, `air.research-manager`, `nature-skills`, `deep-research` |
+| File processing | `mineru-file-processing`, `pubmed-database`, `literature-search-openalex` |
+| Agent and coding guidance | `karpathy-guidelines`, `agents-progressive-disclosure`, `workflow-skill-creator` |
 
 Call a discoverable skill by directory name:
 

@@ -7,7 +7,10 @@
   "keywords": ["pi-package", "pi", "tools", "theme", "tui"],
   "files": ["index.ts", "compact-shell.ts", "result-bridge.ts", "prompt-frame.ts", "README.md", "LICENSE"],
   "pi": { "extensions": ["./compact-shell.ts", "./index.ts", "./result-bridge.ts", "./prompt-frame.ts"] },
-  "scripts": { "typecheck": "tsc --noEmit" },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "typecheck": "tsc --noEmit"
+  },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "*",
     "@earendil-works/pi-tui": "*"
