@@ -24,7 +24,7 @@ A public backup of reusable extensions, skills, and configuration snippets for t
 
 | Path | Contents | Restore method |
 | --- | --- | --- |
-| `extensions/` | Seven installable local extensions, two standalone extensions, and package-specific configuration | Install local packages with `pi install`; copy the standalone files |
+| `extensions/` | Eight installable local extensions, two standalone extensions, and package-specific configuration | Install local packages with `pi install`; copy the standalone files |
 | `skills/` | 57 discoverable skills plus reference-only skill collections | Sync into `~/.pi/agent/skills/` |
 | `config/` | Public runtime preferences, system guidance, deferred/slim/translation state, and the external-package manifest | Copy or merge the documented files |
 | `themes/` | Two current Matugen themes | Copy into `~/.pi/agent/themes/` |
@@ -118,7 +118,7 @@ done < config/external-packages.txt
 
 The package list now includes `pi-sensitive-guard`. It protects sensitive files and scans writes, commits, and pushes for common credential patterns. Its default mode blocks protected reads; redacted reads are opt-in through `/sensitive-guard`.
 
-Review the package list first if you only need part of the setup. The commented local package depends on a source directory that is not included in this repository.
+Review the package list first if you only need part of the setup.
 
 ### 6. Restart and verify
 

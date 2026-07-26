@@ -1,0 +1,6 @@
+{
+  "models": {
+    "openai": "gpt-4.1-nano",
+    "anthropic": "claude-haiku-4-5"
+  }
+}

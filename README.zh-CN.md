@@ -24,7 +24,7 @@
 
 | 路径 | 内容 | 恢复方式 |
 | --- | --- | --- |
-| `extensions/` | 7 个可安装的本地扩展、2 个独立扩展，以及扩展专用配置 | 使用 `pi install` 安装本地 package，并复制独立扩展文件 |
+| `extensions/` | 8 个可安装的本地扩展、2 个独立扩展，以及扩展专用配置 | 使用 `pi install` 安装本地 package，并复制独立扩展文件 |
 | `skills/` | 57 个可发现技能和若干纯参考技能集合 | 同步到 `~/.pi/agent/skills/` |
 | `config/` | 公开运行偏好、系统指导、deferred/slim/翻译状态和外部 package 清单 | 按文档复制或合并 |
 | `themes/` | 当前使用的 2 个 Matugen 主题 | 复制到 `~/.pi/agent/themes/` |
@@ -118,7 +118,7 @@ done < config/external-packages.txt
 
 package 清单已加入 `pi-sensitive-guard`。它会保护敏感文件，并扫描写入、commit 和 push 中常见的凭据模式。默认策略直接阻止受保护的读取；如需返回脱敏内容，可通过 `/sensitive-guard` 手动开启。
 
-只需要部分功能时，请先编辑 package 清单。清单中被注释的本地 package 依赖仓库未包含的源码目录。
+只需要部分功能时，请先编辑 package 清单。
 
 ### 6. 重启并验证
 

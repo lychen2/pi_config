@@ -20,6 +20,3 @@ npm:@victor-software-house/pi-curated-themes
 npm:pi-autoresearch
 npm:@monotykamary/pi-tps
 git:github.com/Xichun123/pi-cometix-footer
-
-# Local-only package from the original machine. Its source is not in this repo.
-# ../../pi-translate-submit

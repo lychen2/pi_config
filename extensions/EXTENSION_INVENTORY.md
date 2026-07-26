@@ -13,9 +13,9 @@ Audited against Pi 0.82 extension, package, TUI, keybinding, provider, and lifec
 | `pi-slim-skills` | Compressed skill index and deduplicated full-body injection | `pi-slim-skills/index.ts` |
 | `pi-todo-guard` | Continue settled runs while Todo tasks remain | `pi-todo-guard/index.ts` |
 | `pi-tool-rails` | Soft tool rails, semantic tool headers, user-message frame, persistent prompt frame | `pi-tool-rails/index.ts`, `pi-tool-rails/prompt-frame.ts` |
-| `pi-translate-submit` | Translate editor input without submitting it | `../../pi-translate-submit/index.ts` |
+| `pi-translate-submit` | Translate editor input without submitting it | `pi-translate-submit/index.ts` |
 
-Seven package directories install from this repository. `pi-translate-submit` remains an external local package configured through `~/.pi/agent/settings.json`.
+Eight package directories install from this repository.
 
 ## Standalone Extensions
 
@@ -63,5 +63,5 @@ Seven package directories install from this repository. `pi-translate-submit` re
 - Tool overrides skip built-ins already owned by another extension.
 - Long generic tool output is bounded and uses the configured expansion key hint.
 - Session-scoped compatibility patches restore original methods on shutdown.
-- All seven repository packages pass TypeScript; translation passes its 12 behavior tests.
-- All seven repository packages pass isolated Pi loading and `npm pack --dry-run` inspection.
+- All eight repository packages pass TypeScript; translation passes its 12 behavior tests.
+- All eight repository packages pass isolated Pi loading and `npm pack --dry-run` inspection.
