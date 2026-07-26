@@ -157,7 +157,7 @@ function run(command, args, options = {}) {
 
   const result = spawnSync(command, args, {
     cwd: options.cwd || repoDir,
-    env: process.env,
+    env: options.env || process.env,
     stdio: "inherit",
     shell: options.shell ?? commandNeedsShell(command),
   });
@@ -381,7 +381,15 @@ async function installExternalPackages(enabled) {
       console.warn(`  skip ${packageSource}: Git is unavailable`);
       continue;
     }
-    run(commandName("pi"), ["install", packageSource]);
+    const commandOptions = {};
+    if (packageSource === "npm:@monotykamary/pi-tps") {
+      console.log("  skipping pi-tps developer-only Git hook setup");
+      commandOptions.env = {
+        ...process.env,
+        npm_config_ignore_scripts: "true",
+      };
+    }
+    run(commandName("pi"), ["install", packageSource], commandOptions);
   }
 }
 
