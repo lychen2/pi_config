@@ -113,6 +113,10 @@ function commandName(name) {
   return isWindows ? `${name}.cmd` : name;
 }
 
+function commandNeedsShell(command) {
+  return isWindows && /\.(cmd|bat)$/i.test(command);
+}
+
 function formatCommand(command, args) {
   return [command, ...args]
     .map((part) => (/^[A-Za-z0-9_./:@=-]+$/.test(part) ? part : JSON.stringify(part)))
@@ -129,7 +133,7 @@ function run(command, args, options = {}) {
     cwd: options.cwd || repoDir,
     env: process.env,
     stdio: "inherit",
-    shell: options.shell || false,
+    shell: options.shell ?? commandNeedsShell(command),
   });
 
   if (result.error) {
@@ -144,7 +148,7 @@ function commandExists(command, args = ["--version"]) {
   const result = spawnSync(command, args, {
     env: process.env,
     stdio: "ignore",
-    shell: false,
+    shell: commandNeedsShell(command),
   });
   return !result.error && result.status === 0;
 }

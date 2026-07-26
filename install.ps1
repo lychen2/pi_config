@@ -167,27 +167,10 @@ function Install-Pi {
     }
 }
 
-function Find-Repository([bool]$AllowDownload = $true) {
-    if ($PSScriptRoot -and
-        (Test-Path (Join-Path $PSScriptRoot "install.mjs")) -and
-        (Test-Path (Join-Path $PSScriptRoot "config"))) {
-        return $PSScriptRoot
-    }
+function Sync-Repository([string]$Destination) {
+    $action = if (Test-Path $Destination) { "Refreshing" } else { "Downloading" }
+    Write-Step "$action pi_config at $Destination"
 
-    if ((Test-Path (Join-Path $PiConfigHome "install.mjs")) -and
-        (Test-Path (Join-Path $PiConfigHome "config"))) {
-        return $PiConfigHome
-    }
-
-    if (-not $AllowDownload) {
-        throw "Dry-run requires an existing local pi_config checkout."
-    }
-
-    if (Test-Path $PiConfigHome) {
-        throw "$PiConfigHome exists but is not a complete pi_config checkout. Move it, then rerun."
-    }
-
-    Write-Step "Downloading pi_config to $PiConfigHome"
     $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("pi-config-" + [guid]::NewGuid())
     $archive = Join-Path $tempRoot "pi_config.zip"
     $expanded = Join-Path $tempRoot "expanded"
@@ -200,13 +183,48 @@ function Find-Repository([bool]$AllowDownload = $true) {
         if (-not $source -or -not (Test-Path (Join-Path $source.FullName "install.mjs"))) {
             throw "The downloaded archive does not contain install.mjs."
         }
-        Move-Item -Path $source.FullName -Destination $PiConfigHome
+
+        if (Test-Path $Destination) {
+            Get-ChildItem -Path $source.FullName -Force | ForEach-Object {
+                Copy-Item -Path $_.FullName -Destination $Destination -Recurse -Force
+            }
+        } else {
+            Move-Item -Path $source.FullName -Destination $Destination
+        }
     } finally {
         if (Test-Path $tempRoot) {
             Remove-Item -Path $tempRoot -Recurse -Force
         }
     }
+}
 
+function Find-Repository([bool]$AllowDownload = $true) {
+    if ($PSScriptRoot -and
+        (Test-Path (Join-Path $PSScriptRoot "install.mjs")) -and
+        (Test-Path (Join-Path $PSScriptRoot "config"))) {
+        return $PSScriptRoot
+    }
+
+    $hasRepository = (
+        (Test-Path (Join-Path $PiConfigHome "install.mjs")) -and
+        (Test-Path (Join-Path $PiConfigHome "config"))
+    )
+    if ($hasRepository) {
+        if ($AllowDownload -and -not (Test-Path (Join-Path $PiConfigHome ".git"))) {
+            Sync-Repository $PiConfigHome
+        }
+        return $PiConfigHome
+    }
+
+    if (-not $AllowDownload) {
+        throw "Dry-run requires an existing local pi_config checkout."
+    }
+
+    if (Test-Path $PiConfigHome) {
+        throw "$PiConfigHome exists but is not a complete pi_config checkout. Move it, then rerun."
+    }
+
+    Sync-Repository $PiConfigHome
     return $PiConfigHome
 }
 
