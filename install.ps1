@@ -103,10 +103,16 @@ function Test-BashAvailable {
 function Install-WinGetPackage([string]$Id, [string]$Name) {
     Write-Step "Installing $Name with WinGet"
     & winget install --id $Id --exact --accept-package-agreements --accept-source-agreements
-    if ($LASTEXITCODE -ne 0) {
-        throw "WinGet failed to install $Name (exit code $LASTEXITCODE)."
-    }
+    $exitCode = $LASTEXITCODE
     Update-ProcessPath
+
+    if ($exitCode -eq -1978335189) {
+        Write-Host "$Name is already installed and has no available upgrade."
+        return
+    }
+    if ($exitCode -ne 0) {
+        throw "WinGet failed to install $Name (exit code $exitCode)."
+    }
 }
 
 function Install-Prerequisites {
