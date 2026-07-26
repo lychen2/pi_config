@@ -24,16 +24,16 @@ A public backup of reusable extensions, skills, and configuration snippets for t
 
 | Path | Contents | Restore method |
 | --- | --- | --- |
-| `extensions/` | Five installable local extensions, one standalone TUI extension, and package-specific configuration | Install local packages with `pi install`; copy the standalone file |
+| `extensions/` | Six installable local extensions, one standalone TUI extension, and package-specific configuration | Install local packages with `pi install`; copy the standalone file |
 | `skills/` | 43 discoverable skills plus reference-only skill collections | Sync into `~/.pi/agent/skills/` |
-| `config/` | Slim-skill, deferred-tool, and external-package manifests | Copy the JSON files and install the package list |
+| `config/` | Slim-skill and external-package manifests | Copy the JSON file and install the package list |
 | `docs/images/` | README screenshots | Documentation only |
 
 ## Restore on a new machine
 
 ### Prerequisites
 
-Install pi, Git, Node.js/npm, and `rsync` before continuing. The optional `pi-rtk-optimizer` package also requires the official `rtk` binary.
+Install pi, Git, Node.js 22 or newer, npm, and `rsync` before continuing. Browser automation also needs the upstream `agent-browser` CLI. The optional `pi-rtk-optimizer` package requires the official `rtk` binary.
 
 ### 1. Clone and back up the current setup
 
@@ -52,7 +52,6 @@ cp -a "$HOME/.pi/agent" "$backup/agent" 2>/dev/null || true
 mkdir -p "$HOME/.pi/agent/skills" "$HOME/.pi/agent"
 rsync -a skills/ "$HOME/.pi/agent/skills/"
 cp config/slim-skills-whitelist.json "$HOME/.pi/agent/slim-skills-whitelist.json"
-cp config/deferred-tools.json "$HOME/.pi/agent/deferred-tools.json"
 ```
 
 ### 3. Install the repository extensions
@@ -66,9 +65,27 @@ mkdir -p "$HOME/.pi/agent/extensions"
 cp extensions/matugen-chrome.ts "$HOME/.pi/agent/extensions/"
 ```
 
-### 4. Install external packages
+### 4. Install command-line dependencies
 
-Install RTK first if you are restoring `pi-rtk-optimizer`:
+#### Browser automation
+
+`agent-browser` is the upstream browser automation CLI. Install it manually before the Pi wrapper:
+
+```bash
+npm install -g agent-browser
+agent-browser install
+agent-browser --version
+```
+
+On a fresh Linux machine, run `agent-browser install --with-deps` if Chrome system libraries are also missing.
+
+The external package list installs `pi-agent-browser-native`. That package wraps the `agent-browser` CLI and exposes it inside Pi as the `agent_browser` tool. These three names refer to different layers.
+
+The repository's `pi-agent-browser-compat` extension treats a valid `args` array as the primary mode, removes conflicting provider-filled mode fields, and strips unsupported stdin before the wrapper executes. Non-empty stdin for batch, eval, and auth workflows is preserved.
+
+#### RTK
+
+Install RTK if you are restoring `pi-rtk-optimizer`:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh
@@ -76,7 +93,9 @@ export PATH="$HOME/.local/bin:$PATH"
 rtk --version
 ```
 
-Then install the packages recorded in [`config/external-packages.txt`](config/external-packages.txt):
+### 5. Install external Pi packages
+
+Install the packages recorded in [`config/external-packages.txt`](config/external-packages.txt):
 
 ```bash
 while IFS= read -r package; do
@@ -87,21 +106,25 @@ while IFS= read -r package; do
 done < config/external-packages.txt
 ```
 
-Review the package list first if you only need part of the setup. The commented local packages depend on source directories that are not included in this repository.
+The package list now includes `pi-sensitive-guard`. It protects sensitive files and scans writes, commits, and pushes for common credential patterns. Its default mode blocks protected reads; redacted reads are opt-in through `/sensitive-guard`.
 
-### 5. Restart and verify
+Review the package list first if you only need part of the setup. The commented local package depends on a source directory that is not included in this repository.
+
+### 6. Restart and verify
 
 ```bash
 pi list
+npm exec --prefix "$HOME/.pi/agent/npm" -- pi-agent-browser-doctor
 ```
 
-Start a new pi session after installation. Run `/rtk verify` inside the TUI if RTK support is enabled.
+Start a new Pi session after installation. Run `/rtk verify` inside the TUI if RTK support is enabled, and `/sensitive-guard status` to inspect the active protection policy.
 
 ## Local extensions
 
 | Extension | Purpose | Main control |
 | --- | --- | --- |
 | [`pi-brand-header`](extensions/pi-brand-header/) | Responsive startup header with model, theme, workspace, skill, and tool information | `/logo` |
+| [`pi-agent-browser-compat`](extensions/pi-agent-browser-compat/) | Normalizes provider-filled `agent_browser` fields without modifying the third-party wrapper | `PI_AGENT_BROWSER_COMPAT_DISABLE=1` |
 | [`pi-manager-models`](extensions/pi-manager-models/) | Refreshes an OpenAI-compatible provider's model catalog while preserving local overrides | Provider `baseUrl` and optional environment variables |
 | [`pi-slim-skills`](extensions/pi-slim-skills/) | Reduces the model-visible skill index while keeping skills callable | `/slim-skills` |
 | [`pi-todo-guard`](extensions/pi-todo-guard/) | Continues a run when Todo still contains unfinished tasks | `PI_TODO_GUARD_DISABLE=1` |
@@ -143,12 +166,25 @@ Some collections contain reference material without a top-level `SKILL.md`; pi w
 
 [`config/external-packages.txt`](config/external-packages.txt) is the editable source of truth for third-party npm and Git extensions. It covers:
 
-- file search, browser automation, previews, and external-directory loading
+- file search, `agent-browser` automation, previews, and external-directory loading
 - planning, goals, Todo management, structured questions, and subagents
 - hash-anchored editing, output compaction, caching, and research workflows
-- themes, footer status, token speed, and raw-paste support
+- sensitive-file protection, themes, footer status, token speed, and raw-paste support
 
 Package credentials and package-owned settings stay on the target machine.
+
+## Sensitive data protection
+
+`pi-sensitive-guard` is part of the external package manifest and requires Node.js 22 or newer. It runs automatically after Pi loads it.
+
+Its default policy blocks reads and writes involving `.env` files, private keys, credential files, and detected secret patterns. It also checks Git commit and push diffs. Open its TUI menu to review the policy or enable redacted read and shell output:
+
+```text
+/sensitive-guard
+/sensitive-guard status
+```
+
+Keep debug logging disabled unless you are diagnosing the extension. The guard reduces accidental exposure; repository review and the pre-commit scans below are still required.
 
 ## Updating this backup
 

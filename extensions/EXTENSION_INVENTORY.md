@@ -7,14 +7,14 @@ Audited against Pi 0.82 extension, package, TUI, keybinding, provider, and lifec
 | Package | Purpose | Source |
 | --- | --- | --- |
 | `pi-brand-header` | Responsive themed startup header | `pi-brand-header/index.ts` |
+| `pi-agent-browser-compat` | Normalize provider-filled `agent_browser` fields | `pi-agent-browser-compat/index.ts` |
 | `pi-manager-models` | Configurable provider model-catalog refresh | `pi-manager-models/index.ts` |
 | `pi-slim-skills` | Compressed model-visible skill index | `pi-slim-skills/index.ts` |
 | `pi-todo-guard` | Continue settled runs while Todo tasks remain | `pi-todo-guard/index.ts` |
 | `pi-tool-rails` | Soft tool rails, semantic tool headers, user-message frame, persistent prompt frame | `pi-tool-rails/index.ts`, `pi-tool-rails/prompt-frame.ts` |
-| `pi-deferred-tools` | Configurable on-demand tool-group loading | `../pi-deferred-tools/extensions/deferred-tools.ts` |
 | `pi-translate-submit` | Translate editor input without submitting it | `../../pi-translate-submit/index.ts` |
 
-The five former global single-file implementations now load these package sources through thin shims in `~/.pi/agent/extensions`. The two existing local packages remain configured through `~/.pi/agent/settings.json`.
+The five former global single-file implementations and the browser compatibility extension install from this repository. The remaining local package stays configured through `~/.pi/agent/settings.json`.
 
 ## Configured Third-Party Extensions
 
@@ -32,7 +32,8 @@ The five former global single-file implementations now load these package source
 | `@narumitw/pi-btw` | 0.25.0 | Side-question command |
 | `pi-rtk-optimizer` | 0.9.0 | RTK command and output compaction |
 | `pi-cache-optimizer` | 2.6.18 | Prompt and provider-cache optimization |
-| `pi-agent-browser-native` | 0.2.72 | Native browser automation tool |
+| `pi-agent-browser-native` | 0.2.72 | Native bridge to the upstream `agent-browser` CLI |
+| `pi-sensitive-guard` | 0.5.0 | Sensitive-file protection and optional output redaction |
 | `pi-add-dir` | 1.3.1 | External-directory context loading |
 | `@tmustier/pi-raw-paste` | 0.1.3 | One-shot raw paste support |
 | `pi-autoresearch` | 1.6.2 | Autonomous experiment loop |

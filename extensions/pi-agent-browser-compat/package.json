@@ -1,0 +1,21 @@
+{
+  "name": "pi-agent-browser-compat",
+  "version": "0.1.0",
+  "description": "Normalize provider-injected filler fields in Pi agent_browser calls",
+  "license": "MIT",
+  "type": "module",
+  "keywords": ["pi-package", "pi", "agent-browser", "compatibility"],
+  "files": ["index.ts", "README.md", "LICENSE"],
+  "pi": { "extensions": ["./index.ts"] },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --test tests/*.test.mjs",
+    "check": "npm run typecheck && npm test"
+  },
+  "peerDependencies": { "@earendil-works/pi-coding-agent": "*" },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "^0.82.0",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0"
+  }
+}

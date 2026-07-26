@@ -24,16 +24,16 @@
 
 | 路径 | 内容 | 恢复方式 |
 | --- | --- | --- |
-| `extensions/` | 5 个可安装的本地扩展、1 个独立 TUI 扩展，以及扩展专用配置 | 使用 `pi install` 安装本地 package，并复制独立扩展文件 |
+| `extensions/` | 6 个可安装的本地扩展、1 个独立 TUI 扩展，以及扩展专用配置 | 使用 `pi install` 安装本地 package，并复制独立扩展文件 |
 | `skills/` | 43 个可发现技能和若干纯参考技能集合 | 同步到 `~/.pi/agent/skills/` |
-| `config/` | slim-skills、deferred-tools 和外部 package 清单 | 复制 JSON 配置并安装 package 清单 |
+| `config/` | slim-skills 和外部 package 清单 | 复制 JSON 配置并安装 package 清单 |
 | `docs/images/` | README 截图 | 仅用于文档 |
 
 ## 在新机器上恢复
 
 ### 前置条件
 
-请先安装 pi、Git、Node.js/npm 和 `rsync`。可选扩展 `pi-rtk-optimizer` 还需要官方 `rtk` 二进制。
+请先安装 pi、Git、Node.js 22 或更高版本、npm 和 `rsync`。浏览器自动化还需要上游 `agent-browser` CLI。可选扩展 `pi-rtk-optimizer` 需要官方 `rtk` 二进制。
 
 ### 1. 克隆仓库并备份当前配置
 
@@ -52,7 +52,6 @@ cp -a "$HOME/.pi/agent" "$backup/agent" 2>/dev/null || true
 mkdir -p "$HOME/.pi/agent/skills" "$HOME/.pi/agent"
 rsync -a skills/ "$HOME/.pi/agent/skills/"
 cp config/slim-skills-whitelist.json "$HOME/.pi/agent/slim-skills-whitelist.json"
-cp config/deferred-tools.json "$HOME/.pi/agent/deferred-tools.json"
 ```
 
 ### 3. 安装仓库内扩展
@@ -66,9 +65,27 @@ mkdir -p "$HOME/.pi/agent/extensions"
 cp extensions/matugen-chrome.ts "$HOME/.pi/agent/extensions/"
 ```
 
-### 4. 安装外部 package
+### 4. 安装命令行依赖
 
-需要恢复 `pi-rtk-optimizer` 时，先安装 RTK：
+#### 浏览器自动化
+
+`agent-browser` 是上游浏览器自动化 CLI，需要在安装 Pi 桥接扩展前手动安装：
+
+```bash
+npm install -g agent-browser
+agent-browser install
+agent-browser --version
+```
+
+全新 Linux 系统缺少 Chrome 系统库时，改用 `agent-browser install --with-deps`。
+
+外部 package 清单会安装 `pi-agent-browser-native`。它负责调用 `agent-browser` CLI，并在 Pi 中提供名为 `agent_browser` 的工具。这三个名称对应不同层级。
+
+仓库内的 `pi-agent-browser-compat` 扩展会把合法 `args` 数组视为主模式，在 wrapper 执行前删除 provider 填充的冲突 mode 字段和不受支持的 stdin；batch、eval 和 auth 使用的非空 stdin 保持不变。
+
+#### RTK
+
+需要恢复 `pi-rtk-optimizer` 时安装 RTK：
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh
@@ -76,7 +93,9 @@ export PATH="$HOME/.local/bin:$PATH"
 rtk --version
 ```
 
-再安装 [`config/external-packages.txt`](config/external-packages.txt) 中记录的 package：
+### 5. 安装外部 Pi package
+
+安装 [`config/external-packages.txt`](config/external-packages.txt) 中记录的 package：
 
 ```bash
 while IFS= read -r package; do
@@ -87,21 +106,25 @@ while IFS= read -r package; do
 done < config/external-packages.txt
 ```
 
+package 清单已加入 `pi-sensitive-guard`。它会保护敏感文件，并扫描写入、commit 和 push 中常见的凭据模式。默认策略直接阻止受保护的读取；如需返回脱敏内容，可通过 `/sensitive-guard` 手动开启。
+
 只需要部分功能时，请先编辑 package 清单。清单中被注释的本地 package 依赖仓库未包含的源码目录。
 
-### 5. 重启并验证
+### 6. 重启并验证
 
 ```bash
 pi list
+npm exec --prefix "$HOME/.pi/agent/npm" -- pi-agent-browser-doctor
 ```
 
-安装后启动新的 pi 会话。启用 RTK 支持时，可在 TUI 中运行 `/rtk verify`。
+安装后启动新的 Pi 会话。启用 RTK 支持时可运行 `/rtk verify`，并用 `/sensitive-guard status` 查看当前保护策略。
 
 ## 本地扩展
 
 | 扩展 | 作用 | 主要控制方式 |
 | --- | --- | --- |
 | [`pi-brand-header`](extensions/pi-brand-header/) | 显示模型、主题、工作区、技能数和工具数，并适配窄终端 | `/logo` |
+| [`pi-agent-browser-compat`](extensions/pi-agent-browser-compat/) | 归一化 provider 填充的 `agent_browser` 字段，不修改第三方 wrapper | `PI_AGENT_BROWSER_COMPAT_DISABLE=1` |
 | [`pi-manager-models`](extensions/pi-manager-models/) | 刷新 OpenAI-compatible provider 的模型目录，同时保留本地覆盖项 | provider `baseUrl` 与可选环境变量 |
 | [`pi-slim-skills`](extensions/pi-slim-skills/) | 压缩模型可见的技能索引，同时保留技能调用能力 | `/slim-skills` |
 | [`pi-todo-guard`](extensions/pi-todo-guard/) | Todo 中仍有未完成任务时自动继续当前运行 | `PI_TODO_GUARD_DISABLE=1` |
@@ -143,12 +166,25 @@ npm pack --dry-run
 
 [`config/external-packages.txt`](config/external-packages.txt) 是第三方 npm 与 Git 扩展的可编辑安装清单，覆盖以下能力：
 
-- 文件搜索、浏览器自动化、预览和外部目录加载
+- 文件搜索、`agent-browser` 自动化、预览和外部目录加载
 - 计划、目标、Todo、结构化提问与 subagent
 - 哈希锚点编辑、输出压缩、缓存与研究工作流
-- 主题、footer 状态、token 速度和 raw paste
+- 敏感文件保护、主题、footer 状态、token 速度和 raw paste
 
 package 凭据和各 package 自己维护的设置保留在目标机器上。
+
+## 敏感数据保护
+
+`pi-sensitive-guard` 已加入外部 package 清单，需要 Node.js 22 或更高版本。Pi 加载扩展后会自动启用。
+
+默认策略会阻止涉及 `.env`、私钥、凭据文件和已识别密钥模式的读取与写入，同时检查 Git commit 和 push diff。通过 TUI 菜单可查看策略，或开启读取结果与 shell 输出脱敏：
+
+```text
+/sensitive-guard
+/sensitive-guard status
+```
+
+除非正在排查扩展问题，否则保持 debug 日志关闭。该扩展用于降低意外泄露风险；提交前仍需人工检查仓库并运行下方扫描命令。
 
 ## 更新备份
 

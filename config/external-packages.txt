@@ -13,6 +13,7 @@ npm:@narumitw/pi-btw
 npm:pi-rtk-optimizer
 npm:pi-cache-optimizer
 npm:pi-agent-browser-native
+npm:pi-sensitive-guard
 npm:pi-add-dir
 npm:@tmustier/pi-raw-paste
 npm:@victor-software-house/pi-curated-themes
@@ -20,6 +21,5 @@ npm:pi-autoresearch
 npm:@monotykamary/pi-tps
 git:github.com/Xichun123/pi-cometix-footer
 
-# Local-only packages from the original machine. Their source is not in this repo.
-# ../../Projects/pi-deferred-tools
+# Local-only package from the original machine. Its source is not in this repo.
 # ../../pi-translate-submit
