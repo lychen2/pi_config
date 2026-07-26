@@ -22,6 +22,32 @@ const homeDir = os.homedir();
 const defaultAgentDir = path.join(homeDir, ".pi", "agent");
 const agentDir = path.resolve(process.env.PI_CODING_AGENT_DIR || defaultAgentDir);
 
+function normalizeChildPath() {
+  const pathKey = Object.keys(process.env).find((key) => key.toLowerCase() === "path") || "PATH";
+  const nodeDirectory = path.dirname(process.execPath);
+  const currentEntries = (process.env[pathKey] || "").split(path.delimiter);
+  const seen = new Set();
+  const entries = [];
+
+  for (const entry of [nodeDirectory, ...currentEntries]) {
+    const trimmed = entry.trim();
+    if (!trimmed) {
+      continue;
+    }
+    const comparisonKey = isWindows
+      ? trimmed.replace(/[\\/]+$/, "").toLowerCase()
+      : trimmed.replace(/\/+$/, "");
+    if (!seen.has(comparisonKey)) {
+      seen.add(comparisonKey);
+      entries.push(trimmed);
+    }
+  }
+
+  process.env[pathKey] = entries.join(path.delimiter);
+}
+
+normalizeChildPath();
+
 function setChoice(options, key, value, label) {
   if (options[key] !== undefined && options[key] !== value) {
     throw new Error(`Conflicting ${label} options were provided.`);

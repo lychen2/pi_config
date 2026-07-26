@@ -46,8 +46,20 @@ function Write-Step([string]$Message) {
 function Update-ProcessPath {
     $machinePath = [Environment]::GetEnvironmentVariable("Path", "Machine")
     $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
-    $paths = @($machinePath, $userPath, $env:Path) | Where-Object { $_ }
-    $env:Path = $paths -join ";"
+    $seen = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
+    $entries = New-Object 'System.Collections.Generic.List[string]'
+
+    foreach ($pathValue in @($env:Path, $userPath, $machinePath)) {
+        if (-not $pathValue) {
+            continue
+        }
+        foreach ($entry in ($pathValue -split ";")) {
+            $trimmed = $entry.Trim()
+            if ($trimmed -and $seen.Add($trimmed)) {
+                [void]$entries.Add($trimmed)
+            }
+        }
+    }
 
     $extraPaths = @(
         (Join-Path $env:APPDATA "npm"),
@@ -58,22 +70,24 @@ function Update-ProcessPath {
         (Join-Path $env:LOCALAPPDATA "Programs\Git\bin")
     )
     foreach ($entry in $extraPaths) {
-        if ((Test-Path $entry) -and ($env:Path -notlike "*$entry*")) {
-            $env:Path = "$entry;$env:Path"
+        if ((Test-Path $entry) -and $seen.Add($entry)) {
+            $entries.Insert(0, $entry)
         }
     }
 
+    $env:Path = $entries -join ";"
     if (Get-Command node -ErrorAction SilentlyContinue) {
         try {
             $nodePath = (& node -p "process.execPath").Trim()
             $nodeDirectory = Split-Path $nodePath -Parent
-            if ((Test-Path $nodeDirectory) -and ($env:Path -notlike "*$nodeDirectory*")) {
-                $env:Path = "$nodeDirectory;$env:Path"
+            if ((Test-Path $nodeDirectory) -and $seen.Add($nodeDirectory)) {
+                $entries.Insert(0, $nodeDirectory)
             }
         } catch {
             # Install-Prerequisites reports an actionable error after bootstrap.
         }
     }
+    $env:Path = $entries -join ";"
 }
 
 function Test-SupportedNode {
