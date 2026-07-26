@@ -18,6 +18,27 @@ $Headers = @{
     "User-Agent" = "pi-config-installer"
 }
 
+function Get-Sha256Hash {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+
+    $Stream = [IO.File]::OpenRead($Path)
+    try {
+        $Sha256 = [Security.Cryptography.SHA256]::Create()
+        try {
+            $HashBytes = $Sha256.ComputeHash($Stream)
+            return [BitConverter]::ToString($HashBytes).Replace("-", "").ToLowerInvariant()
+        } finally {
+            $Sha256.Dispose()
+        }
+    } finally {
+        $Stream.Dispose()
+    }
+}
+
 if ($Version) {
     if (-not $Version.StartsWith("v")) {
         $Version = "v$Version"
@@ -57,12 +78,13 @@ try {
     }
 
     $ExpectedHash = ($ChecksumLine.Trim() -split "\s+")[0].ToLowerInvariant()
-    $ActualHash = (Get-FileHash -Path $ArchivePath -Algorithm SHA256).Hash.ToLowerInvariant()
+    $ActualHash = Get-Sha256Hash -Path $ArchivePath
     if ($ExpectedHash -ne $ActualHash) {
         throw "RTK checksum mismatch: expected $ExpectedHash, got $ActualHash."
     }
 
-    Expand-Archive -Path $ArchivePath -DestinationPath $ExtractPath -Force
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    [IO.Compression.ZipFile]::ExtractToDirectory($ArchivePath, $ExtractPath)
     $Binary = Get-ChildItem -Path $ExtractPath -Filter "rtk.exe" -File -Recurse | Select-Object -First 1
     if (-not $Binary) {
         throw "$AssetName does not contain rtk.exe."
