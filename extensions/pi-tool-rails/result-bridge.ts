@@ -5,7 +5,7 @@ import {
   keyHint,
   type ExtensionAPI,
 } from "@earendil-works/pi-coding-agent";
-import { Text, truncateToWidth, visibleWidth, type Component } from "@earendil-works/pi-tui";
+import { sliceByColumn, Text, truncateToWidth, visibleWidth, type Component } from "@earendil-works/pi-tui";
 
 type Theme = {
   fg(
@@ -318,31 +318,59 @@ function lineNumberWidth(rows: ReplaceDiffRow[]): number {
 function formatLineNumber(value: number | undefined, width: number): string {
   return value === undefined ? " ".repeat(width) : String(value).padStart(width);
 }
+function wrapCellContent(
+  prefix: string,
+  continuationPrefix: string,
+  content: string,
+  width: number,
+): string[] {
+  const contentWidth = visibleWidth(content);
+  if (contentWidth === 0) return [fitCell(prefix, width)];
 
-function formatDiffEntry(
+  const lines: string[] = [];
+  let column = 0;
+  while (column < contentWidth) {
+    const currentPrefix = lines.length === 0 ? prefix : continuationPrefix;
+    const availableWidth = Math.max(1, width - visibleWidth(currentPrefix));
+    let chunk = sliceByColumn(content, column, availableWidth, true);
+    let chunkWidth = visibleWidth(chunk);
+    if (chunkWidth === 0) {
+      chunk = sliceByColumn(content, column, availableWidth, false);
+      chunkWidth = visibleWidth(chunk);
+    }
+    lines.push(fitCell(`${currentPrefix}${chunk}`, width));
+    column += chunkWidth;
+  }
+  return lines;
+}
+
+function formatDiffEntryLines(
   entry: ReplaceDiffEntry | undefined,
   side: "left" | "right",
   width: number,
   numberWidth: number,
   theme: Theme,
-): string {
+): string[] {
   const number = side === "left" ? entry?.oldLineNumber : entry?.newLineNumber;
   const prefix = `${theme.fg("muted", formatLineNumber(number, numberWidth))} ${theme.fg("dim", "│")} `;
-  if (!entry) return fitCell(prefix, width);
+  if (!entry) return [fitCell(prefix, width)];
 
+  const code = entry.content.replace(/\t/g, "    ");
+  const indentation = code.match(/^\s*/)?.[0] ?? "";
+  const continuationPrefix = `${" ".repeat(numberWidth)} ${theme.fg("dim", "│")} ${" ".repeat(2 + visibleWidth(indentation))}`;
   const marker = entry.kind === "add" ? "+" : entry.kind === "remove" ? "-" : " ";
-  const code = `${marker} ${entry.content.replace(/\t/g, "    ")}`;
   const color = entry.kind === "add"
     ? "toolDiffAdded"
     : entry.kind === "remove"
       ? "toolDiffRemoved"
       : "toolOutput";
-  return fitCell(`${prefix}${theme.fg(color, code)}`, width);
+  const firstPrefix = `${prefix}${theme.fg(color, marker)} `;
+  return wrapCellContent(firstPrefix, continuationPrefix, theme.fg(color, code), width);
 }
 
-function formatMetaCell(text: string, width: number, numberWidth: number, theme: Theme): string {
+function formatMetaCellLines(text: string, width: number, numberWidth: number, theme: Theme): string[] {
   const prefix = `${" ".repeat(numberWidth)} ${theme.fg("dim", "│")} `;
-  return fitCell(`${prefix}${theme.fg("muted", text)}`, width);
+  return wrapCellContent(prefix, prefix, theme.fg("muted", text), width);
 }
 
 function topBorderCell(width: number, numberWidth: number, theme: Theme): string {
@@ -391,14 +419,21 @@ function renderSplitDiff(
     `${headerCell("old", leftWidth, numberWidth, theme)}${separator}${headerCell("new", rightWidth, numberWidth, theme)}`,
   ];
 
+  const emptyLeft = formatDiffEntryLines(undefined, "left", leftWidth, numberWidth, theme)[0]!;
+  const emptyRight = formatDiffEntryLines(undefined, "right", rightWidth, numberWidth, theme)[0]!;
   for (const row of rows) {
-    if (row.meta !== undefined) {
-      output.push(`${formatMetaCell(row.meta, leftWidth, numberWidth, theme)}${separator}${formatMetaCell(row.meta, rightWidth, numberWidth, theme)}`);
-      continue;
+    const leftLines = row.meta !== undefined
+      ? formatMetaCellLines(row.meta, leftWidth, numberWidth, theme)
+      : formatDiffEntryLines(row.left, "left", leftWidth, numberWidth, theme);
+    const rightLines = row.meta !== undefined
+      ? formatMetaCellLines(row.meta, rightWidth, numberWidth, theme)
+      : formatDiffEntryLines(row.right, "right", rightWidth, numberWidth, theme);
+    const height = Math.max(leftLines.length, rightLines.length);
+    for (let index = 0; index < height; index++) {
+      output.push(
+        `${leftLines[index] ?? emptyLeft}${separator}${rightLines[index] ?? emptyRight}`,
+      );
     }
-    output.push(
-      `${formatDiffEntry(row.left, "left", leftWidth, numberWidth, theme)}${separator}${formatDiffEntry(row.right, "right", rightWidth, numberWidth, theme)}`,
-    );
   }
   return output;
 }
@@ -419,7 +454,7 @@ function renderUnifiedDiff(
   ];
   for (const row of rows) {
     if (row.meta !== undefined) {
-      output.push(fitCell(`${gutter()}${theme.fg("muted", row.meta)}`, width));
+      output.push(...wrapCellContent(gutter(), gutter(), theme.fg("muted", row.meta), width));
       continue;
     }
     const entries = row.left?.kind === "context"
@@ -432,8 +467,14 @@ function renderUnifiedDiff(
         : entry.kind === "remove"
           ? "toolDiffRemoved"
           : "toolOutput";
-      output.push(fitCell(
-        `${gutter(entry.oldLineNumber, entry.newLineNumber)}${theme.fg(color, `${marker} ${entry.content.replace(/\t/g, "    ")}`)}`,
+      const code = entry.content.replace(/\t/g, "    ");
+      const indentation = code.match(/^\s*/)?.[0] ?? "";
+      const firstPrefix = `${gutter(entry.oldLineNumber, entry.newLineNumber)}${theme.fg(color, marker)} `;
+      const continuationPrefix = `${gutter()}${" ".repeat(2 + visibleWidth(indentation))}`;
+      output.push(...wrapCellContent(
+        firstPrefix,
+        continuationPrefix,
+        theme.fg(color, code),
         width,
       ));
     }

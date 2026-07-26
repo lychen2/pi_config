@@ -54,6 +54,24 @@ test("renders old and new line numbers in split columns", () => {
   assert.ok(lines.every((line) => !/[A-Za-z0-9_-]{3}│/.test(line)));
 });
 
+test("keeps empty split cells bordered and continuation indentation aligned", () => {
+  const content = `    diff: [${"x".repeat(40)}]`;
+  const additionResult = {
+    content: [{ type: "text", text: "Successfully replaced." }],
+    details: { firstChangedLine: 12, diff: `+Ab1│${content}` },
+  };
+  const lines = renderReplaceDiffResult(additionResult, { expanded: true }, theme, {}).render(74);
+  const leftWidth = Math.floor((74 - 3) / 2);
+  const dataLines = lines.slice(3);
+  const leftCells = dataLines.map((line) => line.slice(0, leftWidth));
+  const rightCells = dataLines.map((line) => line.slice(leftWidth + 3));
+
+  assert.ok(dataLines.length > 1, "expected the addition to wrap");
+  assert.ok(leftCells.every((cell) => /^\s{3} │/.test(cell)), "empty old cells must keep their gutter");
+  assert.ok(rightCells[0].includes("diff: [x"), "long tokens should use the first line's remaining width");
+  assert.equal(rightCells[1].indexOf("x"), rightCells[0].indexOf("diff:"));
+});
+
 test("falls back to numbered unified diff in narrow layouts", () => {
   const component = renderReplaceDiffResult(result, { expanded: true }, theme, {});
   const lines = component.render(32);
@@ -63,6 +81,43 @@ test("falls back to numbered unified diff in narrow layouts", () => {
   assert.ok(lines.some((line) => /^\s*42\s+│ - const value/.test(line)));
   assert.ok(lines.some((line) => /^\s+42 │ \+ const value/.test(line)));
   assert.ok(lines.every((line) => visibleWidth(line) <= 32));
+});
+
+test("wraps long diff lines without hiding their tails", () => {
+  const oldContent = `old-prefix-${"x".repeat(48)}-OLD_TAIL`;
+  const newContent = `new-prefix-${"y".repeat(48)}-NEW_TAIL`;
+  const longResult = {
+    content: [{ type: "text", text: "Successfully replaced." }],
+    details: {
+      firstChangedLine: 7,
+      diff: [`-Ab1│${oldContent}`, `+Cd2│${newContent}`].join("\n"),
+    },
+  };
+  const component = renderReplaceDiffResult(longResult, { expanded: true }, theme, {});
+
+  for (const width of [84, 74]) {
+    const splitLines = component.render(width);
+    const leftWidth = Math.floor((width - 3) / 2);
+    const cells = splitLines.slice(3).map((line) => [
+      line.slice(0, leftWidth),
+      line.slice(leftWidth + 3),
+    ]);
+    const unwrap = (side) => cells
+      .map((row) => row[side])
+      .map((cell) => cell.slice(cell.indexOf("│") + 1).trim())
+      .join("");
+    assert.equal(unwrap(0), `- ${oldContent}`);
+    assert.equal(unwrap(1), `+ ${newContent}`);
+    assert.ok(splitLines.every((line) => visibleWidth(line) <= width));
+  }
+
+  const unifiedLines = component.render(32);
+  const unifiedContent = unifiedLines
+    .slice(2)
+    .map((line) => line.slice(line.indexOf("│") + 1).trim())
+    .join("");
+  assert.equal(unifiedContent, `- ${oldContent}+ ${newContent}`);
+  assert.ok(unifiedLines.every((line) => visibleWidth(line) <= 32));
 });
 
 test("locates line numbers across multiple omitted groups", () => {
