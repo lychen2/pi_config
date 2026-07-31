@@ -6,6 +6,8 @@ param(
     [switch]$DryRun,
     [switch]$WithExternal,
     [switch]$SkipExternal,
+    [switch]$WithMagicContext,
+    [switch]$SkipMagicContext,
     [switch]$WithBrowser,
     [switch]$SkipBrowser,
     [switch]$WithRtk,
@@ -19,7 +21,7 @@ $ProgressPreference = "SilentlyContinue"
 
 $exclusivePairs = @(
     @($WithExternal, $SkipExternal, "external package"),
-    @($WithBrowser, $SkipBrowser, "browser"),
+    @($WithMagicContext, $SkipMagicContext, "Magic Context"),
     @($WithRtk, $SkipRtk, "RTK"),
     @($WithModelDefaults, $SkipModelDefaults, "model default")
 )
@@ -288,6 +290,8 @@ if ($Yes) { $installerArgs += "--yes" }
 if ($DryRun) { $installerArgs += "--dry-run" }
 if ($WithExternal) { $installerArgs += "--with-external" }
 if ($SkipExternal) { $installerArgs += "--skip-external" }
+if ($WithMagicContext) { $installerArgs += "--with-magic-context" }
+if ($SkipMagicContext) { $installerArgs += "--skip-magic-context" }
 if ($WithBrowser) { $installerArgs += "--with-browser" }
 if ($SkipBrowser) { $installerArgs += "--skip-browser" }
 if ($WithRtk) { $installerArgs += "--with-rtk" }

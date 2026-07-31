@@ -76,7 +76,8 @@ The installer performs these steps in order:
 3. Backs up the existing Pi directory to `~/.pi-backup-<timestamp>/agent`.
 4. Restores skills, themes, standalone extensions, and public configuration.
 5. Installs local packages and the reviewed external package manifest.
-
+6. Runs the upstream Magic Context setup script, which registers the plugin, writes its config, and disables Pi's built-in auto-compaction.
+7. Installs optional browser and RTK command-line tools when selected.
 Provider credentials, model registries, API keys, sessions, and environment variables remain local to each machine.
 
 Recommended defaults are designed for a clean installation:
@@ -84,6 +85,7 @@ Recommended defaults are designed for a clean installation:
 | Component | Default | Reason |
 | --- | --- | --- |
 | External Pi packages | Install | Reproduces the tools listed in `config/external-packages.txt` |
+| Magic Context | Install | Runs the upstream setup wizard and disables Pi's built-in auto-compaction |
 | Browser runtime | Install | Required by the default `pi-agent-browser-native` package; reuses an existing Chrome runtime when available |
 | RTK binary | Install | Required by `pi-rtk-optimizer` for command rewriting; prebuilt releases support Windows, Linux, and macOS |
 | Provider/model defaults | Keep current | The repository's `manager` provider requires machine-local configuration |
@@ -96,6 +98,7 @@ Pass options to a local script or directly to `install.mjs`:
 | --- | --- |
 | `--yes`, `-y` | Accept the recommended defaults without prompts |
 | `--dry-run` | Print planned actions without changing files or installing packages |
+| `--with-magic-context` / `--skip-magic-context` | Run or skip the upstream Magic Context setup |
 | `--with-external` / `--skip-external` | Enable or skip the external package manifest |
 | `--with-browser` / `--skip-browser` | Enable or skip `agent-browser` installation |
 | `--with-rtk` / `--skip-rtk` | Enable or skip the RTK binary used by `pi-rtk-optimizer` |
@@ -110,9 +113,8 @@ Examples:
 # Apply the repository's provider/model defaults too
 ./install.sh --yes --with-model-defaults
 
-# Skip external packages and optional command-line runtimes
-./install.sh --yes --skip-external --skip-browser --skip-rtk
-```
+# Skip Magic Context setup, external packages, and optional command-line runtimes
+./install.sh --yes --skip-magic-context --skip-external --skip-browser --skip-rtk
 
 PowerShell uses matching switch names:
 

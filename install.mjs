@@ -63,6 +63,7 @@ function parseArgs(argv) {
     yes: false,
     dryRun: false,
     external: undefined,
+    magicContext: undefined,
     browser: undefined,
     rtk: undefined,
     modelDefaults: undefined,
@@ -76,6 +77,12 @@ function parseArgs(argv) {
         break;
       case "--dry-run":
         options.dryRun = true;
+        break;
+      case "--with-magic-context":
+        setChoice(options, "magicContext", true, "Magic Context");
+        break;
+      case "--skip-magic-context":
+        setChoice(options, "magicContext", false, "Magic Context");
         break;
       case "--with-external":
         setChoice(options, "external", true, "external package");
@@ -123,6 +130,8 @@ Usage:
 Options:
   -y, --yes                Accept recommended defaults without prompting
       --dry-run            Print actions without changing the system
+      --with-magic-context  Run the official Magic Context setup script
+      --skip-magic-context  Skip Magic Context setup
       --with-external      Install packages from config/external-packages.txt
       --skip-external      Skip external Pi packages
       --with-browser       Install agent-browser and its browser runtime
@@ -133,7 +142,7 @@ Options:
       --skip-model-defaults  Keep the machine's provider/model selection
   -h, --help               Show this help
 
-Recommended non-interactive install:
+Recommended install (Magic Context runs its own setup wizard):
   node install.mjs --yes
 `);
 }
@@ -254,6 +263,8 @@ async function promptYesNo(rl, question, defaultValue) {
 async function resolveChoices() {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
   try {
+    const magicContext = installerOptions.magicContext ??
+      (await promptYesNo(rl, "Install Magic Context and disable Pi auto-compaction?", true));
     const external = installerOptions.external ??
       (await promptYesNo(rl, "Install the external Pi package manifest?", true));
     const browser = installerOptions.browser ??
@@ -268,7 +279,7 @@ async function resolveChoices() {
       ));
 
 
-    return { external, browser, rtk, modelDefaults };
+    return { magicContext, external, browser, rtk, modelDefaults };
   } finally {
     rl.close();
   }
@@ -276,13 +287,13 @@ async function resolveChoices() {
 
 async function backupExistingConfig() {
   if (!(await pathExists(agentDir))) {
-    console.log("\n[1/6] No existing Pi configuration to back up.");
+    console.log("\n[1/7] No existing Pi configuration to back up.");
     return null;
   }
 
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
   const backupDir = path.join(homeDir, `.pi-backup-${timestamp}`);
-  console.log(`\n[1/6] Backing up ${agentDir} -> ${backupDir}`);
+  console.log(`\n[1/7] Backing up ${agentDir} -> ${backupDir}`);
   if (!installerOptions.dryRun) {
     await mkdir(backupDir, { recursive: true });
     await cp(agentDir, path.join(backupDir, "agent"), {
@@ -295,7 +306,7 @@ async function backupExistingConfig() {
 }
 
 async function restoreFiles() {
-  console.log("\n[2/6] Restoring skills, themes, and extension configuration");
+  console.log("\n[2/7] Restoring skills, themes, and extension configuration");
   if (!installerOptions.dryRun) {
     await mkdir(agentDir, { recursive: true });
   }
@@ -322,7 +333,7 @@ async function restoreFiles() {
 }
 
 async function mergePublicSettings(includeModelDefaults) {
-  console.log("\n[3/6] Merging public settings");
+  console.log("\n[3/7] Merging public settings");
   const publicSettingsPath = path.join(repoDir, "config", "settings-public.json");
   const settingsPath = path.join(agentDir, "settings.json");
   const publicSettings = await readJson(publicSettingsPath);
@@ -356,7 +367,7 @@ async function mergePublicSettings(includeModelDefaults) {
 
 
 async function installLocalPackages() {
-  console.log("\n[4/6] Installing local Pi packages");
+  console.log("\n[4/7] Installing local Pi packages");
   const extensionsDir = path.join(repoDir, "extensions");
   const entries = await readdir(extensionsDir, { withFileTypes: true });
   const packageDirs = [];
@@ -378,7 +389,7 @@ async function installLocalPackages() {
 }
 
 async function installExternalPackages(enabled) {
-  console.log("\n[5/6] Installing external Pi packages");
+  console.log("\n[5/7] Installing external Pi packages");
   if (!enabled) {
     console.log("  skipped");
     return;
@@ -408,8 +419,31 @@ async function installExternalPackages(enabled) {
   }
 }
 
+async function installMagicContext(enabled) {
+  console.log("\n[6/7] Installing Magic Context");
+  if (!enabled) {
+    console.log("  skipped");
+    return;
+  }
+
+  if (isWindows) {
+    run("powershell.exe", [
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-Command",
+      "irm https://raw.githubusercontent.com/cortexkit/magic-context/master/scripts/install.ps1 | iex",
+    ]);
+  } else {
+    run("sh", [
+      "-c",
+      "curl -fsSL https://raw.githubusercontent.com/cortexkit/magic-context/master/scripts/install.sh | bash",
+    ]);
+  }
+}
+
 async function installOptionalTools(choices) {
-  console.log("\n[6/6] Installing optional command-line tools");
+  console.log("\n[7/7] Installing optional command-line tools");
   let installedAny = false;
 
   if (choices.browser) {
@@ -463,6 +497,7 @@ console.log("pi_config cross-platform installer");
 console.log(`  platform: ${process.platform} ${process.arch}`);
 console.log(`  repository: ${repoDir}`);
 console.log(`  target: ${agentDir}`);
+console.log(`  Magic Context: ${choices.magicContext ? "yes" : "no"}`);
 console.log(`  external packages: ${choices.external ? "yes" : "no"}`);
 console.log(`  browser automation: ${choices.browser ? "yes" : "no"}`);
 console.log(`  RTK binary: ${choices.rtk ? "yes" : "no"}`);
@@ -477,6 +512,7 @@ await restoreFiles();
 await mergePublicSettings(choices.modelDefaults);
 await installLocalPackages();
 await installExternalPackages(choices.external);
+await installMagicContext(choices.magicContext);
 await installOptionalTools(choices);
 
 if (installerOptions.dryRun) {

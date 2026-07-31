@@ -2,6 +2,9 @@
   "defaultProvider": "manager",
   "defaultModel": "gpt-5.6-terra",
   "defaultThinkingLevel": "high",
+  "compaction": {
+    "enabled": false
+  },
   "theme": "matugen",
   "quietStartup": true,
   "hideThinkingBlock": false,

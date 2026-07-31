@@ -1,4 +1,5 @@
 # External pi packages recorded from ~/.pi/agent/settings.json
+# Magic Context is installed separately by install.mjs via the upstream setup script.
 # Uncomment or remove packages as needed before installing.
 npm:pi-markdown-preview@0.10.0
 npm:@ff-labs/pi-fff@0.9.6
