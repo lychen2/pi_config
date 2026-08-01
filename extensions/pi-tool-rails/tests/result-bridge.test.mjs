@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { visibleWidth } from "@earendil-works/pi-tui";
-import { locateNewLineNumbers, parseReplaceDiff, renderReplaceDiffResult } from "../result-bridge.ts";
+import {
+  locateNewLineNumbers,
+  parseHashlineReadOutput,
+  parseReplaceDiff,
+  renderHashlineReadResult,
+  renderReplaceDiffResult,
+} from "../result-bridge.ts";
 
 const theme = {
   fg(_color, text) {
@@ -24,6 +30,57 @@ const result = {
     ].join("\n"),
   },
 };
+
+test("renders hashline read output with source line numbers", () => {
+  const hashlineText = [
+    "Ab1│const alpha = true;",
+    "Cd2│const beta = false;",
+    "",
+    "[Showing lines 20-21 of 40. Use offset=22 to continue.]",
+  ].join("\n");
+  const readResult = { content: [{ type: "text", text: hashlineText }] };
+  const entries = parseHashlineReadOutput(hashlineText.split("\n"), 20);
+
+  assert.deepEqual(entries.slice(0, 2), [
+    { kind: "line", content: "const alpha = true;", lineNumber: 20 },
+    { kind: "line", content: "const beta = false;", lineNumber: 21 },
+  ]);
+
+  const component = renderHashlineReadResult(
+    readResult,
+    { expanded: true },
+    theme,
+    { args: { offset: 20 } },
+  );
+  const lines = component.render(72);
+
+  assert.match(lines[0], /^\s*20 │ const alpha = true;/);
+  assert.match(lines[1], /^\s*21 │ const beta = false;/);
+  assert.ok(lines.some((line) => line.includes("Showing lines 20-21 of 40")));
+  assert.ok(lines.every((line) => !/[A-Za-z0-9_-]{3}│/.test(line)));
+  assert.ok(lines.every((line) => visibleWidth(line) <= 72));
+  assert.equal(readResult.content[0].text, hashlineText, "renderer must preserve LLM-visible anchors");
+});
+
+test("wraps numbered read lines with an aligned continuation gutter", () => {
+  const content = `const value = "${"x".repeat(64)}";`;
+  const readResult = { content: [{ type: "text", text: `Ef3│${content}` }] };
+  const lines = renderHashlineReadResult(
+    readResult,
+    { expanded: true },
+    theme,
+    { args: { offset: 105 } },
+  ).render(32);
+
+  assert.ok(lines.length > 1);
+  assert.match(lines[0], /^105 │ const value/);
+  assert.match(lines[1], /^\s{3} │ /);
+  assert.equal(
+    lines.map((line) => line.slice(line.indexOf("│") + 1).trim()).join(""),
+    content,
+  );
+  assert.ok(lines.every((line) => visibleWidth(line) <= 32));
+});
 
 test("parses hashline replace output without exposing hashes", () => {
   const entries = parseReplaceDiff(result.details.diff);

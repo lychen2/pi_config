@@ -37,9 +37,13 @@ type ReplaceDiffEntry = {
   newLineNumber?: number;
 };
 type ReplaceDiffRow = { left?: ReplaceDiffEntry; right?: ReplaceDiffEntry; meta?: string };
+type ReadDisplayEntry =
+  | { kind: "line"; content: string; lineNumber: number }
+  | { kind: "meta"; content: string };
 
 const ANSI_ESCAPE = /\x1B(?:\][^\x07\x1B]*(?:\x07|\x1B\\)|\[[0-?]*[ -/]*[@-~]|[@-Z\\-_])/g;
 const HASHLINE_DIFF = /^([ +\-])((?:[A-Za-z0-9_-]{3}| {3}))│(.*)$/;
+const HASHLINE_READ = /^[A-Za-z0-9_-]{3}│(.*)$/;
 const RESULT_PATCH = Symbol.for("pi.toolRails.resultRendererPatch");
 const REPLACE_LINE_NUMBERS = "toolRailsNewLineNumbers";
 const REPLACE_FINAL_LINE_COUNT = "toolRailsFinalLineCount";
@@ -133,6 +137,104 @@ function compactResult(
     : (count === 1 ? "result" : "results");
   const hint = count > 0 ? ` · ${keyHint("app.tools.expand", "expand")}` : "";
   return reusableText(context, theme.fg("muted", `${count} ${unit}${hint}`));
+}
+
+export function parseHashlineReadOutput(lines: string[], startLine = 1): ReadDisplayEntry[] {
+  let nextLine = Number.isInteger(startLine) && startLine > 0 ? startLine : 1;
+  return lines.map((rawLine) => {
+    const match = rawLine.match(HASHLINE_READ);
+    if (!match) return { kind: "meta", content: rawLine };
+    return { kind: "line", content: match[1] ?? "", lineNumber: nextLine++ };
+  });
+}
+
+function hasHashlineReadRows(result: unknown): boolean {
+  return outputLines(result).some((line) => HASHLINE_READ.test(line));
+}
+
+function readLineNumberWidth(entries: ReadDisplayEntry[]): number {
+  const maximum = entries.reduce(
+    (value, entry) => entry.kind === "line" ? Math.max(value, entry.lineNumber) : value,
+    0,
+  );
+  return Math.max(3, String(maximum || 1).length);
+}
+
+function formatReadEntryLines(
+  entry: ReadDisplayEntry,
+  width: number,
+  numberWidth: number,
+  theme: Theme,
+ ): string[] {
+  const divider = theme.fg("dim", "│");
+  if (entry.kind === "meta") {
+    if (!entry.content) return [fitCell("", width)];
+    const prefix = `${" ".repeat(numberWidth)} ${divider} `;
+    return wrapCellContent(prefix, prefix, theme.fg("muted", entry.content), width);
+  }
+
+  const prefix = `${theme.fg("muted", String(entry.lineNumber).padStart(numberWidth))} ${divider} `;
+  const continuationPrefix = `${" ".repeat(numberWidth)} ${divider} `;
+  const content = entry.content.replace(/\t/g, "    ");
+  return wrapCellContent(prefix, continuationPrefix, theme.fg("toolOutput", content), width);
+}
+
+class HashlineReadComponent implements Component {
+  private entries: ReadDisplayEntry[];
+  private remaining: number;
+  private theme: Theme;
+
+  constructor(entries: ReadDisplayEntry[], remaining: number, theme: Theme) {
+    this.entries = entries;
+    this.remaining = remaining;
+    this.theme = theme;
+  }
+
+  update(entries: ReadDisplayEntry[], remaining: number, theme: Theme): void {
+    this.entries = entries;
+    this.remaining = remaining;
+    this.theme = theme;
+  }
+
+  render(width: number): string[] {
+    const safeWidth = Math.max(1, width);
+    const numberWidth = readLineNumberWidth(this.entries);
+    const lines = this.entries.flatMap((entry) =>
+      formatReadEntryLines(entry, safeWidth, numberWidth, this.theme)
+    );
+    if (this.remaining > 0) {
+      lines.push(fitCell(this.theme.fg(
+        "muted",
+        `${this.remaining} more ${this.remaining === 1 ? "line" : "lines"} · ${keyHint("app.tools.expand", "expand")}`,
+      ), safeWidth));
+    }
+    return lines.map((line) => truncateToWidth(line, safeWidth, ""));
+  }
+
+  invalidate(): void {}
+}
+
+export function renderHashlineReadResult(
+  result: unknown,
+  options: ResultOptions,
+  theme: Theme,
+  context: ResultContext,
+ ): Component {
+  if (!options.expanded && !context.isError) return reusableText(context, "");
+  const args = record(context.args);
+  const startLine = typeof args.offset === "number" && Number.isInteger(args.offset) && args.offset > 0
+    ? args.offset
+    : 1;
+  const entries = parseHashlineReadOutput(outputLines(result), startLine);
+  const maxEntries = options.expanded ? entries.length : 10;
+  const shown = entries.slice(0, maxEntries);
+  const remaining = entries.length - shown.length;
+  const existing = context.lastComponent;
+  if (existing instanceof HashlineReadComponent) {
+    existing.update(shown, remaining, theme);
+    return existing;
+  }
+  return new HashlineReadComponent(shown, remaining, theme);
 }
 
 export function parseReplaceDiff(diff: string): ReplaceDiffEntry[] {
@@ -593,6 +695,19 @@ function installResultBridge(): () => void {
     const name = (this as unknown as { toolName?: string }).toolName;
     if (name === "replace") {
       return (result, options, theme, context) => renderReplaceDiffResult(result, options, theme, context);
+    }
+    if (name === "read") {
+      return (result, options, theme, context) => {
+        if (hasHashlineReadRows(result)) {
+          return renderHashlineReadResult(result, options, theme, context);
+        }
+        if (nativeRenderer) return nativeRenderer(result, options, theme, context);
+        const lines = outputLines(result);
+        return reusableText(
+          context,
+          preview(lines.length ? lines : [context.isError ? "read failed" : ""], options, theme, context, "head"),
+        );
+      };
     }
     if (!name || !COMPACT_RESULTS.has(name)) return nativeRenderer;
     return (result, options, theme, context) => compactResult(name, result, options, theme, context);

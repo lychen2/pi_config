@@ -6,12 +6,12 @@ Quiet TUI styling for Pi:
 - a theme `text` separator (`REPLACE │`, `READ    │`) with exactly one layout space on its right
 - full-block pending, success, and error backgrounds from the active Pi theme
 - compact summaries and expandable previews for shell and search tools
+- numbered `read` views that show source line numbers in the TUI while preserving hash anchors for the model
 - numbered, side-by-side `replace` diffs with old lines on the left, new lines on the right, and multiple change groups
-- native execution, hashline output, and rich diff renderers remain intact
 - one blank line between tool blocks
 - a persistent framed `prompt` editor and framed user messages
 
-Tool ownership is conservative. The extension overrides a built-in only while Pi still owns it, so hashline `read/replace`, sandbox, SSH, and other extension-owned tools keep their execution behavior. Guarded presentation bridges apply the common label column and result formatting at the exported `ToolExecutionComponent` layer. Diff-leading spaces are preserved because they align hashline context and add/remove gutters; only the duplicate space left after removing a repeated tool name is normalized.
+Tool ownership is conservative. The extension overrides a built-in only while Pi still owns it, so hashline `read/replace`, sandbox, SSH, and other extension-owned tools keep their execution behavior. Guarded presentation bridges apply the common label column and result formatting at the exported `ToolExecutionComponent` layer. Hashline `read` results are converted from `HASH│content` to `line │ content` only in the TUI renderer; the tool result sent to the model retains its anchors. Diff-leading spaces are preserved because they align hashline context and add/remove gutters; only the duplicate space left after removing a repeated tool name is normalized.
 
 ## Install
 
