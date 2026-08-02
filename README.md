@@ -8,9 +8,16 @@ A portable backup of extensions, skills, themes, and public configuration for th
 > This repository contains public configuration only. API keys, tokens, passwords, private keys, provider registries, sessions, and local runtime data are intentionally excluded.
 
 ## Preview
-| Themed Pi workspace | Tool rails | Structured results | Session layout |
-| --- | --- | --- | --- |
-| ![Themed Pi workspace](docs/images/pi-tui-overview.png) | ![Pi tool rails](docs/images/pi-tui-replace.png) | ![Structured Pi results](docs/images/pi-tui-tools.png) | ![Pi session layout](docs/images/pi-tui-session.png) |
+<table>
+<tr>
+<td width="50%" align="center"><strong>Themed Pi workspace</strong><br><img src="docs/images/pi-tui-overview.png" alt="Themed Pi workspace" width="100%"></td>
+<td width="50%" align="center"><strong>Tool rails</strong><br><img src="docs/images/pi-tui-replace.png" alt="Pi tool rails" width="100%"></td>
+</tr>
+<tr>
+<td width="50%" align="center"><strong>Structured results</strong><br><img src="docs/images/pi-tui-tools.png" alt="Structured Pi results" width="100%"></td>
+<td width="50%" align="center"><strong>Session layout</strong><br><img src="docs/images/pi-tui-session.png" alt="Pi session layout" width="100%"></td>
+</tr>
+</table>
 
 ## Repository contents
 

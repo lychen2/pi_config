@@ -9,9 +9,16 @@
 
 ## 界面预览
 
-| 主题化 Pi 工作区 | 工具 rail | 结构化结果 | 会话布局 |
-| --- | --- | --- | --- |
-| ![主题化 Pi 工作区](docs/images/pi-tui-overview.png) | ![Pi 工具 rail](docs/images/pi-tui-replace.png) | ![Pi 结构化结果](docs/images/pi-tui-tools.png) | ![Pi 会话布局](docs/images/pi-tui-session.png) |
+<table>
+<tr>
+<td width="50%" align="center"><strong>主题化 Pi 工作区</strong><br><img src="docs/images/pi-tui-overview.png" alt="主题化 Pi 工作区" width="100%"></td>
+<td width="50%" align="center"><strong>工具 rail</strong><br><img src="docs/images/pi-tui-replace.png" alt="Pi 工具 rail" width="100%"></td>
+</tr>
+<tr>
+<td width="50%" align="center"><strong>结构化结果</strong><br><img src="docs/images/pi-tui-tools.png" alt="Pi 结构化结果" width="100%"></td>
+<td width="50%" align="center"><strong>会话布局</strong><br><img src="docs/images/pi-tui-session.png" alt="Pi 会话布局" width="100%"></td>
+</tr>
+</table>
 
 ## 仓库内容
 
