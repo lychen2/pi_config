@@ -8,17 +8,16 @@ A portable backup of extensions, skills, themes, and public configuration for th
 > This repository contains public configuration only. API keys, tokens, passwords, private keys, provider registries, sessions, and local runtime data are intentionally excluded.
 
 ## Preview
-
-| Workspace and themed TUI | Hash-anchored editing | Tool result panels |
-| --- | --- | --- |
-| ![Pi workspace with themed header and footer](docs/images/pi-tui-overview.png) | ![Pi replace tool result](docs/images/pi-tui-replace.png) | ![Pi parallel tool calls and result panels](docs/images/pi-tui-tools.png) |
+| Themed Pi workspace | Tool rails | Structured results | Session layout |
+| --- | --- | --- | --- |
+| ![Themed Pi workspace](docs/images/pi-tui-overview.png) | ![Pi tool rails](docs/images/pi-tui-replace.png) | ![Structured Pi results](docs/images/pi-tui-tools.png) | ![Pi session layout](docs/images/pi-tui-session.png) |
 
 ## Repository contents
 
 | Path | Contents | How to restore |
 | --- | --- | --- |
 | `install.sh`, `install.ps1`, `install.mjs` | Cross-platform bootstrap and configuration installer | Run the entry point for your operating system |
-| `extensions/` | 8 installable local packages and 2 standalone extensions | Install packages with `pi install`; copy standalone files |
+| `extensions/` | 7 installable local packages and 2 standalone extensions | Install packages with `pi install`; copy standalone files |
 | `skills/` | 58 `SKILL.md` definitions, including nested collections | Sync to `~/.pi/agent/skills/` |
 | `config/` | Public Pi settings, system guidance, extension state, and the external package manifest | Review, then copy or merge individual files |
 | `themes/` | 2 Matugen themes | Copy to `~/.pi/agent/themes/` |

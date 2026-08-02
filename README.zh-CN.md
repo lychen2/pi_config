@@ -9,16 +9,16 @@
 
 ## 界面预览
 
-| 工作区与主题化 TUI | 哈希锚点编辑 | 工具结果面板 |
-| --- | --- | --- |
-| ![带主题 header 和 footer 的 Pi 工作区](docs/images/pi-tui-overview.png) | ![Pi replace 工具执行结果](docs/images/pi-tui-replace.png) | ![Pi 并行工具调用和结果面板](docs/images/pi-tui-tools.png) |
+| 主题化 Pi 工作区 | 工具 rail | 结构化结果 | 会话布局 |
+| --- | --- | --- | --- |
+| ![主题化 Pi 工作区](docs/images/pi-tui-overview.png) | ![Pi 工具 rail](docs/images/pi-tui-replace.png) | ![Pi 结构化结果](docs/images/pi-tui-tools.png) | ![Pi 会话布局](docs/images/pi-tui-session.png) |
 
 ## 仓库内容
 
 | 路径 | 内容 | 恢复方式 |
 | --- | --- | --- |
 | `install.sh`、`install.ps1`、`install.mjs` | 跨平台环境引导和配置安装器 | 运行对应操作系统的入口脚本 |
-| `extensions/` | 8 个可安装的本地 package 和 2 个独立扩展 | 使用 `pi install` 安装 package；直接复制独立扩展 |
+| `extensions/` | 7 个可安装的本地 package 和 2 个独立扩展 | 使用 `pi install` 安装 package；直接复制独立扩展 |
 | `skills/` | 58 个 `SKILL.md` 定义，包含嵌套技能集合 | 同步到 `~/.pi/agent/skills/` |
 | `config/` | Pi 公开设置、系统规则、扩展状态和外部 package 清单 | 检查后按需复制或合并 |
 | `themes/` | 2 个 Matugen 主题 | 复制到 `~/.pi/agent/themes/` |
