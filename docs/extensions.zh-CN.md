@@ -17,7 +17,6 @@
 | `pi-slim-skills` | 压缩模型可见的技能索引，降低提示词体积 | `/slim-skills remove <名称>`、`none`、`reset`、`inject <名称>` | `slim-skills-whitelist.json`；`SLIM_SKILLS_DISABLE=1` 禁用 |
 | `pi-todo-guard` | Todo 仍有未完成项目时，提醒代理继续当前任务 | 自动处理 | `PI_TODO_GUARD_DISABLE=1`；默认兼容 `todo` 工具 |
 | `pi-tool-rails` | 提供稳定的工具标签、结果面板、diff 和输入框样式 | 自动处理 | `PI_TOOL_RAILS_DISABLE_USER_FRAME=1` 仅关闭用户消息边框 |
-| `pi-translate-submit` | 把编辑器内容翻译为英文但不提交 | `Ctrl+Alt+T`；`/translate-model` 选择轻量模型 | `translate-submit.json`；保留代码、路径和环境变量 |
 
 ### 延迟工具的正确使用
 

@@ -60,6 +60,8 @@ test("renders hashline read output with source line numbers", () => {
   assert.ok(lines.every((line) => !/[A-Za-z0-9_-]{3}│/.test(line)));
   assert.ok(lines.every((line) => visibleWidth(line) <= 72));
   assert.equal(readResult.content[0].text, hashlineText, "renderer must preserve LLM-visible anchors");
+  const collapsed = renderHashlineReadResult(readResult, { expanded: false }, theme, { args: { offset: 20 } });
+  assert.deepEqual(collapsed.render(72).map((line) => line.trimEnd()), ["2 lines"]);
 });
 
 test("wraps numbered read lines with an aligned continuation gutter", () => {
@@ -109,6 +111,19 @@ test("renders old and new line numbers in split columns", () => {
   assert.match(changedLine, /^\s*42 │ - const value = oldValue;.*│\s*42 │ \+ const value = newValue;/);
   assert.ok(lines.every((line) => visibleWidth(line) <= 80));
   assert.ok(lines.every((line) => !/[A-Za-z0-9_-]{3}│/.test(line)));
+});
+test("uses semantic foreground colors for diff rows", () => {
+  const colors = [];
+  const semanticTheme = {
+    fg(color, text) {
+      colors.push(color);
+      return text;
+    },
+  };
+  renderReplaceDiffResult(result, { expanded: true }, semanticTheme, {}).render(80);
+  assert.ok(colors.includes("toolDiffAdded"));
+  assert.ok(colors.includes("toolDiffRemoved"));
+  assert.ok(colors.includes("toolDiffContext"));
 });
 
 test("keeps empty split cells bordered and continuation indentation aligned", () => {

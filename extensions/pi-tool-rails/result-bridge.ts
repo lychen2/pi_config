@@ -9,7 +9,7 @@ import { sliceByColumn, Text, truncateToWidth, visibleWidth, type Component } fr
 
 type Theme = {
   fg(
-    color: "dim" | "error" | "muted" | "toolDiffAdded" | "toolDiffRemoved" | "toolOutput",
+    color: "dim" | "error" | "muted" | "toolDiffAdded" | "toolDiffRemoved" | "toolDiffContext" | "toolOutput",
     text: string,
   ): string;
 };
@@ -220,12 +220,15 @@ export function renderHashlineReadResult(
   theme: Theme,
   context: ResultContext,
  ): Component {
-  if (!options.expanded && !context.isError) return reusableText(context, "");
   const args = record(context.args);
   const startLine = typeof args.offset === "number" && Number.isInteger(args.offset) && args.offset > 0
     ? args.offset
     : 1;
   const entries = parseHashlineReadOutput(outputLines(result), startLine);
+  if (!options.expanded && !context.isError) {
+    const count = entries.filter((entry) => entry.kind === "line").length;
+    return reusableText(context, theme.fg("toolDiffAdded", `${count} ${count === 1 ? "line" : "lines"}`));
+  }
   const maxEntries = options.expanded ? entries.length : 10;
   const shown = entries.slice(0, maxEntries);
   const remaining = entries.length - shown.length;
@@ -465,7 +468,7 @@ function formatDiffEntryLines(
     ? "toolDiffAdded"
     : entry.kind === "remove"
       ? "toolDiffRemoved"
-      : "toolOutput";
+      : "toolDiffContext";
   const firstPrefix = `${prefix}${theme.fg(color, marker)} `;
   return wrapCellContent(firstPrefix, continuationPrefix, theme.fg(color, code), width);
 }
@@ -568,7 +571,7 @@ function renderUnifiedDiff(
         ? "toolDiffAdded"
         : entry.kind === "remove"
           ? "toolDiffRemoved"
-          : "toolOutput";
+          : "toolDiffContext";
       const code = entry.content.replace(/\t/g, "    ");
       const indentation = code.match(/^\s*/)?.[0] ?? "";
       const firstPrefix = `${gutter(entry.oldLineNumber, entry.newLineNumber)}${theme.fg(color, marker)} `;
@@ -643,7 +646,12 @@ export function renderReplaceDiffResult(
     const fallback = lines.length ? lines : [context.isError ? "replace failed" : "replace completed"];
     return reusableText(context, preview(fallback, options, theme, context, "head"));
   }
-
+  if (!options.expanded && hasChanges) {
+    const additions = rawEntries.filter((entry) => entry.kind === "add").length;
+    const removals = rawEntries.filter((entry) => entry.kind === "remove").length;
+    const summary = `${theme.fg("toolDiffAdded", `+${additions}`)}${theme.fg("muted", "/")}${theme.fg("toolDiffRemoved", `-${removals}`)}`;
+    return reusableText(context, summary);
+  }
   const storedNumbers = Array.isArray(details[REPLACE_LINE_NUMBERS])
     ? details[REPLACE_LINE_NUMBERS].map((value) => typeof value === "number" ? value : null)
     : [];

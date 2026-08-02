@@ -13,7 +13,7 @@ type ShellPrototype = {
 };
 type ToolTheme = {
   bg(color: "toolErrorBg" | "toolPendingBg" | "toolSuccessBg", text: string): string;
-  fg(color: "error" | "text" | "toolTitle" | "warning", text: string): string;
+  fg(color: "accent" | "error" | "muted" | "success" | "text" | "toolTitle" | "warning", text: string): string;
   getBgAnsi?(color: "toolErrorBg" | "toolPendingBg" | "toolSuccessBg"): string;
   bold(text: string): string;
 };
@@ -32,13 +32,52 @@ type ExecutionState = {
   result?: { isError?: boolean };
   selfRenderContainer?: Component;
   toolName?: string;
+  expanded?: boolean;
 };
 
 const ANSI_ESCAPE = /\x1B(?:\][^\x07\x1B]*(?:\x07|\x1B\\)|\[[0-?]*[ -/]*[@-~]|[@-Z\\-_])/g;
 const SHELL_PATCH = Symbol.for("pi.toolRails.labeledShellPatch");
-const LABEL_WIDTH = 10;
+// Two cells keep the leading emoji from crowding the centered tool text.
+const LABEL_WIDTH = 12;
 const PREFIX_WIDTH = LABEL_WIDTH + 3;
+const TOOL_ALIASES: Record<string, string> = {
+  add_directory: "add",
+  agent_browser: "browser",
+  ask_user_question: "ask",
+  ctx_memory: "memory",
+  ctx_search: "search",
+  goal_complete: "done",
+  goal_blocked: "blocked",
+  load_tools: "tools",
+  multi_tool_use_parallel: "parallel",
+  search_external_files: "files",
+  subagent_send: "send",
+  undo_last_replace: "undo",
+};
 
+function shortToolName(name: string): string {
+  const normalized = name.replace(/\./g, "_");
+  return TOOL_ALIASES[normalized] ?? (normalized.replace(/^(?:ctx|subagent)_/, "") || "tool");
+}
+
+function toolEmoji(name: string): string {
+  switch (shortToolName(name)) {
+    case "read": return "📖";
+    case "grep":
+    case "find":
+    case "search": return "🔎";
+    case "ls": return "📂";
+    case "write":
+    case "edit":
+    case "replace":
+    case "todo":
+    case "todowrite": return "✏️";
+    case "browser": return "🌐";
+    case "bash":
+    case "parallel": return "⚡";
+    default: return "🔧";
+  }
+}
 function release(
   shared: typeof globalThis & Record<symbol, unknown>,
   prototype: ShellPrototype,
@@ -60,23 +99,43 @@ function plain(line: string): string {
   return line.replace(ANSI_ESCAPE, "");
 }
 
+function fitLabel(text: string, width = LABEL_WIDTH): string {
+  return visibleWidth(text) <= width
+    ? text
+    : `${plain(truncateToWidth(text, Math.max(1, width - 1), ""))}…`;
+}
+
 function labelText(name: string): string {
-  const upper = name.toUpperCase();
-  return visibleWidth(upper) <= LABEL_WIDTH
-    ? upper
-    : `${plain(truncateToWidth(upper, LABEL_WIDTH - 1, ""))}…`;
+  const reserved = visibleWidth(toolEmoji(name)) * 2;
+  return fitLabel(shortToolName(name), Math.max(1, LABEL_WIDTH - reserved));
 }
 
 export function labelLines(name: string): string[] {
-  const words = name.split("_").filter(Boolean);
-  return words.length > 1 ? words.map(labelText) : [labelText(name)];
+  if (shortToolName(name) === "todowrite") return [fitLabel("todo"), "write"];
+  return [labelText(name)];
 }
 
 export function labelPadding(label: string): { left: number; right: number } {
   const total = Math.max(0, LABEL_WIDTH - visibleWidth(label));
   return { left: Math.floor(total / 2), right: Math.ceil(total / 2) };
 }
-
+export function labelLayout(name: string, index: number, label: string): { emoji: string; text: string; left: number; right: number } {
+  const emoji = index === 0 ? toolEmoji(name) : "";
+  const emojiWidth = visibleWidth(emoji);
+  const text = fitLabel(label, Math.max(1, LABEL_WIDTH - emojiWidth * 2));
+  const padding = labelPadding(text);
+  return {
+    emoji,
+    text,
+    left: Math.max(0, padding.left - emojiWidth),
+    right: padding.right,
+  };
+}
+export function visibleToolContentLines(lines: string[], expanded = false): string[] {
+  if (expanded || lines.length <= 2) return lines;
+  const active = lines.find((line, index) => index > 0 && /^\s*◐/.test(plain(line)));
+  return [lines[0]!, active ?? lines.at(-1)!];
+}
 function removeRepeatedToolName(line: string, name: string): string {
   const visible = plain(line).trimStart();
   const lowerName = name.toLowerCase();
@@ -121,6 +180,16 @@ function boldLabel(text: string, theme: ToolTheme, color: "error" | "toolTitle" 
   return `\x1b[1m${theme.fg(color, text)}\x1b[22m`;
 }
 
+export function styleStructuredLine(line: string, theme: ToolTheme): string {
+  if (line.includes("\x1b[")) return line;
+  if (/^\s*Todos\b/.test(line)) return theme.fg("toolTitle", line);
+  const match = line.match(/^(\s*)([✓◐○×•])(.*)$/);
+  if (!match) return line;
+  const color = match[2] === "✓" ? "success" : match[2] === "×" ? "error" : match[2] === "○" ? "muted" : "warning";
+  const rest = match[3]!.replace(/^(\s+)(#[^\s]+)/, (_value, spacing, id) => `${spacing}${theme.fg("accent", id)}`);
+  return `${match[1]}${theme.fg(color, match[2])}${rest}`;
+}
+
 function backgroundLine(
   line: string,
   width: number,
@@ -131,6 +200,29 @@ function backgroundLine(
   const clipped = truncateToWidth(line, width, "");
   const padded = clipped + " ".repeat(Math.max(0, width - visibleWidth(clipped)));
   return theme.bg(background, keepBackground(padded, bgOpen));
+}
+
+export function renderWithCapturedSelf(
+  component: ToolExecutionComponent,
+  originalRender: ToolRender,
+  container: Component,
+  width: number,
+): { lines: string[]; contentLines?: string[] } {
+  const originalContainerRender = container.render;
+  let contentLines: string[] | undefined;
+  container.render = (contentWidth: number): string[] => {
+    const lines = originalContainerRender.call(container, contentWidth);
+    if (contentWidth === width) contentLines = lines;
+    return lines;
+  };
+  try {
+    return {
+      lines: originalRender.call(component, width),
+      contentLines,
+    };
+  } finally {
+    container.render = originalContainerRender;
+  }
 }
 
 function installLabeledShell(theme: ToolTheme): () => void {
@@ -164,10 +256,18 @@ function installLabeledShell(theme: ToolTheme): () => void {
   const patchedRender: ToolRender = function (width: number): string[] {
     const execution = this as unknown as ExecutionState;
     const innerWidth = Math.max(1, width - PREFIX_WIDTH);
-    const lines = state.originalRender.call(this, innerWidth);
+    const rendered = execution.selfRenderContainer
+      ? renderWithCapturedSelf(
+          this,
+          state.originalRender,
+          execution.selfRenderContainer,
+          innerWidth,
+        )
+      : { lines: state.originalRender.call(this, innerWidth) };
+    const lines = rendered.lines;
     if (execution.hideComponent || !execution.selfRenderContainer) return lines;
 
-    const contentLines = execution.selfRenderContainer.render(innerWidth);
+    const contentLines = rendered.contentLines ?? execution.selfRenderContainer.render(innerWidth);
     if (contentLines.length === 0) return lines;
     const firstContent = lines.findIndex((line) => plain(line).trim() !== "");
     if (firstContent < 0) return lines;
@@ -185,24 +285,25 @@ function installLabeledShell(theme: ToolTheme): () => void {
     const name = execution.toolName ?? "tool";
     const labels = labelLines(name);
     const separator = state.theme.fg("text", "│");
-    const prefixFor = (label: string): string => {
-      const padding = labelPadding(label);
-      const leftLabelPadding = " ".repeat(padding.left);
-      const rightLabelPadding = " ".repeat(padding.right);
-      return ` ${leftLabelPadding}${boldLabel(label, state.theme, labelColor)}${rightLabelPadding}${separator} `;
+    const prefixFor = (label: string, index: number): string => {
+      const layout = labelLayout(name, index, label);
+      const emojiText = layout.emoji ? state.theme.fg(labelColor, layout.emoji) : "";
+      return ` ${" ".repeat(layout.left)}${emojiText}${boldLabel(layout.text, state.theme, labelColor)}${" ".repeat(layout.right)}${separator} `;
     };
 
     const hasStandaloneHeader =
       isStandaloneToolNameLine(lines[firstContent], name) &&
       isStandaloneToolNameLine(contentLines[0] ?? "", name);
     const contentStart = firstContent + (hasStandaloneHeader ? 1 : 0);
-    const renderedContentLineCount = Math.max(0, contentLines.length - (hasStandaloneHeader ? 1 : 0));
+    const fullContentLines = contentLines.slice(hasStandaloneHeader ? 1 : 0);
+    const renderedContentLineCount = fullContentLines.length;
+    const visibleContentLines = visibleToolContentLines(fullContentLines, execution.expanded);
     const contentEnd = Math.min(lines.length, contentStart + renderedContentLineCount);
-    const body = Array.from({ length: Math.max(renderedContentLineCount, labels.length) }, (_, index) => {
-      const content = index < renderedContentLineCount
-        ? lines[contentStart + index]
+    const body = Array.from({ length: Math.max(visibleContentLines.length, labels.length) }, (_, index) => {
+      const content = index < visibleContentLines.length
+        ? visibleContentLines[index]
         : "";
-      return backgroundLine(`${prefixFor(labels[index] ?? "")}${content}`, width, background, state.theme);
+      return backgroundLine(`${prefixFor(labels[index] ?? "", index)}${styleStructuredLine(content, state.theme)}`, width, background, state.theme);
     });
     const blank = backgroundLine("", width, background, state.theme);
 

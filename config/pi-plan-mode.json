@@ -1,0 +1,20 @@
+{
+  "thinkingLevel": "inherit",
+  "defaultPlanTools": [
+    "read",
+    "bash",
+    "grep",
+    "find",
+    "ls",
+    "ffgrep",
+    "fffind",
+    "fff-multi-grep",
+    "ctx_search",
+    "ctx_expand",
+    "ctx_memory",
+    "ctx_note",
+    "ctx_reduce",
+    "subagent",
+    "subagent_spawn"
+  ]
+}

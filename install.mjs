@@ -318,7 +318,7 @@ async function restoreFiles() {
     "APPEND_SYSTEM.md",
     "deferred-tools.json",
     "slim-skills-whitelist.json",
-    "translate-submit.json",
+    "pi-plan-mode.json",
   ];
   for (const file of configFiles) {
     await copyPath(path.join(repoDir, "config", file), path.join(agentDir, file));

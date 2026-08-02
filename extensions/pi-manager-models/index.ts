@@ -25,7 +25,38 @@ type ProviderConfig = {
 };
 type ModelsFile = { providers?: Record<string, ProviderConfig | undefined> };
 type ModelsResponse = { data?: Array<{ id?: unknown }> };
+type JsonRecord = Record<string, unknown>;
 
+function isRecord(value: unknown): value is JsonRecord {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+export function patchDeepSeekResponsesReasoningPayload(payload: unknown): unknown | undefined {
+  if (
+    !isRecord(payload)
+    || typeof payload.model !== "string"
+    || !payload.model.toLowerCase().startsWith("deepseek")
+    || !Array.isArray(payload.input)
+  ) {
+    return undefined;
+  }
+
+  let changed = false;
+  const input = payload.input.map((item) => {
+    if (!isRecord(item) || item.type !== "reasoning" || !Array.isArray(item.summary)) return item;
+    if (typeof item.encrypted_content === "string" && item.encrypted_content.length > 0) return item;
+
+    const summary = item.summary
+      .flatMap((part) => isRecord(part) && typeof part.text === "string" ? [part.text] : [])
+      .join("\n");
+    if (!summary) return item;
+
+    changed = true;
+    return { ...item, encrypted_content: summary };
+  });
+
+  return changed ? { ...payload, input } : undefined;
+}
 async function loadProviderConfig(optional: boolean): Promise<ProviderConfig | undefined> {
   let contents: string;
   try {
@@ -106,6 +137,11 @@ export default async function managerModels(pi: ExtensionAPI): Promise<void> {
 
   let models = (initial.models ?? []).map(completeModel);
   if (!models.length) models = await discoverModels(initial, await resolveInitialKey(pi, initial.apiKey));
+
+  pi.on("before_provider_request", (event, ctx) => {
+    if (ctx.model?.provider !== providerId || ctx.model.api !== "openai-responses") return;
+    return patchDeepSeekResponsesReasoningPayload(event.payload);
+  });
 
   pi.registerProvider(providerId, {
     ...(initial.name ? { name: initial.name } : {}),

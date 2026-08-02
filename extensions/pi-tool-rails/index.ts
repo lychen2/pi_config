@@ -85,6 +85,24 @@ function record(value: unknown): RecordLike {
   return value && typeof value === "object" && !Array.isArray(value) ? value as RecordLike : {};
 }
 
+function withReasoning(parameters: any): any {
+  const reasoning = {
+    type: "string",
+    description: "Short phrase (12 words or fewer) stating the goal behind this call, not the file, path, or command.",
+  };
+  return {
+    ...(parameters ?? { type: "object", properties: {} }),
+    properties: { reasoning, ...(parameters?.properties ?? {}) },
+    required: Array.from(new Set(["reasoning", ...(parameters?.required ?? [])])),
+  };
+}
+
+function stripReasoning(params: any): { reasoning?: string; rest: any } {
+  if (!params || typeof params !== "object" || !Object.hasOwn(params, "reasoning")) return { rest: params };
+  const { reasoning, ...rest } = params;
+  return { reasoning: typeof reasoning === "string" ? reasoning : undefined, rest };
+}
+
 function string(value: unknown, fallback = "..."): string {
   return typeof value === "string" && value.trim() ? value : fallback;
 }
@@ -109,6 +127,36 @@ function reusableText(context: { lastComponent?: unknown }, content: string): Te
   return text;
 }
 
+function fallbackGoal(name: string): string {
+  switch (name) {
+    case "bash": return "run command";
+    case "read": return "inspect file";
+    case "write": return "write file";
+    case "edit": return "update file";
+    case "grep": return "find matching lines";
+    case "find": return "find files";
+    case "ls": return "list directory";
+    default: return "run tool";
+  }
+}
+
+function targetText(name: string, args: RecordLike): string {
+  if (name === "bash") return brief(args.command);
+  if (name === "grep") return `/${brief(args.pattern)}/ in ${path(args.path ?? ".")}`;
+  if (name === "find") return `${brief(args.pattern)} in ${path(args.path ?? ".")}`;
+  if (name === "ls") return path(args.path ?? ".");
+  const target = sourcePath(args);
+  if (name === "read") {
+    const start = typeof args.offset === "number" ? args.offset : undefined;
+    const limit = typeof args.limit === "number" ? args.limit : undefined;
+    if (start !== undefined || limit !== undefined) {
+      const range = `${start ?? 1}${limit === undefined ? "" : `-${(start ?? 1) + limit - 1}`}`;
+      return `${target} L${range}`;
+    }
+  }
+  return target;
+}
+
 function semanticCall(
   name: string,
   input: unknown,
@@ -116,53 +164,13 @@ function semanticCall(
   context: RenderContext,
 ): Component | undefined {
   const args = record(input);
-  const label = (value: string) => theme.fg("toolTitle", theme.bold(value));
-  const target = (value: string) => theme.fg("accent", value);
-  const meta = (value: string) => value ? theme.fg("muted", `  ${value}`) : "";
-  const pending = context.executionStarted && context.isPartial ? theme.fg("warning", "  ...") : "";
-  let content: string | undefined;
-
-  switch (name) {
-    case "bash": {
-      const timeout = typeof args.timeout === "number" ? `timeout ${args.timeout}s` : "";
-      content = `${label("$")} ${target(brief(args.command))}${meta(timeout)}`;
-      break;
-    }
-    case "read": {
-      const start = typeof args.offset === "number" ? args.offset : undefined;
-      const limit = typeof args.limit === "number" ? args.limit : undefined;
-      const range = start === undefined && limit === undefined
-        ? ""
-        : `${start ?? 1}${limit === undefined ? "" : `-${(start ?? 1) + limit - 1}`}`;
-      content = `${label("read")} ${target(sourcePath(args))}${meta(range)}`;
-      break;
-    }
-    case "write": {
-      const lines = typeof args.content === "string" ? args.content.split(/\r?\n/).length : 0;
-      content = `${label("write")} ${target(sourcePath(args))}${meta(lines ? `${lines} ${lines === 1 ? "line" : "lines"}` : "")}`;
-      break;
-    }
-    case "edit": {
-      const changes = Array.isArray(args.edits)
-        ? args.edits.length
-        : (typeof args.oldText === "string" || typeof args.newText === "string" ? 1 : 0);
-      content = `${label("edit")} ${target(sourcePath(args))}${meta(changes ? `${changes} ${changes === 1 ? "change" : "changes"}` : "")}`;
-      break;
-    }
-    case "grep":
-      content = `${label("grep")} ${target(`/${brief(args.pattern)}/`)}${meta(path(args.path ?? "."))}`;
-      break;
-    case "find":
-      content = `${label("find")} ${target(brief(args.pattern))}${meta(path(args.path ?? "."))}`;
-      break;
-    case "ls":
-      content = `${label("ls")} ${target(path(args.path ?? "."))}`;
-      break;
-    default:
-      return undefined;
-  }
-
-  return reusableText(context, content + pending);
+  const { reasoning } = stripReasoning(input);
+  const goal = typeof reasoning === "string" && reasoning.trim() ? brief(reasoning) : fallbackGoal(name);
+  const arrow = theme.fg("muted", " → ");
+  return reusableText(
+    context,
+    `${theme.fg("toolTitle", theme.bold(goal))}${arrow}${theme.fg("accent", targetText(name, args))}`,
+  );
 }
 
 function textOutput(result: unknown): string {
@@ -209,6 +217,50 @@ function hierarchyPreview(
   return text;
 }
 
+function resultSummary(
+  name: string,
+  result: unknown,
+  args: RecordLike,
+  theme: Theme,
+  context: RenderContext,
+): string {
+  const lines = outputLines(result);
+  if (context.isError) {
+    const message = lines.find((line) => line.trim())?.trim() || "failed";
+    return theme.fg("error", message);
+  }
+  if (name === "read") {
+    const count = lines.filter((line) => line.trim() && !/^\[Showing lines /.test(line)).length;
+    return theme.fg("toolOutput", `${count} ${count === 1 ? "line" : "lines"}`);
+  }
+  if (name === "write") {
+    const count = typeof args.content === "string" && args.content.length > 0
+      ? (args.content.match(/\n/g)?.length ?? 0) + (args.content.endsWith("\n") ? 0 : 1)
+      : 0;
+    return theme.fg("toolOutput", `${count} ${count === 1 ? "line" : "lines"} written`);
+  }
+  if (name === "edit") {
+    const diff = record(record(result).details).diff;
+    if (typeof diff === "string") {
+      const additions = diff.split("\n").filter((line) => line.startsWith("+") && !line.startsWith("+++" )).length;
+      const removals = diff.split("\n").filter((line) => line.startsWith("-") && !line.startsWith("---" )).length;
+      return theme.fg("toolOutput", `+${additions}/-${removals}`);
+    }
+    return theme.fg("toolOutput", "updated");
+  }
+  if (name === "bash") return theme.fg("toolOutput", "done");
+  if (name === "grep") {
+    const count = lines.filter((line) => line.trim()).length;
+    return theme.fg("toolOutput", `${count} ${count === 1 ? "match" : "matches"}`);
+  }
+  if (name === "find" || name === "ls") {
+    const count = lines.filter((line) => line.trim()).length;
+    const noun = name === "find" ? (count === 1 ? "file" : "files") : (count === 1 ? "entry" : "entries");
+    return theme.fg("toolOutput", `${count} ${noun}`);
+  }
+  return theme.fg("toolOutput", lines.length ? "done" : "completed");
+}
+
 function semanticResult(
   name: string,
   result: unknown,
@@ -216,35 +268,14 @@ function semanticResult(
   theme: Theme,
   context: RenderContext,
 ): Component | undefined {
+  if (!STYLED_BUILTINS.has(name)) return undefined;
+  if (options.isPartial) return reusableText(context, "");
+  const args = record(context.args);
+  const summary = resultSummary(name, result, args, theme, context);
+  if (!options.expanded) return reusableText(context, summary);
   const lines = outputLines(result);
-
-  if (name === "bash") {
-    if (options.isPartial && lines.length === 0) return reusableText(context, "");
-    if (context.isError && lines.length === 0) {
-      return reusableText(context, `${theme.fg("muted", "↳ ")}${theme.fg("error", "command failed")}`);
-    }
-    if (lines.length === 0) {
-      return reusableText(context, `${theme.fg("muted", "↳ completed")}`);
-    }
-    return reusableText(context, hierarchyPreview(lines, options, theme, context, "tail"));
-  }
-
-  if (name === "grep" || name === "find" || name === "ls") {
-    if (options.isPartial) return reusableText(context, "");
-    if (context.isError) {
-      const errorLines = lines.length ? lines : ["tool failed"];
-      return reusableText(context, hierarchyPreview(errorLines, options, theme, context));
-    }
-    if (options.expanded) {
-      return reusableText(context, hierarchyPreview(lines.length ? lines : ["(no results)"], options, theme, context));
-    }
-    const count = lines.filter((line) => line.trim()).length;
-    const unit = name === "grep" ? (count === 1 ? "match" : "matches") : (count === 1 ? "result" : "results");
-    const hint = count > 0 ? ` · ${keyHint("app.tools.expand", "expand")}` : "";
-    return reusableText(context, theme.fg("muted", `↳ ${count} ${unit}${hint}`));
-  }
-
-  return undefined;
+  if (!lines.length) return reusableText(context, summary);
+  return reusableText(context, `${summary}\n${hierarchyPreview(lines, options, theme, context, name === "bash" ? "tail" : "head")}`);
 }
 
 function fallbackResult(
@@ -261,12 +292,20 @@ function fallbackResult(
   return reusableText(context, hierarchyPreview(lines, options, theme, context));
 }
 
-function decorateTool(tool: ToolDefinition<any, any, any>): ToolDefinition<any, any, any> {
+export function decorateTool(tool: ToolDefinition<any, any, any>): ToolDefinition<any, any, any> {
   const renderCall = tool.renderCall;
   const renderResult = tool.renderResult;
   return {
     ...tool,
+    parameters: withReasoning(tool.parameters),
+    promptGuidelines: [
+      ...(tool.promptGuidelines ?? []),
+      `Always pass a short reasoning goal to ${tool.name}; state why this call is needed, not its path, pattern, or command.`,
+    ],
     renderShell: "default",
+    execute(toolCallId, params, signal, onUpdate, ctx) {
+      return tool.execute.call(tool, toolCallId, stripReasoning(params).rest, signal, onUpdate, ctx);
+    },
     renderCall(args, theme, context) {
       return semanticCall(tool.name, args, theme, context)
         ?? (renderCall

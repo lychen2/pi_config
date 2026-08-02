@@ -7,7 +7,10 @@
   "keywords": ["pi-package", "pi", "models", "provider", "discovery"],
   "files": ["index.ts", "README.md", "LICENSE"],
   "pi": { "extensions": ["./index.ts"] },
-  "scripts": { "typecheck": "tsc --noEmit" },
+  "scripts": {
+    "test": "node --experimental-strip-types --test test/*.test.mjs",
+    "typecheck": "tsc --noEmit"
+  },
   "peerDependencies": { "@earendil-works/pi-coding-agent": "*" },
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "^0.82.0",

@@ -21,6 +21,8 @@ Environment overrides:
 
 The extension supports literal, environment-variable, and `!command` API keys during startup. Provider refresh honors Pi's network policy and abort signal.
 
+For `manager` DeepSeek models over `openai-responses`, the extension preserves max-effort reasoning during tool-call replay when the gateway returns only a reasoning summary. The fallback is scoped to that provider/model transport and leaves already-preserved reasoning untouched.
+
 ## Development
 
 ```bash
