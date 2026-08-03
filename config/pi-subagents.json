@@ -1,0 +1,5 @@
+{
+  "stateful": {
+    "completionDelivery": "auto-resume"
+  }
+}

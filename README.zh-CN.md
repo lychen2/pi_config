@@ -25,7 +25,7 @@
 | 路径 | 内容 | 恢复方式 |
 | --- | --- | --- |
 | `install.sh`、`install.ps1`、`install.mjs` | 跨平台环境引导和配置安装器 | 运行对应操作系统的入口脚本 |
-| `extensions/` | 7 个可安装的本地 package 和 2 个独立扩展 | 使用 `pi install` 安装 package；直接复制独立扩展 |
+| `extensions/` | 全部带 `pi-*/package.json` 的本地 package 和 2 个独立扩展 | 使用 `pi install` 安装 package；直接复制独立扩展 |
 | `skills/` | 58 个 `SKILL.md` 定义，包含嵌套技能集合 | 同步到 `~/.pi/agent/skills/` |
 | `config/` | Pi 公开设置、系统规则、扩展状态和外部 package 清单 | 检查后按需复制或合并 |
 | `themes/` | 2 个 Matugen 主题 | 复制到 `~/.pi/agent/themes/` |
@@ -33,6 +33,7 @@
 
 ## Wiki
 
+- [完整使用手册：安装、激活与基础场景](docs/USAGE.zh-CN.md)
 - [快速上手](docs/WIKI.zh-CN.md)
 - [扩展目录](docs/extensions.zh-CN.md)
 - [技能目录](docs/skills.zh-CN.md)
@@ -82,8 +83,8 @@ node install.mjs
 2. 本地没有仓库时，将其下载到 `~/.pi_config`。
 3. 将现有 Pi 目录备份到 `~/.pi-backup-<timestamp>/agent`。
 4. 恢复技能、主题、独立扩展和公开配置。
-5. 安装仓库内 package 和已检查的外部 package 清单。
-6. 运行上游 Magic Context 官方安装脚本，注册插件、写入配置并关闭 Pi 原生自动压缩。
+5. 安装全部带 `extensions/pi-*/package.json` 的本地 package，按目标机路径重写本地延迟工具 ID，再安装已检查的外部 package 清单。
+6. 运行上游 Magic Context 官方安装脚本，保留其 JSONC 注释，将仓库默认执行阈值设为 `55%`，并关闭 Pi 原生自动压缩。
 7. 根据选择安装浏览器和 RTK 命令行工具。
 provider 凭据、模型注册表、API key、会话和环境变量继续保留在各台机器上。
 
@@ -120,9 +121,9 @@ provider 凭据、模型注册表、API key、会话和环境变量继续保留�
 # 同时应用仓库中的 provider/model 默认值
 ./install.sh --yes --with-model-defaults
 
-# 跳过外部 package 和可选命令行 runtime
 # 跳过 Magic Context、外部 package 和可选命令行 runtime
 ./install.sh --yes --skip-magic-context --skip-external --skip-browser --skip-rtk
+```
 
 PowerShell 使用对应的 switch 名称：
 
@@ -165,7 +166,7 @@ rtk --version
 /sensitive-guard status
 ```
 
-初始工具集中应包含 `load_tools`。由延迟扩展管理的工具会保持隐藏，直到 `load_tools` 激活指定工具。
+初始工具集中应包含 `load_tools`。它是模型调用的工具，不是 slash command：在任务中明确要求语义代码、浏览器或 DAG 等能力，模型会精确激活一个匹配工具。激活步骤和完整场景见[完整使用手册](docs/USAGE.zh-CN.md)。
 
 ## 本地扩展
 
@@ -176,10 +177,22 @@ rtk --version
 | [`pi-deferred-tools`](extensions/pi-deferred-tools/) | 按扩展归组工具，并按需激活 | `/deferred-tools` |
 | [`pi-manager-models`](extensions/pi-manager-models/) | 刷新 OpenAI-compatible 模型目录，同时保留本地覆盖项 | provider `baseUrl` 和环境变量 |
 | [`pi-slim-skills`](extensions/pi-slim-skills/) | 压缩技能索引，并在每个 prompt 中注入一次指定技能内容 | `/slim-skills` |
-| [`pi-todo-guard`](extensions/pi-todo-guard/) | Todo 存在未完成任务时继续当前运行 | `PI_TODO_GUARD_DISABLE=1` |
+| [`pi-todo-guard`](extensions/pi-todo-guard/) | Todo 存在未完成项目时继续当前运行 | `PI_TODO_GUARD_DISABLE=1` |
+| [`pi-semantic-code`](extensions/pi-semantic-code/) | 对 C/C++、Python、Rust、JS/TS、C#、Go、LaTeX、Typst 按需提供 LSP 导航、诊断和安全重命名 | 要求模型加载 `semantic_code` |
+| [`pi-goal-verifier`](extensions/pi-goal-verifier/) | 在 Goal 完成前运行已声明的验收命令 | `.pi/goal-verification.json`、`~/.pi/agent/goal-verification.json`、`/goal-verify` |
+| [`pi-workflow-dag`](extensions/pi-workflow-dag/) | 按依赖分波执行检查、实现、复核 worker | 要求模型加载 `workflow_dag` |
 | [`pi-tool-rails`](extensions/pi-tool-rails/) | 添加主题化工具标签、结果面板和输入框样式 | `PI_TOOL_RAILS_DISABLE_USER_FRAME=1` |
 | [`adhd-mode.ts`](extensions/adhd-mode.ts) | 添加可跨会话保持的 ADHD 响应规则 | `/adhd` |
 | [`matugen-chrome.ts`](extensions/matugen-chrome.ts) | 使用当前 Pi theme 渲染 Cometix 风格 footer | `/matugen-chrome` |
+
+## 首次使用
+
+1. 在项目目录启动 Pi：`pi`。
+2. 用目标、范围和验收命令描述任务，例如：`修复登录回调；运行相关测试；不要改其他模块。`
+3. 需要延迟能力时直接说出能力，例如：`加载 semantic_code，查找 handleRequest 的全部引用。`
+4. 长任务用 `/goal` 配合 `goal-verification.json`；只有小型依赖图才要求 `workflow_dag`。
+
+[完整使用手册](docs/USAGE.zh-CN.md) 说明全部能力的激活方式，并提供编码、审阅、语义导航、Goal、委派、浏览器、PDF 和可视化示例。
 
 常用的 package 检查命令如下：
 
@@ -215,15 +228,17 @@ package 凭据和各 package 自己维护的设置会保留在目标机器上。
 
 ## 更新备份
 
-拉取仓库变更，不直接修改正在使用的 Pi 目录：
+拉取仓库变更、检查差异后，再重新应用可迁移配置：
 
 ```bash
 cd ~/.pi_config
 git pull --ff-only
 git status
+node install.mjs --dry-run --yes
+node install.mjs --yes
 ```
 
-将更新后的文件复制到 `~/.pi/agent/` 前，先检查变更内容。
+安装器会为正在使用的 Pi 目录创建新备份，并更新 skills、设置、本地 package、延迟工具 ID、Magic Context 默认值和公开扩展配置；它不会复制凭据或会话数据。
 
 ## 安全
 

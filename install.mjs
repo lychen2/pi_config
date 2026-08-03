@@ -14,6 +14,7 @@ import path from "node:path";
 import process from "node:process";
 import readline from "node:readline/promises";
 import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
 import { spawnSync } from "node:child_process";
 
 const repoDir = path.dirname(fileURLToPath(import.meta.url));
@@ -319,6 +320,7 @@ async function restoreFiles() {
     "deferred-tools.json",
     "slim-skills-whitelist.json",
     "pi-plan-mode.json",
+    "pi-subagents.json",
   ];
   for (const file of configFiles) {
     await copyPath(path.join(repoDir, "config", file), path.join(agentDir, file));
@@ -386,8 +388,48 @@ async function installLocalPackages() {
   for (const packageDir of packageDirs) {
     run(commandName("pi"), ["install", packageDir]);
   }
+
+  await syncDeferredLocalPackages(packageDirs);
 }
 
+function relativePackageSource(packageDir) {
+  return path.relative(agentDir, packageDir);
+}
+
+function localPackageName(source) {
+  const normalized = source.replaceAll("\\", "/");
+  const match = normalized.match(/(?:^|\/)extensions\/(pi-[^/]+)$/);
+  return match?.[1];
+}
+
+async function syncDeferredLocalPackages(packageDirs) {
+  const targetPath = path.join(agentDir, "deferred-tools.json");
+  const sourcePath = installerOptions.dryRun
+    ? path.join(repoDir, "config", "deferred-tools.json")
+    : targetPath;
+  const config = await readJson(sourcePath, { extensions: [] });
+  if (!Array.isArray(config.extensions)) {
+    throw new Error(`Deferred-tools config at ${sourcePath} must contain an extensions array`);
+  }
+
+  const localSources = new Map(
+    packageDirs.map((packageDir) => [path.basename(packageDir), relativePackageSource(packageDir)]),
+  );
+  let changed = false;
+  const extensions = config.extensions.map((source) => {
+    if (typeof source !== "string") return source;
+    const packageName = localPackageName(source);
+    const replacement = packageName ? localSources.get(packageName) : undefined;
+    if (!replacement || replacement === source) return source;
+    changed = true;
+    return replacement;
+  });
+
+  if (!changed) return;
+  console.log(`  rewrite local deferred package IDs -> ${targetPath}`);
+  if (installerOptions.dryRun) return;
+  await writeFile(targetPath, `${JSON.stringify({ ...config, extensions }, null, 2)}\n`, "utf8");
+}
 async function installExternalPackages(enabled) {
   console.log("\n[5/7] Installing external Pi packages");
   if (!enabled) {
@@ -419,6 +461,39 @@ async function installExternalPackages(enabled) {
   }
 }
 
+function magicContextConfigPath() {
+  const xdgConfigHome = process.env.XDG_CONFIG_HOME;
+  const configHome = xdgConfigHome && path.isAbsolute(xdgConfigHome)
+    ? xdgConfigHome
+    : path.join(homeDir, ".config");
+  return path.join(configHome, "cortexkit", "magic-context.jsonc");
+}
+
+async function configureMagicContextThreshold() {
+  const configPath = magicContextConfigPath();
+  console.log(`  set Magic Context execute threshold to 55% -> ${configPath}`);
+  if (installerOptions.dryRun) return;
+
+  const packageRoot = path.join(agentDir, "npm", "node_modules", "@cortexkit", "pi-magic-context");
+  const packageJsonPath = path.join(packageRoot, "package.json");
+  if (!(await pathExists(packageJsonPath))) {
+    throw new Error(`Magic Context package is missing after installation: ${packageRoot}`);
+  }
+
+  const requireFromMagicContext = createRequire(packageJsonPath);
+  const { parse, stringify } = requireFromMagicContext("comment-json");
+  const existing = await pathExists(configPath)
+    ? parse(await readFile(configPath, "utf8"))
+    : {};
+  if (!isPlainObject(existing)) {
+    throw new Error(`Magic Context config at ${configPath} must be a JSONC object`);
+  }
+
+  existing.execute_threshold_percentage = 55;
+  await mkdir(path.dirname(configPath), { recursive: true });
+  await writeFile(configPath, `${stringify(existing, null, 2)}\n`, "utf8");
+}
+
 async function installMagicContext(enabled) {
   console.log("\n[6/7] Installing Magic Context");
   if (!enabled) {
@@ -440,6 +515,7 @@ async function installMagicContext(enabled) {
       "curl -fsSL https://raw.githubusercontent.com/cortexkit/magic-context/master/scripts/install.sh | bash",
     ]);
   }
+  await configureMagicContextThreshold();
 }
 
 async function installOptionalTools(choices) {

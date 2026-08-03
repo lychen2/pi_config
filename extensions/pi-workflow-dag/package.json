@@ -1,0 +1,23 @@
+{
+  "name": "pi-workflow-dag-local",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "keywords": ["pi-package"],
+  "scripts": { "typecheck": "tsc --noEmit" },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*",
+    "typebox": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-ai": "^0.83.0",
+    "@earendil-works/pi-coding-agent": "^0.83.0",
+    "@types/node": "^24.0.0",
+    "typebox": "^1.1.0",
+    "typescript": "^5.9.0"
+  },
+  "pi": {
+    "extensions": ["./index.ts"]
+  }
+}

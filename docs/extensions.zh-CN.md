@@ -2,11 +2,11 @@
 
 本页说明 `pi_config` 中的扩展如何使用。扩展拥有与 Pi 相同的本机权限；安装未知 package 前先检查其源码和 `package.json`。
 
-回到 [快速上手](WIKI.zh-CN.md)。
+回到[完整使用手册](USAGE.zh-CN.md)或[快速上手](WIKI.zh-CN.md)。
 
 ## 本仓库 package
 
-安装器会安装 `extensions/` 下带 `package.json` 的 8 个 package。开发时进入对应目录运行 `npm run typecheck`；带测试的 package 还可运行 `npm test`。
+安装器会扫描并安装 `extensions/` 下全部带 `pi-*/package.json` 的 package。开发时进入对应目录运行 `npm run typecheck`；带测试的 package 还可运行 `npm test`。
 
 | 扩展 | 解决的问题 | 使用入口 | 配置或开关 |
 | --- | --- | --- | --- |
@@ -17,12 +17,57 @@
 | `pi-slim-skills` | 压缩模型可见的技能索引，降低提示词体积 | `/slim-skills remove <名称>`、`none`、`reset`、`inject <名称>` | `slim-skills-whitelist.json`；`SLIM_SKILLS_DISABLE=1` 禁用 |
 | `pi-todo-guard` | Todo 仍有未完成项目时，提醒代理继续当前任务 | 自动处理 | `PI_TODO_GUARD_DISABLE=1`；默认兼容 `todo` 工具 |
 | `pi-tool-rails` | 提供稳定的工具标签、结果面板、diff 和输入框样式 | 自动处理 | `PI_TOOL_RAILS_DISABLE_USER_FRAME=1` 仅关闭用户消息边框 |
+| `pi-semantic-code` | 在需要时按文件类型选择 LSP，提供导航、诊断、hover、引用和 rename | 让模型调用 `load_tools` 加载 `semantic_code` | 全局或项目 `.pi/semantic-code.json`；见下文 |
+| `pi-goal-verifier` | Goal 完成前执行显式声明的验收命令 | 自动监听 `goal_complete`；`/goal-verify` 可单独运行 | 全局或可信项目的 `goal-verification.json` |
+| `pi-workflow-dag` | 用依赖波次运行小型检查、实现、复核 worker | 让模型调用 `load_tools` 加载 `workflow_dag` | session 中保存 `status` 和 `clear` 状态 |
 
 ### 延迟工具的正确使用
 
-`pi-deferred-tools` 不会删除能力，而是让模型通过 `load_tools` 精确启用一个工具。不要手动伪造 `load_tools` 参数；直接告诉模型所需能力，例如“用浏览器检查登录页”，它会按需加载。
+`pi-deferred-tools` 不会删除能力，而是让模型通过 `load_tools` 精确启用一个工具。`load_tools` 是模型工具，不是需要用户手输的 slash command。直接说明需要的能力，例如：
 
-使用 `/deferred-tools list` 查看当前延迟集合。新增或移除 package 后执行 `/reload`，让扩展重新发现工具归属。
+```text
+请先加载 semantic_code，检查 src/main.rs 的类型诊断；不要修改文件。
+```
+
+模型会加载对应工具后再执行。查看当前延迟集合：
+
+```text
+/deferred-tools list
+```
+
+新增或移除 package 后执行 `/reload`，让扩展重新发现工具归属。除非在调试 loader，否则不要手写本地 extension ID 或路径；安装器会为目标机生成它们。
+
+### `semantic_code`
+
+这是延迟 LSP 工具。支持 `status`、`diagnostics`、`definition`、`references`、`hover`、`symbols`、`rename`；按文件类型自动尝试 C/C++、Python、Rust、JS/TS、C#、Go、LaTeX、Typst 的可执行服务器。
+
+推荐提示：
+
+```text
+加载 semantic_code，查找 src/api.ts 第 42 行 handleRequest 的全部引用。只读，最后给出安全的修改入口。
+```
+
+`rename` 默认只预览；用户确认后才要求模型使用 `apply=true`。项目可用 `.pi/semantic-code.json` 覆盖服务器。完整路由、安装语言服务器和重命名示例见[完整使用手册](USAGE.zh-CN.md#4-语义代码工具semantic_code)。
+
+### `pi-goal-verifier`
+
+它没有工具 schema。没有 `~/.pi/agent/goal-verification.json` 或可信项目 `.pi/goal-verification.json` 时不执行任何命令；有配置时会在 `goal_complete` 前运行最多 5 条验收命令。失败、超时、无效配置和越界 `cwd` 都会阻断完成。
+
+```text
+/goal-verify
+```
+
+单独运行当前配置的验收。JSON 格式、受信任项目规则和例子见[完整使用手册](USAGE.zh-CN.md#5-goal-验收门pi-goal-verifier)。
+
+### `workflow_dag`
+
+这是延迟的轻量 DAG 工具，适合少量 `readonly` 检查节点、一个显式 `write` 实现节点和最后的复核节点。最多 8 个节点；只读节点最多 3 个并行；失败下游会跳过。普通独立委派仍优先使用 `@narumitw/pi-subagents`。
+
+```text
+加载 workflow_dag，把任务拆成 inspect（只读）、implement（write）、review（只读）三个节点。每个节点只返回结论、改动文件和验证结果。
+```
+
+工具的 `status` 和 `clear` 由模型调用；完整节点 JSON 例子见[完整使用手册](USAGE.zh-CN.md#6-轻量-dagworkflow_dag)。
 
 ## 独立扩展
 
@@ -47,7 +92,7 @@
 | `pi-slopchop` | 终端内代码审阅与注释 | `/slopchop` 或 `/diff` |
 | `pi-workspace-history` | 工作区级撤销与重做 | 在需要回退文件改动时调用其命令；先查看 `/hotkeys` 中实际注册键位 |
 | `@narumitw/pi-goal` | 自主目标执行和验收 | `/goal`；仅在目标完整可验证时标记完成 |
-| `@narumitw/pi-subagents` | 隔离子代理委派 | `/subagents` 配置；模型按任务调用子代理工具 |
+| `@narumitw/pi-subagents` | 隔离子代理委派；stateful agent 完成后会自动续跑主代理 | `/subagents status`；模型按任务调用子代理工具；由 `pi-subagents.json` 配置 |
 | `@juicesharp/rpiv-todo` | 跨重载与压缩保存的任务列表 | 模型调用 `todo`；状态显示在 overlay |
 | `@narumitw/pi-btw` | 不打断主任务的侧问题 | `/btw <问题>` |
 | `pi-rtk-optimizer` | RTK 命令改写和工具输出压缩 | `/rtk verify`；需要安装 `rtk` binary |

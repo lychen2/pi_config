@@ -7,6 +7,8 @@
     "npm:@narumitw/pi-subagents",
     "npm:pi-add-dir",
     "npm:pi-agent-browser-native",
-    "npm:pi-markdown-preview"
+    "npm:pi-markdown-preview",
+    "../../pi_config/extensions/pi-semantic-code",
+    "../../pi_config/extensions/pi-workflow-dag"
   ]
 }

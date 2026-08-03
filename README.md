@@ -24,14 +24,14 @@ A portable backup of extensions, skills, themes, and public configuration for th
 | Path | Contents | How to restore |
 | --- | --- | --- |
 | `install.sh`, `install.ps1`, `install.mjs` | Cross-platform bootstrap and configuration installer | Run the entry point for your operating system |
-| `extensions/` | 7 installable local packages and 2 standalone extensions | Install packages with `pi install`; copy standalone files |
-| `skills/` | 58 `SKILL.md` definitions, including nested collections | Sync to `~/.pi/agent/skills/` |
+| `extensions/` | All installable local `pi-*/package.json` packages and 2 standalone extensions | Install packages with `pi install`; copy standalone files |
 | `config/` | Public Pi settings, system guidance, extension state, and the external package manifest | Review, then copy or merge individual files |
 | `themes/` | 2 Matugen themes | Copy to `~/.pi/agent/themes/` |
 | `docs/` | Onboarding Wiki, extension and skill catalogs, plus README screenshots | Open [`docs/WIKI.zh-CN.md`](docs/WIKI.zh-CN.md) |
 
 ## Documentation
 
+- [Complete usage guide (Simplified Chinese)](docs/USAGE.zh-CN.md)
 - [Quick-start Wiki (Simplified Chinese)](docs/WIKI.zh-CN.md)
 - [Extension catalog (Simplified Chinese)](docs/extensions.zh-CN.md)
 - [Skill catalog (Simplified Chinese)](docs/skills.zh-CN.md)
@@ -81,8 +81,8 @@ The installer performs these steps in order:
 2. Downloads this repository to `~/.pi_config` when it is not already available.
 3. Backs up the existing Pi directory to `~/.pi-backup-<timestamp>/agent`.
 4. Restores skills, themes, standalone extensions, and public configuration.
-5. Installs local packages and the reviewed external package manifest.
-6. Runs the upstream Magic Context setup script, which registers the plugin, writes its config, and disables Pi's built-in auto-compaction.
+5. Installs every local `extensions/pi-*/package.json` package, rewrites local deferred-tool IDs for the target machine, then installs the reviewed external package manifest.
+6. Runs the upstream Magic Context setup script, preserves its JSONC comments, sets the repository default execution threshold to `55%`, and disables Pi's built-in auto-compaction.
 7. Installs optional browser and RTK command-line tools when selected.
 Provider credentials, model registries, API keys, sessions, and environment variables remain local to each machine.
 
@@ -121,6 +121,7 @@ Examples:
 
 # Skip Magic Context setup, external packages, and optional command-line runtimes
 ./install.sh --yes --skip-magic-context --skip-external --skip-browser --skip-rtk
+```
 
 PowerShell uses matching switch names:
 
@@ -163,7 +164,7 @@ rtk --version
 /sensitive-guard status
 ```
 
-The initial tool set should include `load_tools`. Tools managed by deferred extensions remain hidden until `load_tools` activates one exact tool.
+The initial tool set should include `load_tools`. It is a model tool, not a slash command: ask Pi to use a capability such as semantic code intelligence or browser automation, and it activates exactly one matching deferred tool. See the [complete usage guide](docs/USAGE.zh-CN.md) for activation and end-to-end examples.
 
 ## Local extensions
 
@@ -175,9 +176,21 @@ The initial tool set should include `load_tools`. Tools managed by deferred exte
 | [`pi-manager-models`](extensions/pi-manager-models/) | Refreshes an OpenAI-compatible model catalog while preserving local overrides | Provider `baseUrl` and environment variables |
 | [`pi-slim-skills`](extensions/pi-slim-skills/) | Compresses the skill index and injects selected skill content once per prompt | `/slim-skills` |
 | [`pi-todo-guard`](extensions/pi-todo-guard/) | Continues runs while Todo contains unfinished tasks | `PI_TODO_GUARD_DISABLE=1` |
+| [`pi-semantic-code`](extensions/pi-semantic-code/) | Deferred LSP navigation, diagnostics, and safe rename across C/C++, Python, Rust, JS/TS, C#, Go, LaTeX, and Typst | Ask Pi to load `semantic_code` |
+| [`pi-goal-verifier`](extensions/pi-goal-verifier/) | Runs configured commands before Goal completion | `.pi/goal-verification.json`, `~/.pi/agent/goal-verification.json`, `/goal-verify` |
+| [`pi-workflow-dag`](extensions/pi-workflow-dag/) | Deferred dependency-aware inspect/implement/review workers | Ask Pi to load `workflow_dag` |
 | [`pi-tool-rails`](extensions/pi-tool-rails/) | Adds themed tool labels, result panels, and prompt framing | `PI_TOOL_RAILS_DISABLE_USER_FRAME=1` |
 | [`adhd-mode.ts`](extensions/adhd-mode.ts) | Adds session-persistent ADHD response rules | `/adhd` |
 | [`matugen-chrome.ts`](extensions/matugen-chrome.ts) | Renders a Cometix-style footer with the active Pi theme | `/matugen-chrome` |
+
+## First use
+
+1. Start Pi from the project directory: `pi`.
+2. Give a bounded request with the intended verification, for example: `Fix the login callback; run its focused tests; do not change other modules.`
+3. For deferred capabilities, explicitly request the capability: `Load semantic_code and find all references to handleRequest.`
+4. Use `/goal` with a `goal-verification.json` file for a verified long task, and ask for `workflow_dag` only when a small dependency graph is useful.
+
+The [complete usage guide](docs/USAGE.zh-CN.md) explains every installed capability and includes coding, review, semantic navigation, Goal, delegation, browser, PDF, and visualization examples.
 
 A typical package check looks like this:
 
@@ -213,15 +226,17 @@ Package credentials and package-owned settings remain on the target machine.
 
 ## Update this backup
 
-Pull repository changes without modifying the active Pi directory:
+Pull repository changes, review them, then reapply the portable configuration:
 
 ```bash
 cd ~/.pi_config
 git pull --ff-only
 git status
+node install.mjs --dry-run --yes
+node install.mjs --yes
 ```
 
-Review the diff before copying updated files into `~/.pi/agent/`.
+The installer creates a fresh backup of the active Pi directory. It updates skills, settings, local packages, deferred IDs, Magic Context defaults, and public extension configuration; it does not copy credentials or session data.
 
 ## Security
 

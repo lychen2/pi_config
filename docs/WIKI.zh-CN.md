@@ -1,7 +1,8 @@
 # Pi 配置快速上手
 
-本页面向第一次使用此仓库的人。先完成下面 5 步，再按任务查阅技能和扩展目录。
+本页面向第一次使用此仓库的人。先完成下面 5 步；需要查看延迟工具、验收、DAG 和完整基础场景时，直接打开[完整使用手册](USAGE.zh-CN.md)。
 
+- [完整使用手册](USAGE.zh-CN.md)：安装、激活、全部能力和六个基础场景
 - [扩展目录](extensions.zh-CN.md)：本地 package、第三方 package、命令与工具
 - [技能目录](skills.zh-CN.md)：58 个随仓库分发的技能及调用场景
 - [公开设置](../config/settings-public.json)：可选的默认模型、主题与技能设置
@@ -11,8 +12,8 @@
 
 1. 在仓库根目录运行 `./install.sh --yes`，或已安装 Pi 时运行 `node install.mjs --yes`。
 2. 运行 `pi`，输入 `/provider add` 配置本机提供方，再用 `/model` 选择可用模型。
-3. 输入一个具体任务，例如“检查当前项目的测试失败原因并修复”。模型会自行调用已启用的工具。
-4. 需要明确工作流时，输入 `/skill:<名称>`，例如 `/skill:karpathy-guidelines` 或 `/skill:literature-review`。
+3. 输入一个具体任务，例如“检查当前项目的测试失败原因并修复”。需要浏览器、subagent、语义代码或 DAG 时，在任务中直接说出能力，模型会调用 `load_tools`。
+4. 需要明确工作流时，输入 `/skill:<名称>`，例如 `/skill:karpathy-guidelines`、`/skill:mineru-file-processing` 或 `/skill:scientific-visualization`。
 5. 修改 `~/.pi/agent/settings.json`、扩展或主题后，在 Pi 中运行 `/reload`。
 
 ## Pi 的工作方式
@@ -27,7 +28,7 @@ Pi 是终端编码代理。它将当前目录、`AGENTS.md`、已启用技能和
 | `!!命令` | 运行本地 shell 但不把输出放进模型上下文 | 本地检查、打开日志或调试环境 |
 | `/skill:名称` | 强制载入某个技能 | 任务需要明确的专业流程 |
 | `/plan` | 切换为只读规划模式 | 先确认方案、范围和风险 |
-| `load_tools` | 由模型按需启用延迟工具 | 当前工具集不含所需能力时 |
+| `load_tools` | 由模型按需启用一个延迟工具，不是用户输入的 slash command | 在提示词中要求语义代码、浏览器、subagent 或 DAG 时 |
 
 `@`、`!` 与 `!!` 都是输入前缀，不是 shell 的通用语法。文件引用用 `@README.md`，shell 命令用 `!git status`。
 
@@ -46,6 +47,18 @@ Pi 是终端编码代理。它将当前目录、`AGENTS.md`、已启用技能和
 | `/hotkeys` | 在终端内查看完整快捷键表 |
 | `/export [文件]` | 导出 HTML 或 JSONL 会话记录 |
 | `/trust` | 保存项目资源信任决定；重启后生效 |
+
+## 新增能力的最短路径
+
+| 目标 | 直接输入给 Pi 的提示 |
+| --- | --- |
+| 跨文件找定义、引用或诊断 | `加载 semantic_code，检查 src/api.ts 第 42 行 handleRequest 的引用和诊断；不要修改文件。` |
+| 安全重命名 | `加载 semantic_code，先预览 rename；我确认后才 apply。` |
+| 长任务必须验证 | 创建 `.pi/goal-verification.json`，然后用 `/goal` 执行任务；完成前用 `/goal-verify` 检查。 |
+| 小型并行工作流 | `加载 workflow_dag，按 inspect、implement、review 三个依赖节点执行。` |
+| 普通并行调查 | `使用 subagent 并行查实现、测试和最近提交；子代理只读。` |
+
+详细参数、配置 JSON 和六个完整场景在[完整使用手册](USAGE.zh-CN.md)。
 
 ## 必记快捷键
 
@@ -89,10 +102,10 @@ Pi 是终端编码代理。它将当前目录、`AGENTS.md`、已启用技能和
 
 ### 科研与文献
 
-1. 文献检索：`/skill:literature-review`、`/skill:literature-search-openalex` 或 `/skill:pubmed-database`。
-2. 论文写作：`/skill:academic-paper`；同行审阅：`/skill:academic-paper-reviewer`。
-3. 图表：先载入 `/skill:figure-style`，多面板图再载入 `/skill:figure-composer`。
-4. PDF 内容抽取优先 `/skill:pdf-explore`；文档批处理使用 `/skill:mineru-file-processing`。
+1. PDF、表格和公式抽取：`/skill:mineru-file-processing`；任务中说明是否需要页码和 OCR。
+2. 科学图表：先加载 `/skill:figure-style`，再加载 `/skill:scientific-visualization`，只用已有数据。
+3. 中文或英文润色：`/skill:humanizer-zh` 或 `/skill:humanizer`，保留术语和引用。
+4. 其他已同步但默认未发现的技能，先查[技能目录](skills.zh-CN.md)，再用 `/slim-skills inject <名称>` 显式注入。
 
 ### 浏览器与外部目录
 
@@ -114,7 +127,7 @@ Pi 是终端编码代理。它将当前目录、`AGENTS.md`、已启用技能和
 | 目标 | 操作 |
 | --- | --- |
 | 更新 Pi 和已安装 package | `pi update --all` |
-| 同步此仓库 | `git pull --ff-only` |
+| 同步此仓库并重新应用公开配置 | `git pull --ff-only && node install.mjs --yes` |
 | 预览安装器影响 | `node install.mjs --dry-run --yes` |
 | 检查已安装 package | `pi list` |
 | 重载当前会话资源 | `/reload` |
