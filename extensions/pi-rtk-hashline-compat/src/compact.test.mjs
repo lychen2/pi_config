@@ -76,6 +76,26 @@ test("applies RTK smart line limit even below the character limit", () => {
   assert.equal(result.details.nextOffset, 91);
 });
 
+test("compacts unpaged long hashline reads before RTK can cut an anchor", () => {
+  const source = hashlineText(81, 360);
+  const result = compactHashlineRead(
+    readEvent(source, { input: { path: "sample.ts" } }),
+    { maxChars: 8_000, maxLines: 160 },
+  );
+
+  const output = textOf(result);
+  const sourceLines = source.split("\n").filter((line) => HASHLINE.test(line));
+  const keptLines = output.split("\n").filter((line) => HASHLINE.test(line));
+
+  assert.ok(source.length > 8_000);
+  assert.ok(output.length <= 8_000);
+  assert.ok(keptLines.length > 0);
+  assert.ok(keptLines.length < sourceLines.length);
+  assert.deepEqual(keptLines, sourceLines.slice(0, keptLines.length));
+  assert.equal(result.details.nextOffset, keptLines.length + 1);
+  assert.match(output, new RegExp(`Continue with read offset=${keptLines.length + 1}\\.`));
+});
+
 test("keeps short and non-hashline reads exact", () => {
   assert.equal(
     compactHashlineRead(readEvent(hashlineText(80)), { maxChars: 1_000, maxLines: 40 }),

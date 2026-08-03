@@ -25,6 +25,8 @@ const agentDir = path.resolve(process.env.PI_CODING_AGENT_DIR || defaultAgentDir
 const retiredPackageSources = new Set([
   "git:github.com/Xichun123/pi-cometix-footer",
 ]);
+const rtkOptimizerPackageSource = "npm:pi-rtk-optimizer";
+const rtkHashlineCompatPackageName = "pi-rtk-hashline-compat";
 
 function normalizeChildPath() {
   const pathKey = Object.keys(process.env).find((key) => key.toLowerCase() === "path") || "PATH";
@@ -210,6 +212,29 @@ function configuredPackageSource(value) {
   if (typeof value === "string") return value;
   if (isPlainObject(value) && typeof value.source === "string") return value.source;
   return undefined;
+}
+
+function isRtkOptimizerPackage(value) {
+  const source = configuredPackageSource(value);
+  return source === rtkOptimizerPackageSource || source?.startsWith(`${rtkOptimizerPackageSource}@`);
+}
+
+function isRtkHashlineCompatPackage(value) {
+  const source = configuredPackageSource(value)?.replaceAll("\\", "/").replace(/\/+$/, "");
+  return source?.endsWith(`/extensions/${rtkHashlineCompatPackageName}`) ?? false;
+}
+
+function moveRtkHashlineCompatBeforeOptimizer(packages) {
+  const rtkIndex = packages.findIndex(isRtkOptimizerPackage);
+  const compatIndex = packages.findIndex(isRtkHashlineCompatPackage);
+  if (rtkIndex < 0 || compatIndex < 0 || compatIndex < rtkIndex) {
+    return packages;
+  }
+
+  const reordered = [...packages];
+  const [compatPackage] = reordered.splice(compatIndex, 1);
+  reordered.splice(rtkIndex, 0, compatPackage);
+  return reordered;
 }
 
 function mergeObjects(base, overlay) {
@@ -463,6 +488,25 @@ async function installExternalPackages(enabled) {
   }
 }
 
+async function ensureRtkHashlineCompatLoadOrder() {
+  const settingsPath = path.join(agentDir, "settings.json");
+  const settings = await readJson(settingsPath);
+  if (!Array.isArray(settings.packages)) {
+    return;
+  }
+
+  const packages = moveRtkHashlineCompatBeforeOptimizer(settings.packages);
+  if (packages === settings.packages) {
+    return;
+  }
+
+  console.log("  move pi-rtk-hashline-compat before pi-rtk-optimizer");
+  if (installerOptions.dryRun) {
+    return;
+  }
+  await writeFile(settingsPath, `${JSON.stringify({ ...settings, packages }, null, 2)}\n`, "utf8");
+}
+
 function magicContextConfigPath() {
   const xdgConfigHome = process.env.XDG_CONFIG_HOME;
   const configHome = xdgConfigHome && path.isAbsolute(xdgConfigHome)
@@ -590,6 +634,7 @@ await restoreFiles();
 await mergePublicSettings(choices.modelDefaults);
 await installLocalPackages();
 await installExternalPackages(choices.external);
+await ensureRtkHashlineCompatLoadOrder();
 await installMagicContext(choices.magicContext);
 await installOptionalTools(choices);
 

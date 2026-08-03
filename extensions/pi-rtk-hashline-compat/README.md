@@ -12,7 +12,7 @@ Compatibility extension for `pi-rtk-optimizer` and `pi-hashline-edit-pro`.
 - skips results already compacted by RTK;
 - leaves `write` and `replace` results untouched, so their hash validation and edit behavior are unchanged;
 
-It reads RTK's runtime config from `~/.pi/agent/extensions/pi-rtk-optimizer/config.json` and becomes inactive when RTK read compaction is disabled or both truncation modes are disabled. It only changes successful `read` result text; `write` and `replace` events pass through unchanged. Set `PI_RTK_HASHLINE_COMPAT_DISABLE=1` to disable only this adapter. `PI_RTK_HASHLINE_MAX_CHARS` overrides the character limit for diagnosis.
+It must load before `pi-rtk-optimizer`: Pi chains `tool_result` handlers in package order, so this adapter first reduces long hashline output at complete-line boundaries and RTK then sees a result inside the same budget. `install.mjs` normalizes that order in `~/.pi/agent/settings.json` after package installation. The adapter reads RTK's runtime config from `~/.pi/agent/extensions/pi-rtk-optimizer/config.json` and becomes inactive when RTK read compaction is disabled or both truncation modes are disabled. It only changes successful `read` result text; `write` and `replace` events pass through unchanged. Set `PI_RTK_HASHLINE_COMPAT_DISABLE=1` to disable only this adapter. `PI_RTK_HASHLINE_MAX_CHARS` overrides the character limit for diagnosis.
 
 ## Development
 

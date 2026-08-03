@@ -37,22 +37,30 @@ try {
   configuredPackages = [];
 }
 
-const adapterSource = configuredPackages.find(
-  (source) => typeof source === "string" && source.replaceAll("\\", "/").endsWith("/extensions/pi-rtk-hashline-compat"),
-);
+const sourceOf = (value) => typeof value === "string" ? value : value && typeof value === "object" && typeof value.source === "string" ? value.source : undefined;
+const adapterIndex = configuredPackages.findIndex(
+  (entry) => sourceOf(entry)?.replaceAll("\\", "/").endsWith("/extensions/pi-rtk-hashline-compat") ?? false,
+ );
+const rtkIndex = configuredPackages.findIndex((entry) => {
+  const source = sourceOf(entry);
+  return source === "npm:pi-rtk-optimizer" || source?.startsWith("npm:pi-rtk-optimizer@");
+});
+const adapterSource = adapterIndex >= 0 ? sourceOf(configuredPackages[adapterIndex]) : undefined;
 const adapter = adapterSource
   ? { name: "pi-rtk-hashline-compat-local", version: "local", source: adapterSource }
   : await packageInfo("pi-rtk-hashline-compat-local");
 const hashline = await packageInfo("pi-hashline-edit-pro");
 const rtk = await packageInfo("pi-rtk-optimizer");
+const loadOrderCorrect = adapterIndex >= 0 && rtkIndex >= 0 && adapterIndex < rtkIndex;
 const configPath = path.join(agentDir, "extensions", "pi-rtk-optimizer", "config.json");
 console.log(`Pi agent directory: ${agentDir}`);
 console.log(`adapter: ${adapter ? `OK (${adapter.version})` : "MISSING"}`);
 console.log(`pi-hashline-edit-pro: ${hashline ? `OK (${hashline.version})` : "MISSING"}`);
 console.log(`pi-rtk-optimizer: ${rtk ? `OK (${rtk.version})` : "MISSING"}`);
+console.log(`load order: ${loadOrderCorrect ? "OK (adapter before RTK)" : "INVALID (adapter must load before RTK)"}`);
 console.log(`RTK config: ${await fileExists(configPath) ? "present" : "absent (adapter stays inactive)"}`);
 
-if (!adapter) {
+if (!adapter || !hashline || !rtk || !loadOrderCorrect) {
   console.error("Install local packages with: node install.mjs --yes");
   process.exitCode = 1;
 }
