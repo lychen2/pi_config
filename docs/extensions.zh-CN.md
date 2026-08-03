@@ -20,6 +20,18 @@
 | `pi-semantic-code` | 在需要时按文件类型选择语言服务器，提供代码结构导航、诊断、hover、引用和 rename | 直接描述要查的定义、引用或错误；需要时自动加载 | 全局或项目 `.pi/semantic-code.json`；见下文 |
 | `pi-goal-verifier` | Goal 完成前执行显式声明的验收命令 | 自动监听 `goal_complete`；`/goal-verify` 可单独运行 | 全局或可信项目的 `goal-verification.json` |
 | `pi-workflow-dag` | 用依赖波次运行小型检查、实现、复核 worker | 直接描述需要拆开的依赖任务；需要时自动加载 | session 中保存 `status` 和 `clear` 状态 |
+| `pi-rtk-hashline-compat` | 将 `pi-rtk-optimizer` 的 read 预算适配到 `pi-hashline-edit-pro` 的 `HASH│内容`，保留完整锚点 | `PI_RTK_HASHLINE_COMPAT_DISABLE=1`；见下文 |
+
+### `pi-rtk-hashline-compat`
+
+`pi-rtk-optimizer` 仍是外部 package。本地兼容扩展只处理 `pi-hashline-edit-pro` 成功的 `read` 结果：
+
+- 保留原始 `HASH│内容` 行格式，不重新计算或改写锚点；
+- 只在 RTK 配置的字符或智能行数预算内保留完整锚点行；
+- 将 `nextOffset` 改为第一条被省略的源文件行；
+- 不拦截 `write` 或 `replace`，hash 校验和实际编辑仍由 `pi-hashline-edit-pro` 负责。
+
+安装或更新后运行 `/reload`。设置 `PI_RTK_HASHLINE_COMPAT_DISABLE=1` 可只禁用这个适配层，两个第三方 package 仍会保留。
 
 ### 延迟工具的正确使用
 
@@ -95,7 +107,7 @@
 | `@narumitw/pi-subagents` | 隔离子代理委派；stateful agent 完成后会自动续跑主代理 | `/subagents status`；模型按任务调用子代理工具；由 `pi-subagents.json` 配置 |
 | `@juicesharp/rpiv-todo` | 跨重载与压缩保存的任务列表 | 模型调用 `todo`；状态显示在 overlay |
 | `@narumitw/pi-btw` | 不打断主任务的侧问题 | `/btw <问题>` |
-| `pi-rtk-optimizer` | RTK 命令改写和工具输出压缩 | `/rtk verify`；需要安装 `rtk` binary |
+| `pi-rtk-optimizer` | RTK 命令改写和通用工具输出压缩；hashline read 由本地 `pi-rtk-hashline-compat` 补齐 | `/rtk verify`；需要安装 `rtk` binary |
 | `pi-cache-optimizer` | 稳定提示词和 provider cache，提高缓存命中 | `/cache-optimizer` 查看或调整状态 |
 | `pi-agent-browser-native` | `agent-browser` 浏览器自动化工具 | 直接要求模型使用浏览器；先运行 doctor 检查 runtime |
 | `pi-add-dir` | 把项目外目录的文件、规则和技能加入上下文 | `/add-dir`、`/suggest-dirs`、`/dirs`、`/remove-dir` |

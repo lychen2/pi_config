@@ -24,6 +24,7 @@ A portable backup of extensions, skills, themes, and public configuration for th
 | Path | Contents | How to restore |
 | --- | --- | --- |
 | `install.sh`, `install.ps1`, `install.mjs` | Cross-platform bootstrap and configuration installer | Run the entry point for your operating system |
+| `scripts/` | Cross-platform post-install checks for local integrations | Run the relevant Node script from the repository root |
 | `extensions/` | All installable local `pi-*/package.json` packages and 2 standalone extensions | Install packages with `pi install`; copy standalone files |
 | `config/` | Public Pi settings, system guidance, extension state, and the external package manifest | Review, then copy or merge individual files |
 | `themes/` | 2 Matugen themes | Copy to `~/.pi/agent/themes/` |
@@ -164,6 +165,12 @@ rtk --version
 /sensitive-guard status
 ```
 
+From the repository root, verify the local hashline adapter and its installed dependencies:
+
+```bash
+node scripts/verify-rtk-hashline-compat.mjs
+```
+
 The initial tool set should include `load_tools`. It is a model tool, not a slash command: ask Pi to use a capability such as semantic code intelligence or browser automation, and it activates exactly one matching deferred tool. See the [complete usage guide](docs/USAGE.zh-CN.md) for activation and end-to-end examples.
 
 ## Local extensions
@@ -179,6 +186,7 @@ The initial tool set should include `load_tools`. It is a model tool, not a slas
 | [`pi-semantic-code`](extensions/pi-semantic-code/) | Deferred code-structure navigation, diagnostics, and safe rename across C/C++, Python, Rust, JS/TS, C#, Go, LaTeX, and Typst | Describe the definition, references, errors, or rename you need; Pi loads it when needed |
 | [`pi-goal-verifier`](extensions/pi-goal-verifier/) | Runs configured commands before Goal completion | `.pi/goal-verification.json`, `~/.pi/agent/goal-verification.json`, `/goal-verify` |
 | [`pi-workflow-dag`](extensions/pi-workflow-dag/) | Deferred dependency-aware inspect/implement/review workers | Describe the dependent phases; Pi loads it when needed |
+| [`pi-rtk-hashline-compat`](extensions/pi-rtk-hashline-compat/) | Applies RTK read limits to hashline output while leaving `write` and `replace` results untouched | `PI_RTK_HASHLINE_COMPAT_DISABLE=1` |
 | [`pi-tool-rails`](extensions/pi-tool-rails/) | Adds themed tool labels, result panels, and prompt framing | `PI_TOOL_RAILS_DISABLE_USER_FRAME=1` |
 | [`adhd-mode.ts`](extensions/adhd-mode.ts) | Adds session-persistent ADHD response rules | `/adhd` |
 | [`matugen-chrome.ts`](extensions/matugen-chrome.ts) | Renders a Cometix-style footer with the active Pi theme | `/matugen-chrome` |
@@ -198,6 +206,11 @@ A typical package check looks like this:
 cd extensions/pi-brand-header
 npm install
 npm run typecheck
+npm pack --dry-run
+
+cd ../pi-rtk-hashline-compat
+npm install
+npm run check
 npm pack --dry-run
 ```
 
@@ -222,7 +235,7 @@ Some directories are reference collections without a top-level `SKILL.md`. Pi do
 - hash-anchored editing, output compaction, caching, and research workflows
 - sensitive-file protection, themes, token speed, and raw-paste support
 
-Package credentials and package-owned settings remain on the target machine.
+`pi-rtk-optimizer` remains an external package. The local `pi-rtk-hashline-compat` package bridges its read-output limits to `pi-hashline-edit-pro`'s `HASH│content` format. It only compacts successful `read` results; `write` and `replace` remain untouched. Run `/reload` after installation or updates.
 
 ## Update this backup
 

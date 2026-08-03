@@ -141,6 +141,7 @@ Options:
       --skip-rtk           Skip the RTK binary
       --with-model-defaults  Apply provider/model defaults from public settings
       --skip-model-defaults  Keep the machine's provider/model selection
+  Local extensions/pi-*/package.json packages are always installed, including the RTK/hashline compatibility adapter.
   -h, --help               Show this help
 
 Recommended install (Magic Context runs its own setup wizard):
@@ -385,6 +386,7 @@ async function installLocalPackages() {
   }
 
   packageDirs.sort();
+  console.log(`  discovered local packages: ${packageDirs.map((packageDir) => path.basename(packageDir)).join(", ") || "none"}`);
   for (const packageDir of packageDirs) {
     run(commandName("pi"), ["install", packageDir]);
   }

@@ -133,5 +133,6 @@ Pi 是终端编码代理。它将当前目录、`AGENTS.md`、已启用技能和
 | 重载当前会话资源 | `/reload` |
 | 查看浏览器运行时 | `npm exec --prefix "$HOME/.pi/agent/npm" -- pi-agent-browser-doctor` |
 | 检查 RTK | `rtk --version` 与 `/rtk verify` |
+| 检查 hashline 兼容层 | `node scripts/verify-rtk-hashline-compat.mjs` |
 
 仓库只备份 `skills/` 中的技能。额外放在 `~/.agents/skills/`、`~/.claude/` 或其他目录的本机技能不会由安装器恢复；要迁移它们，应单独审查后纳入仓库或在 `settings.json` 中显式配置路径。

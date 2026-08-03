@@ -13,8 +13,11 @@ Audited against Pi 0.82 extension, package, TUI, keybinding, provider, and lifec
 | `pi-slim-skills` | Compressed skill index and deduplicated full-body injection | `pi-slim-skills/index.ts` |
 | `pi-todo-guard` | Continue settled runs while Todo tasks remain | `pi-todo-guard/index.ts` |
 | `pi-tool-rails` | Soft tool rails, semantic tool headers, user-message frame, persistent prompt frame | `pi-tool-rails/index.ts`, `pi-tool-rails/prompt-frame.ts` |
-
-Seven package directories install from this repository.
+| `pi-goal-verifier` | Run configured commands before Goal completion | `pi-goal-verifier/index.ts` |
+| `pi-semantic-code` | Deferred code navigation, diagnostics, and safe rename | `pi-semantic-code/index.ts` |
+| `pi-workflow-dag` | Dependency-aware inspect, implement, and review workers | `pi-workflow-dag/index.ts` |
+| `pi-rtk-hashline-compat` | Anchor-safe read compaction compatibility for RTK and hashline output | `pi-rtk-hashline-compat/index.ts`, `src/compact.ts` |
+Eleven package directories install from this repository.
 
 ## Standalone Extensions
 
@@ -38,7 +41,7 @@ Seven package directories install from this repository.
 | `@narumitw/pi-subagents` | 0.31.0 | Isolated subagent delegation |
 | `@juicesharp/rpiv-todo` | 2.1.0 | Persistent Todo tool and overlay |
 | `@narumitw/pi-btw` | 0.32.0 | Side-question command |
-| `pi-rtk-optimizer` | 0.9.0 | RTK command and output compaction |
+| `pi-rtk-optimizer` | 0.9.0 | RTK command rewriting and generic output compaction; hashline read compatibility is supplied by local `pi-rtk-hashline-compat` |
 | `pi-cache-optimizer` | 2.6.22 | Prompt and provider-cache optimization |
 | `pi-agent-browser-native` | 0.2.72 | Native bridge to the upstream `agent-browser` CLI |
 | `pi-add-dir` | 1.3.1 | External-directory context loading |
@@ -62,5 +65,5 @@ Seven package directories install from this repository.
 - Tool overrides skip built-ins already owned by another extension.
 - Long generic tool output is bounded and uses the configured expansion key hint.
 - Session-scoped compatibility patches restore original methods on shutdown.
-- All seven repository packages pass TypeScript.
-- All seven repository packages pass isolated Pi loading and `npm pack --dry-run` inspection.
+- All eleven repository packages pass TypeScript.
+- All eleven repository packages pass isolated Pi loading and `npm pack --dry-run` inspection.

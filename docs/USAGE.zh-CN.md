@@ -61,8 +61,8 @@ pi list
 pi-semantic-code-local
 pi-goal-verifier-local
 pi-workflow-dag-local
+pi-rtk-hashline-compat-local
 ```
-
 启动 Pi：
 
 ```bash
@@ -446,7 +446,9 @@ npm exec --prefix "$HOME/.pi/agent/npm" -- pi-agent-browser-doctor
 /cache-optimizer
 ```
 
-RTK 压缩命令输出；cache optimizer 尽量保持稳定的提示词前缀以提高 provider cache 命中。两者都不是代码正确性的替代品，测试仍要运行。
+RTK 压缩命令输出；`pi-rtk-hashline-compat` 将同一预算应用到 `pi-hashline-edit-pro` 的 `HASH│内容` read 结果。它只保留完整锚点行并修正继续读取所需的 `nextOffset`，不修改 `write` 或 `replace` 结果。
+
+从仓库根目录运行 `node scripts/verify-rtk-hashline-compat.mjs`，可检查适配层、`pi-hashline-edit-pro`、`pi-rtk-optimizer` 和 RTK 配置是否存在。
 
 ### Magic Context
 

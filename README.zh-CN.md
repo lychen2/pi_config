@@ -25,6 +25,7 @@
 | 路径 | 内容 | 恢复方式 |
 | --- | --- | --- |
 | `install.sh`、`install.ps1`、`install.mjs` | 跨平台环境引导和配置安装器 | 运行对应操作系统的入口脚本 |
+| `scripts/` | 本地集成的跨平台安装后检查脚本 | 在仓库根目录运行对应 Node 脚本 |
 | `extensions/` | 全部带 `pi-*/package.json` 的本地 package 和 2 个独立扩展 | 使用 `pi install` 安装 package；直接复制独立扩展 |
 | `skills/` | 58 个 `SKILL.md` 定义，包含嵌套技能集合 | 同步到 `~/.pi/agent/skills/` |
 | `config/` | Pi 公开设置、系统规则、扩展状态和外部 package 清单 | 检查后按需复制或合并 |
@@ -166,6 +167,12 @@ rtk --version
 /sensitive-guard status
 ```
 
+在仓库根目录运行下面的命令，检查本地 hashline 适配层及其依赖：
+
+```bash
+node scripts/verify-rtk-hashline-compat.mjs
+```
+
 初始工具集中应包含 `load_tools`。它是模型调用的工具，不是 slash command：在任务中明确要求语义代码、浏览器或 DAG 等能力，模型会精确激活一个匹配工具。激活步骤和完整场景见[完整使用手册](docs/USAGE.zh-CN.md)。
 
 ## 本地扩展
@@ -181,6 +188,7 @@ rtk --version
 | [`pi-semantic-code`](extensions/pi-semantic-code/) | 对 C/C++、Python、Rust、JS/TS、C#、Go、LaTeX、Typst 按需提供代码结构导航、诊断和安全重命名 | 直接描述要查的定义、引用或错误；需要时自动加载 |
 | [`pi-goal-verifier`](extensions/pi-goal-verifier/) | 在 Goal 完成前运行已声明的验收命令 | `.pi/goal-verification.json`、`~/.pi/agent/goal-verification.json`、`/goal-verify` |
 | [`pi-workflow-dag`](extensions/pi-workflow-dag/) | 按依赖分波执行检查、实现、复核 worker | 直接描述有依赖的步骤；需要时自动加载 |
+| [`pi-rtk-hashline-compat`](extensions/pi-rtk-hashline-compat/) | 将 RTK 的 read 输出限制应用到 hashline，同时不修改 `write` 和 `replace` 结果 | `PI_RTK_HASHLINE_COMPAT_DISABLE=1` |
 | [`pi-tool-rails`](extensions/pi-tool-rails/) | 添加主题化工具标签、结果面板和输入框样式 | `PI_TOOL_RAILS_DISABLE_USER_FRAME=1` |
 | [`adhd-mode.ts`](extensions/adhd-mode.ts) | 添加可跨会话保持的 ADHD 响应规则 | `/adhd` |
 | [`matugen-chrome.ts`](extensions/matugen-chrome.ts) | 使用当前 Pi theme 渲染 Cometix 风格 footer | `/matugen-chrome` |
@@ -200,6 +208,11 @@ rtk --version
 cd extensions/pi-brand-header
 npm install
 npm run typecheck
+npm pack --dry-run
+
+cd ../pi-rtk-hashline-compat
+npm install
+npm run check
 npm pack --dry-run
 ```
 
@@ -224,7 +237,7 @@ npm pack --dry-run
 - 哈希锚点编辑、输出压缩、缓存和研究工作流
 - 敏感文件保护、主题、token 速度和 raw paste
 
-package 凭据和各 package 自己维护的设置会保留在目标机器上。
+`pi-rtk-optimizer` 仍作为外部 package 安装。本地 `pi-rtk-hashline-compat` 将它的 read 输出限制适配到 `pi-hashline-edit-pro` 的 `HASH│内容` 格式，只压缩成功的 `read` 结果，不处理 `write` 和 `replace`。安装或更新后运行 `/reload`。
 
 ## 更新备份
 
