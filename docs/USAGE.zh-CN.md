@@ -85,19 +85,13 @@ pi
 - **常驻能力**：Pi 启动时直接可用，例如 `read`、`bash`、`replace`、`todo`、skills 索引和主题。
 - **延迟能力**：启动时隐藏，真正需要时才加载，例如浏览器、subagent、语义代码和 DAG。
 
-`load_tools` 是一个给模型使用的工具，不是需要用户输入的 slash command。通常只需在自然语言中说明任务，模型会自动调用它。例如：
+`load_tools` 是模型内部的按需加载开关，不是你需要输入的命令。你不必记住 `load_tools` 或 `semantic_code` 的名字，只要用日常语言描述你想知道的事情：
 
 ```text
-请先加载语义代码工具，查找 src/parser.cpp 中 parse_request 的定义和全部引用，再告诉我修改风险。不要修改文件。
+请查看 src/parser.cpp 中 parse_request 的定义和全部引用，告诉我修改风险；不要修改文件。
 ```
 
-模型应先调用：
-
-```text
-load_tools({"query":"semantic_code"})
-```
-
-然后才调用 `semantic_code`。用户不需要把 JSON 手动粘贴进终端。
+模型会根据任务自动加载合适的工具。只有在它没有自动使用代码结构分析时，才补充一句“请使用能查定义、引用和类型错误的代码工具”；不需要手写 JSON。
 
 查看哪些扩展被延迟、哪些工具可加载：
 
@@ -152,7 +146,7 @@ PI_DEFERRED_TOOLS_DISABLE=1
 
 ### 能做什么
 
-`semantic_code` 是一个延迟加载的 LSP 工具，按文件扩展名自动选择语言服务器。支持：
+`semantic_code` 只是这个工具的内部名称。你不需要学习这个词。它可以理解为一把“看得懂代码关系的放大镜”：普通搜索只能找相同文字，它还能判断一个名字在哪里定义、哪些地方真正引用它、某行的类型是否不对。
 
 | 语言 | 文件 | 首选服务器 |
 | --- | --- | --- |
@@ -165,7 +159,7 @@ PI_DEFERRED_TOOLS_DISABLE=1
 | LaTeX | `.tex`、`.ltx`、`.bib` | `texlab` |
 | Typst | `.typ` | `tinymist` |
 
-支持的操作：
+它能帮你做这些事：
 
 - `status`：显示可用服务器和当前路由。
 - `diagnostics`：读取错误、警告和类型诊断。
@@ -177,55 +171,41 @@ PI_DEFERRED_TOOLS_DISABLE=1
 
 所有结果都有大小限制，不会把整个项目或整份文件塞回上下文。
 
-### 推荐调用方式
+### 你可以这样说
 
-直接告诉模型要使用语义工具：
-
-```text
-请加载 semantic_code，检查 src/main.rs 第 88 行的 borrow 错误。
-先给出 diagnostics 和相关定义，不要修改文件。
-```
-
-如果需要精确位置，也可以在任务中写清楚路径、行号和符号：
+不需要使用工具名，也不需要填写参数：
 
 ```text
-加载 semantic_code，查找 src/api.ts 第 42 行 handleRequest 的全部引用。
+请查看 src/service.py 中 UserStore 的定义、全部引用和类型诊断。只读，不修改文件；最后告诉我最安全的修改入口。
 ```
 
-模型内部对应的调用形状大致是：
-
-```json
-{
-  "action": "references",
-  "path": "src/api.ts",
-  "line": 42,
-  "symbol": "handleRequest"
-}
+```text
+请检查 src/main.rs 第 88 行附近的类型或借用错误，并解释原因。不要修改文件。
 ```
+
+```text
+请告诉我 src/api.ts 中 handleRequest 的定义位置、调用它的文件，以及它接收的参数类型。
+```
+
+路径、文件名和行号越具体，结果越准确；缺少行号时，模型会先查文件中的相关符号。
 
 ### Rename 的安全用法
 
-默认只预览：
+默认只预览，不会改文件：
 
 ```text
-加载 semantic_code，把 src/parser.cpp 中 parse_request 重命名为 parseRequest。
-先只生成 rename 预览，列出将修改的文件；不要应用。
+请把 src/parser.cpp 中的 parse_request 改名为 parseRequest。先列出所有将被修改的文件和位置，不要应用。
 ```
 
-确认预览后再应用：
+确认预览无误后：
 
 ```text
-预览内容正确。现在用 semantic_code 以 apply=true 应用这个 rename，然后运行相关测试。
+刚才的改名范围正确。现在应用这个改名，并运行相关测试。
 ```
-
-不要直接用普通文本替换代替语义 rename；宏、重载、导入别名和跨文件引用可能需要语言服务器判断。
-
-### 服务器检查与覆盖
-
-先让模型执行：
+如果工具报告找不到代码分析服务器，直接这样问：
 
 ```text
-请加载 semantic_code，运行 status，告诉我当前项目能用哪些语言服务器。
+请检查当前项目能用的代码分析服务器，并告诉我缺少什么；不要修改项目。
 ```
 
 工具搜索顺序是：当前项目的 `node_modules/.bin`、`.venv/bin` 或 `venv/bin`，用户目录下的 `.local/bin`、`.dotnet/tools`、`go/bin`，最后是系统 `PATH`。
@@ -323,22 +303,17 @@ Goal 验收默认关闭，避免无意中执行命令。启用方式是创建配
 
 `workflow_dag` 也是延迟工具，适合小型的“检查 -> 实现 -> 复核”流程。普通单任务委派仍优先使用 `@narumitw/pi-subagents`。
 
-激活方式：
+不需要记住 `workflow_dag` 的名字。直接说明步骤之间的依赖关系：
 
 ```text
-请加载 workflow_dag，把这个任务拆成三个节点：先只读检查，再实现，最后只读复核。
+把这个任务拆成三个有依赖的步骤：先只读检查现状，再实现最小修改，最后只读复核 diff 和测试。每一步只返回结论、改动文件和验证结果。
 ```
 
-工具内部会调用：
-
-```text
-load_tools({"query":"workflow_dag"})
-```
-
+模型会在适合时自动加载并组织这个流程。
 ### 经典例子：检查、实现、复核
 
 ```text
-请使用 workflow_dag，workflowId 设为 auth-fix：
+把登录回调修复拆成一个有依赖的工作流：
 
 1. inspect：只读检查登录回调、现有测试和失败原因。
 2. implement：在 inspect 通过后实现修复，mode=write。
@@ -496,15 +471,15 @@ RTK 压缩命令输出；cache optimizer 尽量保持稳定的提示词前缀以
 ### 场景 B：跨文件语义定位
 
 ```text
-加载 semantic_code，查找 src/service.py 中 UserStore 的定义、全部引用和类型诊断。
+请查找 src/service.py 中 UserStore 的定义、全部引用和类型诊断。
 只读，不修改文件；最后告诉我最安全的修改入口。
 ```
 
 ### 场景 C：安全重命名
 
 ```text
-加载 semantic_code，把 src/api.ts 中 handleRequest 重命名为 handleRequestV2。
-先预览所有 rename edits；我确认后再 apply，并运行 TypeScript 测试。
+请把 src/api.ts 中的 handleRequest 重命名为 handleRequestV2。
+先预览所有将修改的文件和位置；我确认后再应用，并运行 TypeScript 测试。
 ```
 
 ### 场景 D：可验证长任务
@@ -565,7 +540,7 @@ pi list
 1. 重启 Pi，或运行 `/reload`。
 2. 检查 `pi list` 是否有对应 package。
 3. 检查 `PI_DEFERRED_TOOLS_DISABLE` 是否为 `1`。
-4. 对语义工具运行 `semantic_code status`，确认语言服务器可执行。
+4. 让 Pi 检查当前项目能用的代码分析服务器，确认所需服务器可执行。
 5. 用 `pi --no-extensions` 判断是否为扩展冲突。
 
 如果 Goal 验收没有执行：

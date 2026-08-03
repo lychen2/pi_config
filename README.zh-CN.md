@@ -178,9 +178,9 @@ rtk --version
 | [`pi-manager-models`](extensions/pi-manager-models/) | 刷新 OpenAI-compatible 模型目录，同时保留本地覆盖项 | provider `baseUrl` 和环境变量 |
 | [`pi-slim-skills`](extensions/pi-slim-skills/) | 压缩技能索引，并在每个 prompt 中注入一次指定技能内容 | `/slim-skills` |
 | [`pi-todo-guard`](extensions/pi-todo-guard/) | Todo 存在未完成项目时继续当前运行 | `PI_TODO_GUARD_DISABLE=1` |
-| [`pi-semantic-code`](extensions/pi-semantic-code/) | 对 C/C++、Python、Rust、JS/TS、C#、Go、LaTeX、Typst 按需提供 LSP 导航、诊断和安全重命名 | 要求模型加载 `semantic_code` |
+| [`pi-semantic-code`](extensions/pi-semantic-code/) | 对 C/C++、Python、Rust、JS/TS、C#、Go、LaTeX、Typst 按需提供代码结构导航、诊断和安全重命名 | 直接描述要查的定义、引用或错误；需要时自动加载 |
 | [`pi-goal-verifier`](extensions/pi-goal-verifier/) | 在 Goal 完成前运行已声明的验收命令 | `.pi/goal-verification.json`、`~/.pi/agent/goal-verification.json`、`/goal-verify` |
-| [`pi-workflow-dag`](extensions/pi-workflow-dag/) | 按依赖分波执行检查、实现、复核 worker | 要求模型加载 `workflow_dag` |
+| [`pi-workflow-dag`](extensions/pi-workflow-dag/) | 按依赖分波执行检查、实现、复核 worker | 直接描述有依赖的步骤；需要时自动加载 |
 | [`pi-tool-rails`](extensions/pi-tool-rails/) | 添加主题化工具标签、结果面板和输入框样式 | `PI_TOOL_RAILS_DISABLE_USER_FRAME=1` |
 | [`adhd-mode.ts`](extensions/adhd-mode.ts) | 添加可跨会话保持的 ADHD 响应规则 | `/adhd` |
 | [`matugen-chrome.ts`](extensions/matugen-chrome.ts) | 使用当前 Pi theme 渲染 Cometix 风格 footer | `/matugen-chrome` |
@@ -189,8 +189,8 @@ rtk --version
 
 1. 在项目目录启动 Pi：`pi`。
 2. 用目标、范围和验收命令描述任务，例如：`修复登录回调；运行相关测试；不要改其他模块。`
-3. 需要延迟能力时直接说出能力，例如：`加载 semantic_code，查找 handleRequest 的全部引用。`
-4. 长任务用 `/goal` 配合 `goal-verification.json`；只有小型依赖图才要求 `workflow_dag`。
+3. 需要代码结构分析时，不用记工具名，直接说你要查定义、引用、类型错误或安全改名，例如：`查看 src/service.py 中 UserStore 的定义、全部引用和类型诊断；只读，并告诉我最安全的修改入口。`
+4. 长任务用 `/goal` 配合 `goal-verification.json`；小型依赖任务直接说明“先检查、再实现、最后复核”的步骤即可。
 
 [完整使用手册](docs/USAGE.zh-CN.md) 说明全部能力的激活方式，并提供编码、审阅、语义导航、Goal、委派、浏览器、PDF 和可视化示例。
 

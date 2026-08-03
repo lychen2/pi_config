@@ -176,9 +176,9 @@ The initial tool set should include `load_tools`. It is a model tool, not a slas
 | [`pi-manager-models`](extensions/pi-manager-models/) | Refreshes an OpenAI-compatible model catalog while preserving local overrides | Provider `baseUrl` and environment variables |
 | [`pi-slim-skills`](extensions/pi-slim-skills/) | Compresses the skill index and injects selected skill content once per prompt | `/slim-skills` |
 | [`pi-todo-guard`](extensions/pi-todo-guard/) | Continues runs while Todo contains unfinished tasks | `PI_TODO_GUARD_DISABLE=1` |
-| [`pi-semantic-code`](extensions/pi-semantic-code/) | Deferred LSP navigation, diagnostics, and safe rename across C/C++, Python, Rust, JS/TS, C#, Go, LaTeX, and Typst | Ask Pi to load `semantic_code` |
+| [`pi-semantic-code`](extensions/pi-semantic-code/) | Deferred code-structure navigation, diagnostics, and safe rename across C/C++, Python, Rust, JS/TS, C#, Go, LaTeX, and Typst | Describe the definition, references, errors, or rename you need; Pi loads it when needed |
 | [`pi-goal-verifier`](extensions/pi-goal-verifier/) | Runs configured commands before Goal completion | `.pi/goal-verification.json`, `~/.pi/agent/goal-verification.json`, `/goal-verify` |
-| [`pi-workflow-dag`](extensions/pi-workflow-dag/) | Deferred dependency-aware inspect/implement/review workers | Ask Pi to load `workflow_dag` |
+| [`pi-workflow-dag`](extensions/pi-workflow-dag/) | Deferred dependency-aware inspect/implement/review workers | Describe the dependent phases; Pi loads it when needed |
 | [`pi-tool-rails`](extensions/pi-tool-rails/) | Adds themed tool labels, result panels, and prompt framing | `PI_TOOL_RAILS_DISABLE_USER_FRAME=1` |
 | [`adhd-mode.ts`](extensions/adhd-mode.ts) | Adds session-persistent ADHD response rules | `/adhd` |
 | [`matugen-chrome.ts`](extensions/matugen-chrome.ts) | Renders a Cometix-style footer with the active Pi theme | `/matugen-chrome` |
@@ -187,8 +187,8 @@ The initial tool set should include `load_tools`. It is a model tool, not a slas
 
 1. Start Pi from the project directory: `pi`.
 2. Give a bounded request with the intended verification, for example: `Fix the login callback; run its focused tests; do not change other modules.`
-3. For deferred capabilities, explicitly request the capability: `Load semantic_code and find all references to handleRequest.`
-4. Use `/goal` with a `goal-verification.json` file for a verified long task, and ask for `workflow_dag` only when a small dependency graph is useful.
+3. For code-structure questions, describe what you want in plain language; for example: `Find the definition, all references, and type diagnostics for UserStore in src/service.py. Read-only; tell me the safest modification entry point.`
+4. Use `/goal` with a `goal-verification.json` file for a verified long task. For a small dependency graph, describe the inspect, implement, and review phases in plain language.
 
 The [complete usage guide](docs/USAGE.zh-CN.md) explains every installed capability and includes coding, review, semantic navigation, Goal, delegation, browser, PDF, and visualization examples.
 

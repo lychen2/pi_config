@@ -2,15 +2,16 @@
 
 按需加载的 LSP 语义代码工具。安装器会自动发现本地 package；启动时不会把这个工具放进主上下文。
 
-## 激活
 
-在 Pi 中直接描述需要语义代码能力的任务：
+## 怎么用
+
+你不需要记住 `semantic_code` 这个名字。直接告诉 Pi 你想查什么：
 
 ```text
-请加载 semantic_code，查找 src/api.ts 第 42 行 handleRequest 的全部引用；只读，不要修改文件。
+请查看 src/service.py 中 UserStore 的定义、全部引用和类型诊断。只读，不修改文件；最后告诉我最安全的修改入口。
 ```
 
-模型会先调用 `load_tools`，再调用 `semantic_code`。`load_tools` 是模型工具，不是用户需要输入的 slash command。
+模型会在需要时自动加载这个工具。`load_tools` 是模型内部动作，不是你需要输入的 slash command。
 
 查看当前延迟扩展：
 
@@ -28,22 +29,16 @@
 - `symbols`：列出文件或工作区符号。
 - `rename`：生成跨文件重命名预览；确认后才传 `apply: true`。
 
-直接调用时，非 `status` 操作至少需要 `path`：
-
-```json
-{
-  "action": "references",
-  "path": "src/api.ts",
-  "line": 42,
-  "symbol": "handleRequest"
-}
-```
-
-安全重命名示例：
+你不需要填写 JSON 参数。安全重命名可以这样说：
 
 ```text
-加载 semantic_code，把 src/parser.cpp 中 parse_request 重命名为 parseRequest。
-先预览所有文件的 edits，不要 apply；我确认后再执行。
+请把 src/parser.cpp 中的 parse_request 改名为 parseRequest。先预览所有文件和位置，不要应用；我确认后再执行。
+```
+
+确认后再说：
+
+```text
+预览正确，现在应用这个改名并运行相关测试。
 ```
 
 ## 自动路由
@@ -61,8 +56,8 @@
 
 查找顺序：当前项目 `node_modules/.bin`、`.venv/bin`、`venv/bin`，然后是 `~/.local/bin`、`~/.dotnet/tools`、`~/go/bin` 和系统 `PATH`。
 
-扩展只负责路由，不捆绑所有语言服务器。缺少服务器时先运行 `semantic_code` 的 `status`，再安装对应运行时。项目或全局覆盖配置示例见 [`../../docs/USAGE.zh-CN.md`](../../docs/USAGE.zh-CN.md#4-语义代码工具semantic_code)。
-
+扩展只负责路由，不捆绑所有语言服务器。项目或全局覆盖配置示例见 [`../../docs/USAGE.zh-CN.md`](../../docs/USAGE.zh-CN.md#4-语义代码工具semantic_code)。
+缺少某个服务器时，直接问：“请检查当前项目能用的代码分析服务器，并告诉我缺少什么。”
 ## 开发
 
 ```bash

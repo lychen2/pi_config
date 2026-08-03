@@ -52,10 +52,10 @@ Pi 是终端编码代理。它将当前目录、`AGENTS.md`、已启用技能和
 
 | 目标 | 直接输入给 Pi 的提示 |
 | --- | --- |
-| 跨文件找定义、引用或诊断 | `加载 semantic_code，检查 src/api.ts 第 42 行 handleRequest 的引用和诊断；不要修改文件。` |
-| 安全重命名 | `加载 semantic_code，先预览 rename；我确认后才 apply。` |
+| 跨文件找定义、引用或诊断 | `检查 src/api.ts 第 42 行 handleRequest 的定义、引用和诊断；只读，不要修改文件。` |
+| 安全重命名 | `把 handleRequest 改名为 handleRequestV2，先预览将修改的文件；我确认后才应用。` |
 | 长任务必须验证 | 创建 `.pi/goal-verification.json`，然后用 `/goal` 执行任务；完成前用 `/goal-verify` 检查。 |
-| 小型并行工作流 | `加载 workflow_dag，按 inspect、implement、review 三个依赖节点执行。` |
+| 小型并行工作流 | `把任务拆成检查现状、实现修改、复核测试三个有依赖的步骤；每步只返回结论和验证结果。` |
 | 普通并行调查 | `使用 subagent 并行查实现、测试和最近提交；子代理只读。` |
 
 详细参数、配置 JSON 和六个完整场景在[完整使用手册](USAGE.zh-CN.md)。

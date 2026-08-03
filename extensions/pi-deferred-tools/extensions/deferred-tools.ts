@@ -223,6 +223,9 @@ export default function deferredTools(pi: ExtensionAPI): void {
       promptSnippet: "Load exactly one inactive extension tool when its specific capability is needed",
       promptGuidelines: [
         `Call ${loaderName} with one exact tool name before using that inactive tool. Never request all or multiple tools; load another tool only when it becomes necessary.`,
+        catalog.some(({ tool }) => tool.name === "semantic_code")
+          ? "The user does not need to name a tool. Infer the capability from natural language; for code definitions, references, type diagnostics, symbol information, or safe renaming, prefer semantic_code when available."
+          : "The user does not need to name a tool. Infer the needed capability from the user's natural-language request and load one matching tool.",
       ],
       parameters: LoaderParameters,
       async execute(_toolCallId, params) {

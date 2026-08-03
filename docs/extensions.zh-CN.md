@@ -17,19 +17,19 @@
 | `pi-slim-skills` | 压缩模型可见的技能索引，降低提示词体积 | `/slim-skills remove <名称>`、`none`、`reset`、`inject <名称>` | `slim-skills-whitelist.json`；`SLIM_SKILLS_DISABLE=1` 禁用 |
 | `pi-todo-guard` | Todo 仍有未完成项目时，提醒代理继续当前任务 | 自动处理 | `PI_TODO_GUARD_DISABLE=1`；默认兼容 `todo` 工具 |
 | `pi-tool-rails` | 提供稳定的工具标签、结果面板、diff 和输入框样式 | 自动处理 | `PI_TOOL_RAILS_DISABLE_USER_FRAME=1` 仅关闭用户消息边框 |
-| `pi-semantic-code` | 在需要时按文件类型选择 LSP，提供导航、诊断、hover、引用和 rename | 让模型调用 `load_tools` 加载 `semantic_code` | 全局或项目 `.pi/semantic-code.json`；见下文 |
+| `pi-semantic-code` | 在需要时按文件类型选择语言服务器，提供代码结构导航、诊断、hover、引用和 rename | 直接描述要查的定义、引用或错误；需要时自动加载 | 全局或项目 `.pi/semantic-code.json`；见下文 |
 | `pi-goal-verifier` | Goal 完成前执行显式声明的验收命令 | 自动监听 `goal_complete`；`/goal-verify` 可单独运行 | 全局或可信项目的 `goal-verification.json` |
-| `pi-workflow-dag` | 用依赖波次运行小型检查、实现、复核 worker | 让模型调用 `load_tools` 加载 `workflow_dag` | session 中保存 `status` 和 `clear` 状态 |
+| `pi-workflow-dag` | 用依赖波次运行小型检查、实现、复核 worker | 直接描述需要拆开的依赖任务；需要时自动加载 | session 中保存 `status` 和 `clear` 状态 |
 
 ### 延迟工具的正确使用
 
-`pi-deferred-tools` 不会删除能力，而是让模型通过 `load_tools` 精确启用一个工具。`load_tools` 是模型工具，不是需要用户手输的 slash command。直接说明需要的能力，例如：
+`pi-deferred-tools` 不会删除能力，而是让模型在真正需要时启用一个工具。`load_tools` 是模型内部动作，不是需要用户手输的 slash command。你只需说明想完成的任务，例如：
 
 ```text
-请先加载 semantic_code，检查 src/main.rs 的类型诊断；不要修改文件。
+请查看 src/main.rs 的类型诊断，告诉我问题原因；不要修改文件。
 ```
 
-模型会加载对应工具后再执行。查看当前延迟集合：
+模型会根据这句话自动选择合适的延迟工具。查看当前延迟集合：
 
 ```text
 /deferred-tools list
@@ -39,12 +39,12 @@
 
 ### `semantic_code`
 
-这是延迟 LSP 工具。支持 `status`、`diagnostics`、`definition`、`references`、`hover`、`symbols`、`rename`；按文件类型自动尝试 C/C++、Python、Rust、JS/TS、C#、Go、LaTeX、Typst 的可执行服务器。
+它是“懂代码关系”的工具：普通文本搜索只能找相同文字，它还能判断定义、真实引用、类型诊断和跨文件改名。按文件类型自动尝试 C/C++、Python、Rust、JS/TS、C#、Go、LaTeX、Typst 的可执行服务器。
 
-推荐提示：
+你可以直接这样说：
 
 ```text
-加载 semantic_code，查找 src/api.ts 第 42 行 handleRequest 的全部引用。只读，最后给出安全的修改入口。
+请查找 src/api.ts 第 42 行 handleRequest 的全部引用，说明最安全的修改入口；只读，不要修改文件。
 ```
 
 `rename` 默认只预览；用户确认后才要求模型使用 `apply=true`。项目可用 `.pi/semantic-code.json` 覆盖服务器。完整路由、安装语言服务器和重命名示例见[完整使用手册](USAGE.zh-CN.md#4-语义代码工具semantic_code)。
@@ -64,7 +64,7 @@
 这是延迟的轻量 DAG 工具，适合少量 `readonly` 检查节点、一个显式 `write` 实现节点和最后的复核节点。最多 8 个节点；只读节点最多 3 个并行；失败下游会跳过。普通独立委派仍优先使用 `@narumitw/pi-subagents`。
 
 ```text
-加载 workflow_dag，把任务拆成 inspect（只读）、implement（write）、review（只读）三个节点。每个节点只返回结论、改动文件和验证结果。
+把这个任务拆成三个有依赖的步骤：先检查现状，再实现修改，最后复核测试。每一步只返回结论、改动文件和验证结果。
 ```
 
 工具的 `status` 和 `clear` 由模型调用；完整节点 JSON 例子见[完整使用手册](USAGE.zh-CN.md#6-轻量-dagworkflow_dag)。
