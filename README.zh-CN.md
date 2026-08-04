@@ -27,7 +27,7 @@
 | `install.sh`、`install.ps1`、`install.mjs` | 跨平台环境引导和配置安装器 | 运行对应操作系统的入口脚本 |
 | `scripts/` | 本地集成与工具显示 registry 的跨平台安装后检查脚本 | 在仓库根目录运行对应 Node 脚本 |
 | `extensions/` | 全部带 `pi-*/package.json` 的本地 package 和 2 个独立扩展 | 使用 `pi install` 安装 package；直接复制独立扩展 |
-| `skills/` | 仓库跟踪 57 个 `SKILL.md` 定义；当前有效清单另包含本机保留的 `batch-grill-me`，合计 58 个定义 | 同步到 `~/.pi/agent/skills/`；本机已有 skill 会保留 |
+| `skills/` | 仓库跟踪 57 个 `SKILL.md` 定义；当前有效清单另包含本机保留的 `batch-grill-me`，合计 58 个定义 | 合并缺失项到 `~/.pi/agent/skills/`；本机已有 skill 会保留 |
 | `config/` | Pi 公开设置、系统规则、扩展状态和外部 package 清单 | 检查后按需复制或合并 |
 | `themes/` | 2 个 Matugen 主题 | 复制到 `~/.pi/agent/themes/` |
 | `docs/` | 上手 Wiki、58 个 skill 和 41 个工具目录，以及 README 截图 | 打开 [`docs/WIKI.zh-CN.md`](docs/WIKI.zh-CN.md) |
@@ -83,10 +83,10 @@ node install.mjs
 
 1. 使用系统引导脚本时，安装 Node.js 22.19.0 或更高版本、Git 和 Pi。
 2. 本地没有仓库时，将其下载到 `~/.pi_config`。
-3. 将现有 Pi 目录备份到 `~/.pi-backup-<timestamp>/agent`。
-4. 恢复技能、主题、独立扩展和公开配置。
-5. 安装全部带 `extensions/pi-*/package.json` 的本地 package，校验 52 项兼容显示 registry 的短名与 emoji，再安装已检查的外部 package 清单。52 项是显示 registry，不是当前 active 工具数量。
-6. 运行上游 Magic Context 官方安装脚本，保留其 JSONC 注释，将仓库默认执行阈值设为 `55%`，并关闭 Pi 原生自动压缩。
+3. 备份现有 `~/.pi/agent`，以及会被更新的 `~/.config/cortexkit/aft.jsonc` 和 `magic-context.jsonc`。
+4. 合并缺失的 skills 和 themes，保留本机已有文件；仅在独立扩展不存在时复制它们。
+5. 覆盖仓库维护的公开配置，合并公开 settings，并按选项安装全部本地和外部 package。校验 52 项兼容显示 registry 的短名与 emoji；52 项不是当前 active 工具数量。
+6. 运行上游 Magic Context 官方安装脚本，保留已有 JSONC 内容，只将执行阈值设为 `55%`，并关闭 Pi 原生自动压缩。
 7. 根据选择安装 RTK 命令行工具。
 provider 凭据、模型注册表、API key、会话和环境变量继续保留在各台机器上。
 
@@ -157,10 +157,22 @@ pi
 ```text
 rtk --version
 /rtk verify
-/sensitive-guard status
+/cache-optimizer
 ```
 
 扩展工具默认启用。工具现在不再运行时延迟；只有需要减少当前项目发送给模型的工具定义时，才运行 `/tools`：一级按扩展开关，`Enter` 进入二级逐工具选择，结果保存在受信任项目 `.pi/tool-selector.json`。完整用法见[使用手册](docs/USAGE.zh-CN.md)。
+
+### 本机配置快速理解
+
+| 仓库来源 | 安装目标 | 恢复行为 |
+| --- | --- | --- |
+| `config/settings-public.json` | `~/.pi/agent/settings.json` | 合并公开设置；默认保留本机 provider/model，使用 `--with-model-defaults` 才应用仓库默认值 |
+| `config/aft.jsonc` | `~/.config/cortexkit/aft.jsonc` | 安装前备份，然后覆盖为仓库维护的 AFT 配置 |
+| `config/APPEND_SYSTEM.md`、三个 JSON 配置 | `~/.pi/agent/` | 覆盖仓库维护的公开配置 |
+| `skills/`、`themes/` | `~/.pi/agent/` | 只补齐缺失文件，保留本机已有内容 |
+| `extensions/adhd-mode.ts`、`matugen-chrome.ts` | `~/.pi/agent/extensions/` | 只在目标不存在时复制 |
+| `config/external-packages.txt` | Pi package registry | 按选项运行 `pi install` |
+| 项目 `.pi/tool-selector.json` | 当前项目目录 | 不由安装器复制；每个项目独立保存工具开关 |
 
 ## 本地扩展
 
@@ -229,7 +241,7 @@ node install.mjs --dry-run --yes
 node install.mjs --yes
 ```
 
-安装器会为正在使用的 Pi 目录创建新备份，并初始化缺失的 skills、更新设置、本地 package、Magic Context 默认值和公开扩展配置；它不会复制凭据、项目工具选择或会话数据。
+安装器会为正在使用的 Pi 目录和被更新的 Cortex 配置创建新备份，补齐缺失的 skills/themes，更新公开设置、本地 package、Magic Context 阈值和 AFT 配置；它不会复制凭据、项目工具选择或会话数据。
 
 ## 安全
 

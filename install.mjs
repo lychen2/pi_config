@@ -275,6 +275,34 @@ async function copyPathIfMissing(source, destination) {
   await copyPath(source, destination);
 }
 
+async function mergeMissingTree(source, destination) {
+  if (!(await pathExists(destination))) {
+    await copyPath(source, destination);
+    return;
+  }
+
+  for (const entry of await readdir(source, { withFileTypes: true })) {
+    const sourceEntry = path.join(source, entry.name);
+    const destinationEntry = path.join(destination, entry.name);
+    if (entry.isDirectory()) {
+      if (!(await pathExists(destinationEntry))) {
+        await copyPath(sourceEntry, destinationEntry);
+        continue;
+      }
+      try {
+        await readdir(destinationEntry);
+      } catch {
+        continue;
+      }
+      await mergeMissingTree(sourceEntry, destinationEntry);
+      continue;
+    }
+    if (!(await pathExists(destinationEntry))) {
+      await copyPath(sourceEntry, destinationEntry);
+    }
+  }
+}
+
 async function promptYesNo(rl, question, defaultValue) {
   if (installerOptions.yes || !process.stdin.isTTY) {
     return defaultValue;
@@ -312,18 +340,39 @@ async function resolveChoices() {
 }
 
 async function backupExistingConfig() {
-  if (!(await pathExists(agentDir))) {
+  const cortexConfigPaths = ["aft.jsonc", "magic-context.jsonc"]
+    .map((name) => cortexConfigPath(name));
+  const existingCortexConfigPaths = [];
+  for (const configPath of cortexConfigPaths) {
+    if (await pathExists(configPath)) {
+      existingCortexConfigPaths.push(configPath);
+    }
+  }
+  const hasAgentConfig = await pathExists(agentDir);
+  if (!hasAgentConfig && existingCortexConfigPaths.length === 0) {
     console.log("\n[1/7] No existing Pi configuration to back up.");
     return null;
   }
 
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
   const backupDir = path.join(homeDir, `.pi-backup-${timestamp}`);
-  console.log(`\n[1/7] Backing up ${agentDir} -> ${backupDir}`);
-  if (!installerOptions.dryRun) {
-    await mkdir(backupDir, { recursive: true });
+  console.log(`\n[1/7] Backing up existing configuration -> ${backupDir}`);
+  if (installerOptions.dryRun) {
+    return backupDir;
+  }
+
+  await mkdir(backupDir, { recursive: true });
+  if (hasAgentConfig) {
     await cp(agentDir, path.join(backupDir, "agent"), {
       recursive: true,
+      force: false,
+      errorOnExist: true,
+    });
+  }
+  for (const configPath of existingCortexConfigPaths) {
+    const backupPath = path.join(backupDir, "cortexkit", path.basename(configPath));
+    await mkdir(path.dirname(backupPath), { recursive: true });
+    await cp(configPath, backupPath, {
       force: false,
       errorOnExist: true,
     });
@@ -332,13 +381,13 @@ async function backupExistingConfig() {
 }
 
 async function restoreFiles() {
-  console.log("\n[2/7] Restoring skills, themes, and extension configuration");
+  console.log("\n[2/7] Merging missing skills, themes, and extension configuration");
   if (!installerOptions.dryRun) {
     await mkdir(agentDir, { recursive: true });
   }
 
-  await copyPathIfMissing(path.join(repoDir, "skills"), path.join(agentDir, "skills"));
-  await copyPathIfMissing(path.join(repoDir, "themes"), path.join(agentDir, "themes"));
+  await mergeMissingTree(path.join(repoDir, "skills"), path.join(agentDir, "skills"));
+  await mergeMissingTree(path.join(repoDir, "themes"), path.join(agentDir, "themes"));
 
   const configFiles = [
     "APPEND_SYSTEM.md",
@@ -356,13 +405,9 @@ async function restoreFiles() {
       path.join(agentDir, "extensions", file),
     );
   }
-  const xdgConfigHome = process.env.XDG_CONFIG_HOME;
-  const configHome = xdgConfigHome && path.isAbsolute(xdgConfigHome)
-    ? xdgConfigHome
-    : path.join(homeDir, ".config");
   await copyPath(
     path.join(repoDir, "config", "aft.jsonc"),
-    path.join(configHome, "cortexkit", "aft.jsonc"),
+    cortexConfigPath("aft.jsonc"),
   );
 }
 
@@ -489,12 +534,19 @@ async function installExternalPackages(enabled) {
 }
 
 
-function magicContextConfigPath() {
+function cortexConfigHome() {
   const xdgConfigHome = process.env.XDG_CONFIG_HOME;
-  const configHome = xdgConfigHome && path.isAbsolute(xdgConfigHome)
+  return xdgConfigHome && path.isAbsolute(xdgConfigHome)
     ? xdgConfigHome
     : path.join(homeDir, ".config");
-  return path.join(configHome, "cortexkit", "magic-context.jsonc");
+}
+
+function cortexConfigPath(name) {
+  return path.join(cortexConfigHome(), "cortexkit", name);
+}
+
+function magicContextConfigPath() {
+  return cortexConfigPath("magic-context.jsonc");
 }
 
 async function configureMagicContextThreshold() {

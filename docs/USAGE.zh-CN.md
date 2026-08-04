@@ -27,9 +27,9 @@ irm https://raw.githubusercontent.com/lychen2/pi_config/main/install.ps1 | iex
 
 1. 安装或检查 Node.js、Git 和 Pi。
 2. 将仓库放到 `~/.pi_config`，或使用已有 checkout。
-3. 备份现有 `~/.pi/agent`。
-4. 恢复 skills、themes、公开配置和独立扩展。
-5. 自动扫描 `extensions/pi-*/package.json`，逐个运行 `pi install`。
+3. 备份现有 `~/.pi/agent`，以及会被更新的 `~/.config/cortexkit/aft.jsonc` 和 `magic-context.jsonc`。
+4. 合并缺失的 skills 和 themes，保留本机已有文件；仅在独立扩展不存在时复制它们。
+5. 覆盖仓库维护的公开配置，合并公开 settings，并自动扫描 `extensions/pi-*/package.json` 逐个运行 `pi install`。
 6. 工具扩展默认全部启用；每个项目可用 `/tools` 保存自己的禁用项。
 7. 按选择安装 Magic Context 和 RTK。
 
@@ -45,7 +45,7 @@ node install.mjs --yes
 node install.mjs --dry-run --yes
 ```
 
-安装器不会写入 provider 凭据、API key、session 或模型注册表。安装前仍应审查脚本，因为 Pi package 以当前用户权限运行。
+安装器不会写入 provider 凭据、API key、session 或模型注册表。它会补齐缺失的仓库 skills，不会覆盖已有 skill、theme 或独立扩展文件；安装前仍应审查脚本，因为 Pi package 以当前用户权限运行。
 
 ### 安装后检查
 
@@ -56,11 +56,22 @@ pi --version
 pi list
 ```
 
-确认以下本地 package 出现在 `pi list` 中：
+确认 `pi list` 输出包含仓库本地 package 路径（名称可能显示为相对路径）：
 
 ```text
-pi-workflow-dag-local
+extensions/pi-aft-compat
+extensions/pi-brand-header
+extensions/pi-deferred-tools
+extensions/pi-manager-models
+extensions/pi-rtk-aft-capture
+extensions/pi-rtk-aft-restore
+extensions/pi-slim-skills
+extensions/pi-todo-guard
+extensions/pi-tool-rails
+extensions/pi-workflow-dag
 ```
+
+还应看到 `npm:@cortexkit/aft-pi@0.49.0`、`npm:@narumitw/pi-subagents@0.46.0` 和 `npm:pi-web-access`。
 启动 Pi：
 
 ```bash
@@ -127,7 +138,7 @@ pi
 > [!IMPORTANT]
 > AFT 已替代默认的 `read`、`write` 和 `edit`。它不提供 LSP 的诊断、定义/引用、hover 或确认式跨文件 rename。
 
-> AFT 的用户配置在 `~/.config/cortexkit/aft.jsonc`；本配置关闭其 Bash 接管，保留 `pi-rtk-optimizer` 的命令改写和输出压缩。
+> AFT 的用户配置在 `~/.config/cortexkit/aft.jsonc`；本配置启用 AFT Bash 的 rewrite、压缩和后台执行，RTK 继续处理 `read`、`grep` 与其他通用结果。安装器会先备份再覆盖这份公开 AFT 配置。
 
 > `read` 使用普通行号输出；超过 80 行的结果仍由 RTK 的通用 smart-truncate 和字符上限控制。
 

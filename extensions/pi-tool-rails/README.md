@@ -10,11 +10,11 @@ Quiet TUI styling for Pi:
 - short, icon-specific labels for known core, Web, context, subagent, workflow, AFT, and AST tool names instead of truncated raw identifiers; the registry is broader than the current active tool surface
 - structured output colors for headings, success, active, pending, error, and task identifiers
 - numbered `read` views that show source line numbers in the TUI while preserving hash anchors for the model
-- numbered, side-by-side `replace` diffs with old lines on the left, new lines on the right, and multiple change groups
-- renders AFT `edit` as `+N/-N · N edits` when collapsed and delegates to AFT's native full diff when expanded
+- numbered, side-by-side `replace` and AFT `edit` diffs with old lines on the left, new lines on the right, multiple change groups, and shared indentation removed from each visible hunk
+- renders AFT `edit` as `+N/-N · N edits` when collapsed and with the same split diff as `replace` when expanded
 - one blank line between tool blocks
 - a persistent framed `prompt` editor and framed user messages
-Tool ownership is conservative. The extension overrides a built-in only while Pi still owns it, and it never registers `find` or `ls`; those remain under Pi or another search owner. AFT `edit` keeps its native call renderer. Its collapsed result is a stable structured count parsed from metadata or the textual `Edited (+N/-N, N edits)` fallback, while its expanded result delegates to AFT's native full diff renderer. Guarded presentation bridges apply the common label column and result formatting at the exported `ToolExecutionComponent` layer. Hashline `read` results are converted from `HASH│content` to `line │ content` only in the TUI renderer; the tool result sent to the model retains its anchors. Diff-leading spaces are preserved because they align hashline context and add/remove gutters; only the duplicate space left after removing a repeated tool name is normalized.
+Tool ownership is conservative. The extension overrides a built-in only while Pi still owns it, and it never registers `find` or `ls`; those remain under Pi or another search owner. AFT `edit` keeps its native call renderer. Its collapsed result is a stable structured count parsed from metadata or the textual `Edited (+N/-N, N edits)` fallback, while its expanded result reuses the split `replace` renderer. Guarded presentation bridges apply the common label column and result formatting at the exported `ToolExecutionComponent` layer. Hashline `read` results are converted from `HASH│content` to `line │ content` only in the TUI renderer; the tool result sent to the model retains its anchors. Diff markers and gutters remain aligned while shared code indentation is removed per visible hunk and relative indentation is retained.
 
 ## Tool labels
 

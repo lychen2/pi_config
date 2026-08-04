@@ -43,6 +43,7 @@ type ReadDisplayEntry =
 
 const ANSI_ESCAPE = /\x1B(?:\][^\x07\x1B]*(?:\x07|\x1B\\)|\[[0-?]*[ -/]*[@-~]|[@-Z\\-_])/g;
 const HASHLINE_DIFF = /^([ +\-])((?:[A-Za-z0-9_-]{3}| {3}))│(.*)$/;
+const NUMBERED_DIFF = /^([ +\-])(\s*\d+)\s(.*)$/;
 const HASHLINE_READ = /^[A-Za-z0-9_-]{3}│(.*)$/;
 const RESULT_PATCH = Symbol.for("pi.toolRails.resultRendererPatch");
 const REPLACE_LINE_NUMBERS = "toolRailsNewLineNumbers";
@@ -264,6 +265,67 @@ export function parseReplaceDiff(diff: string): ReplaceDiffEntry[] {
     }
   }
   return entries;
+}
+
+export function parseAftEditDiff(diff: string): ReplaceDiffEntry[] {
+  const entries: ReplaceDiffEntry[] = [];
+  let lineDelta = 0;
+
+  for (const rawLine of diff.replace(/\r/g, "").split("\n")) {
+    const numbered = rawLine.match(NUMBERED_DIFF);
+    if (!numbered) {
+      if (rawLine.trim()) entries.push({ kind: "meta", content: rawLine.trim() });
+      continue;
+    }
+
+    const prefix = numbered[1];
+    const lineNumber = Number(numbered[2]);
+    const content = numbered[3] ?? "";
+    if (prefix === "-") {
+      entries.push({ kind: "remove", content, oldLineNumber: lineNumber });
+      lineDelta--;
+    } else if (prefix === "+") {
+      entries.push({ kind: "add", content, newLineNumber: lineNumber });
+      lineDelta++;
+    } else {
+      entries.push({
+        kind: "context",
+        content,
+        oldLineNumber: lineNumber,
+        newLineNumber: lineNumber + lineDelta,
+      });
+    }
+  }
+  return entries;
+}
+
+function stripCommonIndent(entries: ReplaceDiffEntry[]): ReplaceDiffEntry[] {
+  const normalized: ReplaceDiffEntry[] = [];
+  let segment: ReplaceDiffEntry[] = [];
+
+  const flush = () => {
+    const expanded = segment.map((entry) => ({ ...entry, content: entry.content.replace(/\t/g, "    ") }));
+    const contentLines = expanded.filter((entry) => entry.content.trim().length > 0);
+    const commonIndent = contentLines.length === 0
+      ? 0
+      : Math.min(...contentLines.map((entry) => entry.content.match(/^ */)?.[0].length ?? 0));
+    normalized.push(...expanded.map((entry) => ({
+      ...entry,
+      content: entry.content.trim().length === 0 ? "" : entry.content.slice(commonIndent),
+    })));
+    segment = [];
+  };
+
+  for (const entry of entries) {
+    if (entry.kind === "meta") {
+      flush();
+      normalized.push({ ...entry });
+    } else {
+      segment.push(entry);
+    }
+  }
+  flush();
+  return normalized;
 }
 
 function visibleFileLines(content: string): string[] {
@@ -593,13 +655,13 @@ class ReplaceDiffComponent implements Component {
   private theme: Theme;
 
   constructor(entries: ReplaceDiffEntry[], expanded: boolean, theme: Theme) {
-    this.entries = entries;
+    this.entries = stripCommonIndent(entries);
     this.expanded = expanded;
     this.theme = theme;
   }
 
   update(entries: ReplaceDiffEntry[], expanded: boolean, theme: Theme): void {
-    this.entries = entries;
+    this.entries = stripCommonIndent(entries);
     this.expanded = expanded;
     this.theme = theme;
   }
@@ -625,9 +687,18 @@ class ReplaceDiffComponent implements Component {
   invalidate(): void {}
 }
 
-function diffFromResult(result: unknown): string {
-  const diff = record(record(result).details).diff;
-  return typeof diff === "string" ? diff : "";
+function renderDiffComponent(
+  entries: ReplaceDiffEntry[],
+  options: ResultOptions,
+  theme: Theme,
+  context: ResultContext,
+): Component {
+  const existing = context.lastComponent;
+  if (existing instanceof ReplaceDiffComponent) {
+    existing.update(entries, options.expanded === true, theme);
+    return existing;
+  }
+  return new ReplaceDiffComponent(entries, options.expanded === true, theme);
 }
 
 export function renderReplaceDiffResult(
@@ -660,13 +731,9 @@ export function renderReplaceDiffResult(
     ? details[REPLACE_FINAL_LINE_COUNT]
     : undefined;
   const entries = numberedEntries(rawEntries, storedNumbers, firstChangedLine, finalLineCount);
-  const existing = context.lastComponent;
-  if (existing instanceof ReplaceDiffComponent) {
-    existing.update(entries, options.expanded === true, theme);
-    return existing;
-  }
-  return new ReplaceDiffComponent(entries, options.expanded === true, theme);
+  return renderDiffComponent(entries, options, theme, context);
 }
+
 export function renderAftEditResult(
   result: unknown,
   options: ResultOptions,
@@ -681,39 +748,48 @@ export function renderAftEditResult(
   }
   const lines = outputLines(result);
   const textCounts = lines.join(" ").match(/\(\+(\d+)\/-(\d+)(?:,\s*(\d+)\s+edits?)?\)/i);
-  const diff = record(details.diff);
-  const additions = typeof diff.additions === "number"
-    ? diff.additions
-    : textCounts
-      ? Number(textCounts[1])
-      : undefined;
-  const deletions = typeof diff.deletions === "number"
-    ? diff.deletions
-    : textCounts
-      ? Number(textCounts[2])
-      : undefined;
-  const editsApplied = typeof details.edits_applied === "number"
-    ? details.edits_applied
-    : textCounts?.[3]
-      ? Number(textCounts[3])
-      : undefined;
+  const diffMetadata = record(details.diff);
+  const additions = typeof details.additions === "number"
+    ? details.additions
+    : typeof diffMetadata.additions === "number"
+      ? diffMetadata.additions
+      : textCounts
+        ? Number(textCounts[1])
+        : undefined;
+  const deletions = typeof details.deletions === "number"
+    ? details.deletions
+    : typeof diffMetadata.deletions === "number"
+      ? diffMetadata.deletions
+      : textCounts
+        ? Number(textCounts[2])
+        : undefined;
+  const editsApplied = typeof details.editsApplied === "number"
+    ? details.editsApplied
+    : typeof details.edits_applied === "number"
+      ? details.edits_applied
+      : textCounts?.[3]
+        ? Number(textCounts[3])
+        : undefined;
   const summary = additions !== undefined && deletions !== undefined
     ? `${theme.fg("toolDiffAdded", `+${additions}`)}${theme.fg("muted", "/")}${theme.fg("toolDiffRemoved", `-${deletions}`)}${editsApplied === undefined ? "" : theme.fg("muted", ` · ${editsApplied} edits`)}`
     : theme.fg("muted", "updated");
   if (!options.expanded) return reusableText(context, summary);
-  return reusableText(context, [summary, ...lines].filter(Boolean).join("\n"));
+
+  const diffText = typeof details.diff === "string" ? details.diff : "";
+  const entries = diffText ? parseAftEditDiff(diffText) : [];
+  const hasChanges = entries.some((entry) => entry.kind === "add" || entry.kind === "remove");
+  return hasChanges
+    ? renderDiffComponent(entries, options, theme, context)
+    : reusableText(context, [summary, ...lines].filter(Boolean).join("\n"));
 }
 
 export function renderAftEditBridgeResult(
-  nativeRenderer: ResultRenderer | undefined,
+  _nativeRenderer: ResultRenderer | undefined,
   result: unknown,
   options: ResultOptions,
   theme: Theme,
   context: ResultContext,
 ): Component {
-  if (options.expanded && nativeRenderer) {
-    return nativeRenderer(result, options, theme, context);
-  }
   return renderAftEditResult(result, options, theme, context);
 }
 

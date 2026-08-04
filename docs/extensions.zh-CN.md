@@ -51,7 +51,7 @@
 | `adhd-mode.ts` | 将面向 ADHD 的输出规则注入每轮系统提示词，状态写入会话 | `/adhd` 开关 |
 | `matugen-chrome.ts` | 使用当前主题绘制 footer 和工作动画 | `/matugen-chrome` 开关 |
 
-这两个文件复制到 `~/.pi/agent/extensions/` 后自动发现。修改文件后在 Pi 内运行 `/reload`。
+这两个文件只在 `~/.pi/agent/extensions/` 中不存在时复制；本机已有文件会保留。修改文件后在 Pi 内运行 `/reload`。
 
 ## 第三方 package
 

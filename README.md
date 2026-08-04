@@ -81,10 +81,10 @@ The installer performs these steps in order:
 
 1. Installs Node.js 22.19.0 or newer, Git, and Pi when the platform bootstrap is used.
 2. Downloads this repository to `~/.pi_config` when it is not already available.
-3. Backs up the existing Pi directory to `~/.pi-backup-<timestamp>/agent`.
-4. Restores skills, themes, standalone extensions, and public configuration.
-5. Installs every local `extensions/pi-*/package.json` package, verifies the 52-entry compatibility label/emoji registry, then installs the reviewed external package manifest.
-6. Runs the upstream Magic Context setup script, preserves its JSONC comments, sets the repository default execution threshold to `55%`, and disables Pi's built-in auto-compaction.
+3. Backs up the existing `~/.pi/agent` and the Cortex config files it updates: `aft.jsonc` and `magic-context.jsonc`.
+4. Merges missing skills and themes while preserving existing machine-owned files; standalone extensions are copied only when absent.
+5. Merges the public settings, installs every local `extensions/pi-*/package.json` package, verifies the 52-entry compatibility label/emoji registry, then installs the reviewed external package manifest.
+6. Runs the upstream Magic Context setup script, preserves its existing JSONC content, sets the execute threshold to `55%`, and disables Pi's built-in auto-compaction.
 7. Installs the optional RTK command-line tool when selected.
 Provider credentials, model registries, API keys, sessions, and environment variables remain local to each machine.
 
@@ -155,10 +155,22 @@ When RTK is enabled, run:
 ```text
 rtk --version
 /rtk verify
-/sensitive-guard status
+/cache-optimizer
 ```
 
 Extension tools are enabled by default. Tools are no longer deferred at runtime. Use `/tools` only when the current project should send fewer tool definitions: toggle an extension at the first level or press `Enter` for per-tool selection. Choices are stored in the trusted project's `.pi/tool-selector.json`.
+
+### Understand the restored configuration
+
+| Repository source | Installed target | Restore behavior |
+| --- | --- | --- |
+| `config/settings-public.json` | `~/.pi/agent/settings.json` | Merges public settings; keeps machine provider/model values unless `--with-model-defaults` is used |
+| `config/aft.jsonc` | `~/.config/cortexkit/aft.jsonc` | Backs up the existing file, then applies the repository AFT configuration |
+| `config/APPEND_SYSTEM.md` and three JSON files | `~/.pi/agent/` | Replaces the repository-maintained public configuration |
+| `skills/` and `themes/` | `~/.pi/agent/` | Adds missing files and preserves existing machine content |
+| `extensions/adhd-mode.ts` and `matugen-chrome.ts` | `~/.pi/agent/extensions/` | Copies only when the target file is absent |
+| `config/external-packages.txt` | Pi package registry | Runs `pi install` when external packages are enabled |
+| Project `.pi/tool-selector.json` | The project directory | Is never copied; tool selections remain project-specific |
 
 ## Local extensions
 
@@ -228,7 +240,7 @@ node install.mjs --dry-run --yes
 node install.mjs --yes
 ```
 
-The installer creates a fresh backup of the active Pi directory. It initializes missing skills, updates settings, local packages, Magic Context defaults, and public extension configuration; it does not copy credentials, project tool selections, or session data.
+The installer creates a fresh backup of the active Pi directory and the Cortex config files it updates. It adds missing skills/themes, updates settings, local packages, the Magic Context threshold, and AFT configuration; it does not copy credentials, project tool selections, or session data.
 
 ## Security
 

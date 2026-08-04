@@ -3,6 +3,7 @@ import test from "node:test";
 import { visibleWidth } from "@earendil-works/pi-tui";
 import {
   locateNewLineNumbers,
+  parseAftEditDiff,
   parseHashlineReadOutput,
   parseReplaceDiff,
   renderHashlineReadResult,
@@ -53,18 +54,29 @@ test("renders AFT edit counts from structured diff metadata", () => {
   assert.deepEqual(textFallback.map((line) => line.trimEnd()), ["+16/-2 · 2 edits"]);
 });
 
-test("uses counts when collapsed and the native AFT diff when expanded", () => {
+test("renders expanded AFT edits as a de-indented split diff", () => {
+  const aftDiff = [
+    " 4 \t\t\tbefore",
+    "-5 \t\t\told",
+    "+5 \t\t\tnew",
+    "+6 \t\t\t\tchild",
+    " 6 \t\t\tafter",
+    "   ...",
+    " 20 \t\t\tfinal",
+  ].join("\n");
   const aftResult = {
-    content: [{ type: "text", text: "Edited (+3/-2, 2 edits)." }],
+    content: [{ type: "text", text: "Edited (+2/-1, 2 edits)." }],
     details: {
-      edits_applied: 2,
-      diff: { additions: 3, deletions: 2 },
+      additions: 2,
+      deletions: 1,
+      editsApplied: 2,
+      diff: aftDiff,
     },
   };
   let nativeCalls = 0;
   const nativeRenderer = () => {
     nativeCalls += 1;
-    return { render: () => ["- old", "+ new"], invalidate() {} };
+    return { render: () => ["native diff"], invalidate() {} };
   };
 
   const collapsed = renderAftEditBridgeResult(
@@ -74,8 +86,7 @@ test("uses counts when collapsed and the native AFT diff when expanded", () => {
     theme,
     {},
   ).render(80);
-  assert.deepEqual(collapsed.map((line) => line.trimEnd()), ["+3/-2 · 2 edits"]);
-  assert.equal(nativeCalls, 0);
+  assert.deepEqual(collapsed.map((line) => line.trimEnd()), ["+2/-1 · 2 edits"]);
 
   const expanded = renderAftEditBridgeResult(
     nativeRenderer,
@@ -84,8 +95,28 @@ test("uses counts when collapsed and the native AFT diff when expanded", () => {
     theme,
     {},
   ).render(80);
-  assert.deepEqual(expanded, ["- old", "+ new"]);
-  assert.equal(nativeCalls, 1);
+  const changedLine = expanded.find((line) => line.includes("- old") && line.includes("+ new"));
+  const childLine = expanded.find((line) => line.includes("child"));
+
+  assert.equal(expanded[0].trim(), "↳ diff +2 -1 split");
+  assert.match(changedLine, /^\s*5 │ - old.*│\s*5 │ \+ new/);
+  assert.ok(childLine.includes("+     child"), "one relative indentation level must remain");
+  assert.ok(expanded.some((line) => /^\s*20 │/.test(line) && /│\s*21 │/.test(line)));
+  assert.equal(nativeCalls, 0);
+
+  const parsed = parseAftEditDiff(aftDiff);
+  assert.deepEqual(
+    parsed.map(({ kind, oldLineNumber, newLineNumber }) => [kind, oldLineNumber, newLineNumber]),
+    [
+      ["context", 4, 4],
+      ["remove", 5, undefined],
+      ["add", undefined, 5],
+      ["add", undefined, 6],
+      ["context", 6, 7],
+      ["meta", undefined, undefined],
+      ["context", 20, 21],
+    ],
+  );
 });
 test("renders hashline read output with source line numbers", () => {
   const hashlineText = [

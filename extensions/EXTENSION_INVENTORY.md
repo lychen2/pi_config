@@ -36,7 +36,7 @@ Ten package directories install from this repository.
 | `@cortexkit/aft-pi` | 0.49.0 | Native file editing, recovery checkpoints, code inspection, and indexed search |
 | `pi-slopchop` | 0.10.1 | Terminal code review and annotations |
 | `pi-workspace-history` | 0.2.2 | Workspace undo/redo history |
-| `@narumitw/pi-subagents` | 0.31.0 | Isolated subagent delegation |
+| `@narumitw/pi-subagents` | 0.46.0 | Isolated subagent delegation |
 | `@juicesharp/rpiv-todo` | 2.1.0 | Persistent Todo tool and overlay |
 | `pi-rtk-optimizer` | 0.9.0 | RTK command rewriting and generic output compaction |
 | `pi-cache-optimizer` | 2.6.22 | Prompt and provider-cache optimization |
@@ -59,5 +59,5 @@ Ten package directories install from this repository.
 - Long generic tool output is bounded and uses the configured expansion key hint.
 - The installer verifies compact labels and dedicated emoji for 52 known registry entries; optional and compatibility entries are included, so this is not the active-tool count.
 - Session-scoped compatibility patches restore original methods on shutdown.
-- All seven repository packages pass TypeScript.
-- All seven repository packages pass isolated Pi loading and `npm pack --dry-run` inspection.
+- All ten repository packages pass TypeScript.
+- All ten repository packages pass isolated Pi loading and `npm pack --dry-run` inspection.
