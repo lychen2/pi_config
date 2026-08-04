@@ -3,6 +3,7 @@ import {
   type ExtensionAPI,
 } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth, visibleWidth, type Component } from "@earendil-works/pi-tui";
+import { shortToolName, toolEmoji } from "./tool-presentations.mjs";
 
 type ShellMode = "default" | "self";
 type GetRenderShell = (this: ToolExecutionComponent) => ShellMode;
@@ -40,44 +41,6 @@ const SHELL_PATCH = Symbol.for("pi.toolRails.labeledShellPatch");
 // Two cells keep the leading emoji from crowding the centered tool text.
 const LABEL_WIDTH = 12;
 const PREFIX_WIDTH = LABEL_WIDTH + 3;
-const TOOL_ALIASES: Record<string, string> = {
-  add_directory: "add",
-  agent_browser: "browser",
-  ask_user_question: "ask",
-  ctx_memory: "memory",
-  ctx_search: "search",
-  goal_complete: "done",
-  goal_blocked: "blocked",
-  load_tools: "tools",
-  multi_tool_use_parallel: "parallel",
-  search_external_files: "files",
-  subagent_send: "send",
-  undo_last_replace: "undo",
-};
-
-function shortToolName(name: string): string {
-  const normalized = name.replace(/\./g, "_");
-  return TOOL_ALIASES[normalized] ?? (normalized.replace(/^(?:ctx|subagent)_/, "") || "tool");
-}
-
-function toolEmoji(name: string): string {
-  switch (shortToolName(name)) {
-    case "read": return "📖";
-    case "grep":
-    case "find":
-    case "search": return "🔎";
-    case "ls": return "📂";
-    case "write":
-    case "edit":
-    case "replace":
-    case "todo":
-    case "todowrite": return "✏️";
-    case "browser": return "🌐";
-    case "bash":
-    case "parallel": return "⚡";
-    default: return "🔧";
-  }
-}
 function release(
   shared: typeof globalThis & Record<symbol, unknown>,
   prototype: ShellPrototype,
@@ -132,9 +95,14 @@ export function labelLayout(name: string, index: number, label: string): { emoji
   };
 }
 export function visibleToolContentLines(lines: string[], expanded = false): string[] {
-  if (expanded || lines.length <= 2) return lines;
-  const active = lines.find((line, index) => index > 0 && /^\s*◐/.test(plain(line)));
-  return [lines[0]!, active ?? lines.at(-1)!];
+  if (expanded || lines.length <= 1) return lines;
+  const informative = [
+    lines[0]!,
+    ...lines.slice(1).filter((line) => !/^(?:\.{3}|…)\s*$/.test(plain(line).trim())),
+  ];
+  if (informative.length <= 2) return informative;
+  const active = informative.find((line, index) => index > 0 && /^\s*◐/.test(plain(line)));
+  return [informative[0]!, active ?? informative.at(-1)!];
 }
 function removeRepeatedToolName(line: string, name: string): string {
   const visible = plain(line).trimStart();

@@ -7,6 +7,8 @@ import {
   parseReplaceDiff,
   renderHashlineReadResult,
   renderReplaceDiffResult,
+  renderAftEditBridgeResult,
+  renderAftEditResult,
 } from "../result-bridge.ts";
 
 const theme = {
@@ -31,6 +33,60 @@ const result = {
   },
 };
 
+test("renders AFT edit counts from structured diff metadata", () => {
+  const aftResult = {
+    content: [{ type: "text", text: "Edited (+3/-2, 2 edits)." }],
+    details: {
+      edits_applied: 2,
+      diff: { additions: 3, deletions: 2 },
+    },
+  };
+  const collapsed = renderAftEditResult(aftResult, { expanded: false }, theme, {}).render(80);
+  assert.deepEqual(collapsed.map((line) => line.trimEnd()), ["+3/-2 · 2 edits"]);
+  const expanded = renderAftEditResult(aftResult, { expanded: true }, theme, {}).render(80);
+  assert.ok(expanded.some((line) => line.includes("Edited (+3/-2, 2 edits).")));
+
+  const textOnlyResult = {
+    content: [{ type: "text", text: "Edited (+16/-2, 2 edits)." }],
+  };
+  const textFallback = renderAftEditResult(textOnlyResult, { expanded: false }, theme, {}).render(80);
+  assert.deepEqual(textFallback.map((line) => line.trimEnd()), ["+16/-2 · 2 edits"]);
+});
+
+test("uses counts when collapsed and the native AFT diff when expanded", () => {
+  const aftResult = {
+    content: [{ type: "text", text: "Edited (+3/-2, 2 edits)." }],
+    details: {
+      edits_applied: 2,
+      diff: { additions: 3, deletions: 2 },
+    },
+  };
+  let nativeCalls = 0;
+  const nativeRenderer = () => {
+    nativeCalls += 1;
+    return { render: () => ["- old", "+ new"], invalidate() {} };
+  };
+
+  const collapsed = renderAftEditBridgeResult(
+    nativeRenderer,
+    aftResult,
+    { expanded: false },
+    theme,
+    {},
+  ).render(80);
+  assert.deepEqual(collapsed.map((line) => line.trimEnd()), ["+3/-2 · 2 edits"]);
+  assert.equal(nativeCalls, 0);
+
+  const expanded = renderAftEditBridgeResult(
+    nativeRenderer,
+    aftResult,
+    { expanded: true },
+    theme,
+    {},
+  ).render(80);
+  assert.deepEqual(expanded, ["- old", "+ new"]);
+  assert.equal(nativeCalls, 1);
+});
 test("renders hashline read output with source line numbers", () => {
   const hashlineText = [
     "Ab1│const alpha = true;",

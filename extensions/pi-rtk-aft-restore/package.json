@@ -1,0 +1,13 @@
+{
+  "name": "pi-rtk-aft-restore",
+  "version": "0.1.0",
+  "description": "Restore AFT Bash results after RTK compaction",
+  "license": "MIT",
+  "type": "module",
+  "keywords": ["pi-package", "pi", "rtk", "aft"],
+  "files": ["index.ts"],
+  "pi": { "extensions": ["./index.ts"] },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  }
+}

@@ -667,6 +667,56 @@ export function renderReplaceDiffResult(
   }
   return new ReplaceDiffComponent(entries, options.expanded === true, theme);
 }
+export function renderAftEditResult(
+  result: unknown,
+  options: ResultOptions,
+  theme: Theme,
+  context: ResultContext,
+): Component {
+  if (options.isPartial) return reusableText(context, "");
+  const details = record(record(result).details);
+  if (context.isError) {
+    const lines = outputLines(result);
+    return reusableText(context, preview(lines.length ? lines : ["edit failed"], options, theme, context, "head"));
+  }
+  const lines = outputLines(result);
+  const textCounts = lines.join(" ").match(/\(\+(\d+)\/-(\d+)(?:,\s*(\d+)\s+edits?)?\)/i);
+  const diff = record(details.diff);
+  const additions = typeof diff.additions === "number"
+    ? diff.additions
+    : textCounts
+      ? Number(textCounts[1])
+      : undefined;
+  const deletions = typeof diff.deletions === "number"
+    ? diff.deletions
+    : textCounts
+      ? Number(textCounts[2])
+      : undefined;
+  const editsApplied = typeof details.edits_applied === "number"
+    ? details.edits_applied
+    : textCounts?.[3]
+      ? Number(textCounts[3])
+      : undefined;
+  const summary = additions !== undefined && deletions !== undefined
+    ? `${theme.fg("toolDiffAdded", `+${additions}`)}${theme.fg("muted", "/")}${theme.fg("toolDiffRemoved", `-${deletions}`)}${editsApplied === undefined ? "" : theme.fg("muted", ` · ${editsApplied} edits`)}`
+    : theme.fg("muted", "updated");
+  if (!options.expanded) return reusableText(context, summary);
+  return reusableText(context, [summary, ...lines].filter(Boolean).join("\n"));
+}
+
+export function renderAftEditBridgeResult(
+  nativeRenderer: ResultRenderer | undefined,
+  result: unknown,
+  options: ResultOptions,
+  theme: Theme,
+  context: ResultContext,
+): Component {
+  if (options.expanded && nativeRenderer) {
+    return nativeRenderer(result, options, theme, context);
+  }
+  return renderAftEditResult(result, options, theme, context);
+}
+
 
 function release(
   shared: typeof globalThis & Record<symbol, unknown>,
@@ -701,6 +751,10 @@ function installResultBridge(): () => void {
   const patched: GetResultRenderer = function (): ResultRenderer | undefined {
     const nativeRenderer = state.original.call(this);
     const name = (this as unknown as { toolName?: string }).toolName;
+    if (name === "edit") {
+      return (result, options, theme, context) =>
+        renderAftEditBridgeResult(nativeRenderer, result, options, theme, context);
+    }
     if (name === "replace") {
       return (result, options, theme, context) => renderReplaceDiffResult(result, options, theme, context);
     }

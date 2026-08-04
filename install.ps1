@@ -8,8 +8,6 @@ param(
     [switch]$SkipExternal,
     [switch]$WithMagicContext,
     [switch]$SkipMagicContext,
-    [switch]$WithBrowser,
-    [switch]$SkipBrowser,
     [switch]$WithRtk,
     [switch]$SkipRtk,
     [switch]$WithModelDefaults,
@@ -292,8 +290,6 @@ if ($WithExternal) { $installerArgs += "--with-external" }
 if ($SkipExternal) { $installerArgs += "--skip-external" }
 if ($WithMagicContext) { $installerArgs += "--with-magic-context" }
 if ($SkipMagicContext) { $installerArgs += "--skip-magic-context" }
-if ($WithBrowser) { $installerArgs += "--with-browser" }
-if ($SkipBrowser) { $installerArgs += "--skip-browser" }
 if ($WithRtk) { $installerArgs += "--with-rtk" }
 if ($SkipRtk) { $installerArgs += "--skip-rtk" }
 if ($WithModelDefaults) { $installerArgs += "--with-model-defaults" }

@@ -24,9 +24,25 @@ const defaultAgentDir = path.join(homeDir, ".pi", "agent");
 const agentDir = path.resolve(process.env.PI_CODING_AGENT_DIR || defaultAgentDir);
 const retiredPackageSources = new Set([
   "git:github.com/Xichun123/pi-cometix-footer",
+  "npm:@narumitw/pi-goal",
+  "npm:@narumitw/pi-btw",
+  "npm:pi-add-dir",
+  "npm:@tmustier/pi-raw-paste",
+  "npm:pi-autoresearch",
+  "npm:@monotykamary/pi-tps",
+  "npm:pi-agent-browser-native",
+  "npm:pi-hashline-edit-pro",
+ ]);
+const retiredLocalPackageNames = new Set([
+  "pi-agent-browser-compat",
+  "pi-goal-verifier",
+  "pi-rtk-hashline-compat",
+  "pi-semantic-code",
 ]);
-const rtkOptimizerPackageSource = "npm:pi-rtk-optimizer";
-const rtkHashlineCompatPackageName = "pi-rtk-hashline-compat";
+
+const lateLocalPackageNames = new Set([
+  "pi-rtk-aft-restore",
+]);
 
 function normalizeChildPath() {
   const pathKey = Object.keys(process.env).find((key) => key.toLowerCase() === "path") || "PATH";
@@ -67,7 +83,6 @@ function parseArgs(argv) {
     dryRun: false,
     external: undefined,
     magicContext: undefined,
-    browser: undefined,
     rtk: undefined,
     modelDefaults: undefined,
   };
@@ -92,12 +107,6 @@ function parseArgs(argv) {
         break;
       case "--skip-external":
         setChoice(options, "external", false, "external package");
-        break;
-      case "--with-browser":
-        setChoice(options, "browser", true, "browser");
-        break;
-      case "--skip-browser":
-        setChoice(options, "browser", false, "browser");
         break;
       case "--with-rtk":
         setChoice(options, "rtk", true, "RTK");
@@ -137,13 +146,11 @@ Options:
       --skip-magic-context  Skip Magic Context setup
       --with-external      Install packages from config/external-packages.txt
       --skip-external      Skip external Pi packages
-      --with-browser       Install agent-browser and its browser runtime
-      --skip-browser       Skip browser automation
       --with-rtk           Install the RTK binary used by pi-rtk-optimizer
       --skip-rtk           Skip the RTK binary
       --with-model-defaults  Apply provider/model defaults from public settings
       --skip-model-defaults  Keep the machine's provider/model selection
-  Local extensions/pi-*/package.json packages are always installed, including the RTK/hashline compatibility adapter.
+  Local extensions/pi-*/package.json packages are always installed.
   -h, --help               Show this help
 
 Recommended install (Magic Context runs its own setup wizard):
@@ -214,28 +221,14 @@ function configuredPackageSource(value) {
   return undefined;
 }
 
-function isRtkOptimizerPackage(value) {
-  const source = configuredPackageSource(value);
-  return source === rtkOptimizerPackageSource || source?.startsWith(`${rtkOptimizerPackageSource}@`);
-}
-
-function isRtkHashlineCompatPackage(value) {
+function isRetiredPackageSource(value) {
   const source = configuredPackageSource(value)?.replaceAll("\\", "/").replace(/\/+$/, "");
-  return source?.endsWith(`/extensions/${rtkHashlineCompatPackageName}`) ?? false;
+  if (!source) return false;
+  if (retiredPackageSources.has(source)) return true;
+  if ([...retiredPackageSources].some((retired) => source.startsWith(`${retired}@`))) return true;
+  return [...retiredLocalPackageNames].some((name) => source.endsWith(`/extensions/${name}`));
 }
 
-function moveRtkHashlineCompatBeforeOptimizer(packages) {
-  const rtkIndex = packages.findIndex(isRtkOptimizerPackage);
-  const compatIndex = packages.findIndex(isRtkHashlineCompatPackage);
-  if (rtkIndex < 0 || compatIndex < 0 || compatIndex < rtkIndex) {
-    return packages;
-  }
-
-  const reordered = [...packages];
-  const [compatPackage] = reordered.splice(compatIndex, 1);
-  reordered.splice(rtkIndex, 0, compatPackage);
-  return reordered;
-}
 
 function mergeObjects(base, overlay) {
   const merged = { ...base };
@@ -274,6 +267,14 @@ async function copyPath(source, destination) {
   });
 }
 
+async function copyPathIfMissing(source, destination) {
+  if (await pathExists(destination)) {
+    console.log(`  preserve existing ${destination}`);
+    return;
+  }
+  await copyPath(source, destination);
+}
+
 async function promptYesNo(rl, question, defaultValue) {
   if (installerOptions.yes || !process.stdin.isTTY) {
     return defaultValue;
@@ -294,8 +295,6 @@ async function resolveChoices() {
       (await promptYesNo(rl, "Install Magic Context and disable Pi auto-compaction?", true));
     const external = installerOptions.external ??
       (await promptYesNo(rl, "Install the external Pi package manifest?", true));
-    const browser = installerOptions.browser ??
-      (await promptYesNo(rl, "Install browser automation?", true));
     const rtk = installerOptions.rtk ??
       (await promptYesNo(rl, "Install the RTK binary used by pi-rtk-optimizer?", true));
     const modelDefaults = installerOptions.modelDefaults ??
@@ -306,7 +305,7 @@ async function resolveChoices() {
       ));
 
 
-    return { magicContext, external, browser, rtk, modelDefaults };
+    return { magicContext, external, rtk, modelDefaults };
   } finally {
     rl.close();
   }
@@ -338,12 +337,11 @@ async function restoreFiles() {
     await mkdir(agentDir, { recursive: true });
   }
 
-  await copyPath(path.join(repoDir, "skills"), path.join(agentDir, "skills"));
-  await copyPath(path.join(repoDir, "themes"), path.join(agentDir, "themes"));
+  await copyPathIfMissing(path.join(repoDir, "skills"), path.join(agentDir, "skills"));
+  await copyPathIfMissing(path.join(repoDir, "themes"), path.join(agentDir, "themes"));
 
   const configFiles = [
     "APPEND_SYSTEM.md",
-    "deferred-tools.json",
     "slim-skills-whitelist.json",
     "pi-plan-mode.json",
     "pi-subagents.json",
@@ -353,11 +351,19 @@ async function restoreFiles() {
   }
 
   for (const file of ["adhd-mode.ts", "matugen-chrome.ts"]) {
-    await copyPath(
+    await copyPathIfMissing(
       path.join(repoDir, "extensions", file),
       path.join(agentDir, "extensions", file),
     );
   }
+  const xdgConfigHome = process.env.XDG_CONFIG_HOME;
+  const configHome = xdgConfigHome && path.isAbsolute(xdgConfigHome)
+    ? xdgConfigHome
+    : path.join(homeDir, ".config");
+  await copyPath(
+    path.join(repoDir, "config", "aft.jsonc"),
+    path.join(configHome, "cortexkit", "aft.jsonc"),
+  );
 }
 
 async function mergePublicSettings(includeModelDefaults) {
@@ -377,12 +383,10 @@ async function mergePublicSettings(includeModelDefaults) {
   const currentSettings = await readJson(settingsPath);
   const mergedSettings = mergeObjects(currentSettings, publicSettings);
   if (Array.isArray(mergedSettings.packages)) {
-    const packageCount = mergedSettings.packages.length;
-    mergedSettings.packages = mergedSettings.packages.filter(
-      (entry) => !retiredPackageSources.has(configuredPackageSource(entry)),
-    );
-    if (mergedSettings.packages.length !== packageCount) {
-      console.log("  removed retired fixed-color footer package");
+    const retiredPackages = mergedSettings.packages.filter(isRetiredPackageSource);
+    mergedSettings.packages = mergedSettings.packages.filter((entry) => !isRetiredPackageSource(entry));
+    if (retiredPackages.length) {
+      console.log(`  removed retired packages: ${retiredPackages.map(configuredPackageSource).filter(Boolean).join(", ")}`);
     }
   }
   if (installerOptions.dryRun) {
@@ -412,51 +416,54 @@ async function installLocalPackages() {
 
   packageDirs.sort();
   console.log(`  discovered local packages: ${packageDirs.map((packageDir) => path.basename(packageDir)).join(", ") || "none"}`);
-  for (const packageDir of packageDirs) {
+  for (const packageDir of packageDirs.filter((entry) => !lateLocalPackageNames.has(path.basename(entry)))) {
     run(commandName("pi"), ["install", packageDir]);
   }
 
-  await syncDeferredLocalPackages(packageDirs);
+  run(process.execPath, [path.join(repoDir, "scripts", "verify-tool-presentations.mjs")]);
 }
 
-function relativePackageSource(packageDir) {
-  return path.relative(agentDir, packageDir);
+async function installLateLocalPackages() {
+  const packageDir = path.join(repoDir, "extensions", "pi-rtk-aft-restore");
+  if (!(await pathExists(path.join(packageDir, "package.json")))) return;
+  console.log("  installing late local package: pi-rtk-aft-restore");
+  run(commandName("pi"), ["install", packageDir]);
 }
 
-function localPackageName(source) {
-  const normalized = source.replaceAll("\\", "/");
-  const match = normalized.match(/(?:^|\/)extensions\/(pi-[^/]+)$/);
-  return match?.[1];
+function isNamedPackageSource(value, name) {
+  const source = configuredPackageSource(value)?.replaceAll("\\", "/").replace(/\/+$/, "");
+  return source?.endsWith(`/extensions/${name}`) || source === `npm:${name}`;
 }
 
-async function syncDeferredLocalPackages(packageDirs) {
-  const targetPath = path.join(agentDir, "deferred-tools.json");
-  const sourcePath = installerOptions.dryRun
-    ? path.join(repoDir, "config", "deferred-tools.json")
-    : targetPath;
-  const config = await readJson(sourcePath, { extensions: [] });
-  if (!Array.isArray(config.extensions)) {
-    throw new Error(`Deferred-tools config at ${sourcePath} must contain an extensions array`);
+async function reorderRtkAftPackages() {
+  if (installerOptions.dryRun) return;
+  const settingsPath = path.join(agentDir, "settings.json");
+  const settings = await readJson(settingsPath);
+  if (!Array.isArray(settings.packages)) return;
+
+  const originalPackages = settings.packages;
+  let packages = [...originalPackages];
+  const capture = packages.find((entry) => isNamedPackageSource(entry, "pi-rtk-aft-capture"));
+  const restore = packages.find((entry) => isNamedPackageSource(entry, "pi-rtk-aft-restore"));
+  const rtk = packages.find((entry) => {
+    const source = configuredPackageSource(entry);
+    return typeof source === "string" && (source === "npm:pi-rtk-optimizer" || source.startsWith("npm:pi-rtk-optimizer@"));
+  });
+  if (capture && restore && rtk) {
+    const withoutRtkAdapters = packages.filter((entry) => entry !== capture && entry !== restore);
+    const rtkIndex = withoutRtkAdapters.indexOf(rtk);
+    withoutRtkAdapters.splice(rtkIndex, 0, capture);
+    withoutRtkAdapters.splice(rtkIndex + 2, 0, restore);
+    packages = withoutRtkAdapters;
   }
 
-  const localSources = new Map(
-    packageDirs.map((packageDir) => [path.basename(packageDir), relativePackageSource(packageDir)]),
-  );
-  let changed = false;
-  const extensions = config.extensions.map((source) => {
-    if (typeof source !== "string") return source;
-    const packageName = localPackageName(source);
-    const replacement = packageName ? localSources.get(packageName) : undefined;
-    if (!replacement || replacement === source) return source;
-    changed = true;
-    return replacement;
-  });
 
-  if (!changed) return;
-  console.log(`  rewrite local deferred package IDs -> ${targetPath}`);
-  if (installerOptions.dryRun) return;
-  await writeFile(targetPath, `${JSON.stringify({ ...config, extensions }, null, 2)}\n`, "utf8");
+  if (JSON.stringify(packages) === JSON.stringify(originalPackages)) return;
+  settings.packages = packages;
+  await writeFile(settingsPath, `${JSON.stringify(settings, null, 2)}\n`, "utf8");
+  if (capture && restore && rtk) console.log("  ordered AFT Bash capture -> RTK -> restore");
 }
+
 async function installExternalPackages(enabled) {
   console.log("\n[5/7] Installing external Pi packages");
   if (!enabled) {
@@ -477,35 +484,10 @@ async function installExternalPackages(enabled) {
       continue;
     }
     const commandOptions = {};
-    if (packageSource === "npm:@monotykamary/pi-tps") {
-      console.log("  skipping pi-tps developer-only Git hook setup");
-      commandOptions.env = {
-        ...process.env,
-        npm_config_ignore_scripts: "true",
-      };
-    }
     run(commandName("pi"), ["install", packageSource], commandOptions);
   }
 }
 
-async function ensureRtkHashlineCompatLoadOrder() {
-  const settingsPath = path.join(agentDir, "settings.json");
-  const settings = await readJson(settingsPath);
-  if (!Array.isArray(settings.packages)) {
-    return;
-  }
-
-  const packages = moveRtkHashlineCompatBeforeOptimizer(settings.packages);
-  if (packages === settings.packages) {
-    return;
-  }
-
-  console.log("  move pi-rtk-hashline-compat before pi-rtk-optimizer");
-  if (installerOptions.dryRun) {
-    return;
-  }
-  await writeFile(settingsPath, `${JSON.stringify({ ...settings, packages }, null, 2)}\n`, "utf8");
-}
 
 function magicContextConfigPath() {
   const xdgConfigHome = process.env.XDG_CONFIG_HOME;
@@ -568,11 +550,6 @@ async function installOptionalTools(choices) {
   console.log("\n[7/7] Installing optional command-line tools");
   let installedAny = false;
 
-  if (choices.browser) {
-    installedAny = true;
-    run(commandName("npm"), ["install", "-g", "agent-browser"]);
-    run(commandName("agent-browser"), ["install"]);
-  }
 
   if (choices.rtk) {
     installedAny = true;
@@ -621,7 +598,6 @@ console.log(`  repository: ${repoDir}`);
 console.log(`  target: ${agentDir}`);
 console.log(`  Magic Context: ${choices.magicContext ? "yes" : "no"}`);
 console.log(`  external packages: ${choices.external ? "yes" : "no"}`);
-console.log(`  browser automation: ${choices.browser ? "yes" : "no"}`);
 console.log(`  RTK binary: ${choices.rtk ? "yes" : "no"}`);
 console.log(`  provider/model defaults: ${choices.modelDefaults ? "apply" : "keep current"}`);
 if (installerOptions.dryRun) {
@@ -634,7 +610,8 @@ await restoreFiles();
 await mergePublicSettings(choices.modelDefaults);
 await installLocalPackages();
 await installExternalPackages(choices.external);
-await ensureRtkHashlineCompatLoadOrder();
+await installLateLocalPackages();
+await reorderRtkAftPackages();
 await installMagicContext(choices.magicContext);
 await installOptionalTools(choices);
 

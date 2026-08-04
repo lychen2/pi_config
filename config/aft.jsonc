@@ -1,0 +1,11 @@
+{
+  "tool_surface": "recommended",
+  "bash": {
+    "rewrite": true,
+    "compress": true,
+    "background": true
+  },
+  "search_index": true,
+  "semantic_search": true,
+  "callgraph_store": true
+}

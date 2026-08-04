@@ -1,10 +1,11 @@
 # Pi 配置快速上手
 
-本页面向第一次使用此仓库的人。先完成下面 5 步；需要查看延迟工具、验收、DAG 和完整基础场景时，直接打开[完整使用手册](USAGE.zh-CN.md)。
+本页面面向第一次使用此仓库的人。先完成下面 5 步；需要查看项目工具开关、验收、DAG 和完整基础场景时，直接打开[完整使用手册](USAGE.zh-CN.md)。
 
-- [完整使用手册](USAGE.zh-CN.md)：安装、激活、全部能力和六个基础场景
+- [完整使用手册](USAGE.zh-CN.md)：安装、工具选择、全部能力和六个基础场景
+- [Skill 目录](skills.zh-CN.md)：58 个当前有效 skill 定义及逐项调用示例
+- [工具目录](tools.zh-CN.md)：当前 41 个 `functions.*` 工具及逐项使用示例
 - [扩展目录](extensions.zh-CN.md)：本地 package、第三方 package、命令与工具
-- [技能目录](skills.zh-CN.md)：58 个随仓库分发的技能及调用场景
 - [公开设置](../config/settings-public.json)：可选的默认模型、主题与技能设置
 - [外部 package 清单](../config/external-packages.txt)：安装器会安装的第三方资源
 
@@ -12,9 +13,15 @@
 
 1. 在仓库根目录运行 `./install.sh --yes`，或已安装 Pi 时运行 `node install.mjs --yes`。
 2. 运行 `pi`，输入 `/provider add` 配置本机提供方，再用 `/model` 选择可用模型。
-3. 输入一个具体任务，例如“检查当前项目的测试失败原因并修复”。需要浏览器、subagent、语义代码或 DAG 时，在任务中直接说出能力，模型会调用 `load_tools`。
-4. 需要明确工作流时，输入 `/skill:<名称>`，例如 `/skill:karpathy-guidelines`、`/skill:mineru-file-processing` 或 `/skill:scientific-visualization`。
+3. 输入一个具体任务，例如“检查当前项目的测试失败原因并修复”。浏览器、subagent 和 DAG 工具默认可用；当前项目不需要某些工具时用 `/tools` 关闭。
+4. 需要明确工作流时，输入 `/skill:<名称>`，例如 `/skill:batch-grill-me`、`/skill:mineru-file-processing` 或 `/skill:scientific-visualization`。
 5. 修改 `~/.pi/agent/settings.json`、扩展或主题后，在 Pi 中运行 `/reload`。
+
+## 当前清单和命名边界
+
+- **Skill：58 个有效定义。** 仓库跟踪 57 个 `SKILL.md` 定义；本机保留的 `batch-grill-me` 计入当前有效清单。仓库内有两个同名 `mineru` 定义，所以是 58 个定义、57 个唯一名称。
+- **工具：41 个当前 `functions.*` 接口。** 另有 52 项工具显示 registry，用于短标签和 emoji 校验；它不是 active 工具数量。完整逐项示例见[工具目录](tools.zh-CN.md)。
+- **`pi-deferred-tools`：旧包名，新职责。** Tools are no longer deferred. 扩展工具默认保持 Pi 的正常启用状态；它现在只是受信任项目内的 `/tools` 两级开关面板，配置写入 `.pi/tool-selector.json`。`/deferred-tools` 只是兼容别名。
 
 ## Pi 的工作方式
 
@@ -28,7 +35,7 @@ Pi 是终端编码代理。它将当前目录、`AGENTS.md`、已启用技能和
 | `!!命令` | 运行本地 shell 但不把输出放进模型上下文 | 本地检查、打开日志或调试环境 |
 | `/skill:名称` | 强制载入某个技能 | 任务需要明确的专业流程 |
 | `/plan` | 切换为只读规划模式 | 先确认方案、范围和风险 |
-| `load_tools` | 由模型按需启用一个延迟工具，不是用户输入的 slash command | 在提示词中要求语义代码、浏览器、subagent 或 DAG 时 |
+| `/tools` | 按扩展或单个工具配置当前项目的模型工具集 | 工具定义过多或项目不需要某类能力时 |
 
 `@`、`!` 与 `!!` 都是输入前缀，不是 shell 的通用语法。文件引用用 `@README.md`，shell 命令用 `!git status`。
 
@@ -54,7 +61,7 @@ Pi 是终端编码代理。它将当前目录、`AGENTS.md`、已启用技能和
 | --- | --- |
 | 跨文件找定义、引用或诊断 | `检查 src/api.ts 第 42 行 handleRequest 的定义、引用和诊断；只读，不要修改文件。` |
 | 安全重命名 | `把 handleRequest 改名为 handleRequestV2，先预览将修改的文件；我确认后才应用。` |
-| 长任务必须验证 | 创建 `.pi/goal-verification.json`，然后用 `/goal` 执行任务；完成前用 `/goal-verify` 检查。 |
+| 长任务必须验证 | 在任务中写明范围、验收命令和停止条件；完成前运行验收命令。 |
 | 小型并行工作流 | `把任务拆成检查现状、实现修改、复核测试三个有依赖的步骤；每步只返回结论和验证结果。` |
 | 普通并行调查 | `使用 subagent 并行查实现、测试和最近提交；子代理只读。` |
 
@@ -107,18 +114,17 @@ Pi 是终端编码代理。它将当前目录、`AGENTS.md`、已启用技能和
 3. 中文或英文润色：`/skill:humanizer-zh` 或 `/skill:humanizer`，保留术语和引用。
 4. 其他已同步但默认未发现的技能，先查[技能目录](skills.zh-CN.md)，再用 `/slim-skills inject <名称>` 显式注入。
 
-### 浏览器与外部目录
+### 联网资料
 
-1. 浏览器自动化先确认已安装 `agent-browser` runtime，然后直接要求模型使用浏览器；按需工具加载会启用 `agent_browser`。
-2. 需要仓库外代码或文档时用 `/add-dir /绝对路径`，不要把大型目录直接复制进项目。
-3. 结束后用 `/remove-dir` 清理不再需要的外部上下文。
+1. 需要最新资料时，直接说明检索目标、时间范围和可信域名；默认可用的 `web_search` 会执行检索。
+2. 需要网页、PDF、GitHub 仓库或视频内容时，提供 URL 并要求提取证据；`fetch_content` 会按内容类型处理，GitHub 仓库会克隆为本地目录。
 
 ## 使用技巧
 
 - 提示词先写结果，再写边界。例如“把 X 改成 Y；不修改 API；测试必须通过”。
 - 用 `/name 发布检查` 给重要会话命名，后续用 `/resume` 更容易找到。
 - 长任务开始前要求模型使用 Todo；`pi-todo-guard` 会在仍有未完成任务时提醒代理继续。
-- 不需要完整工具集时无需手动启用。`pi-deferred-tools` 会保留 `load_tools`，模型可按任务精确加载工具。
+- 扩展工具默认启用；工具定义过多时用 `/tools` 为当前项目关闭整组或单个工具。
 - 通过 `/tree` 分支试验。实验失败时回到旧节点继续，避免把试验性改动混入主分支。
 - 不要将 API key、token 或私钥贴进提示词和仓库。provider 凭据保存在本机 Pi 配置中，不属于此仓库。
 
@@ -131,8 +137,7 @@ Pi 是终端编码代理。它将当前目录、`AGENTS.md`、已启用技能和
 | 预览安装器影响 | `node install.mjs --dry-run --yes` |
 | 检查已安装 package | `pi list` |
 | 重载当前会话资源 | `/reload` |
-| 查看浏览器运行时 | `npm exec --prefix "$HOME/.pi/agent/npm" -- pi-agent-browser-doctor` |
 | 检查 RTK | `rtk --version` 与 `/rtk verify` |
-| 检查 hashline 兼容层 | `node scripts/verify-rtk-hashline-compat.mjs` |
+| 检查工具显示 registry | `node scripts/verify-tool-presentations.mjs` |
 
 仓库只备份 `skills/` 中的技能。额外放在 `~/.agents/skills/`、`~/.claude/` 或其他目录的本机技能不会由安装器恢复；要迁移它们，应单独审查后纳入仓库或在 `settings.json` 中显式配置路径。

@@ -89,10 +89,12 @@ function installWorkingIndicator(ctx: ExtensionContext): void {
     frames: [
       theme.fg("dim", "·"),
       theme.fg("muted", "•"),
+      theme.fg("success", "●"),
       theme.fg("accent", "●"),
+      theme.fg("warning", "●"),
       theme.fg("muted", "•"),
     ],
-    intervalMs: 140,
+    intervalMs: 120,
   });
 }
 

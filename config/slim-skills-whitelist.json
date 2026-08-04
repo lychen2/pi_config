@@ -4,12 +4,10 @@
     "figure-style",
     "humanizer",
     "humanizer-zh",
-    "karpathy-guidelines",
+    "batch-grill-me",
     "mineru",
     "mineru-file-processing",
     "scientific-visualization"
   ],
-  "inject": [
-    "i-have-adhd"
-  ]
+  "inject": []
 }

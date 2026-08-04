@@ -5,7 +5,7 @@
   "license": "MIT",
   "type": "module",
   "keywords": ["pi-package", "pi", "tools", "theme", "tui"],
-  "files": ["index.ts", "compact-shell.ts", "result-bridge.ts", "prompt-frame.ts", "README.md", "LICENSE"],
+  "files": ["index.ts", "compact-shell.ts", "result-bridge.ts", "prompt-frame.ts", "tool-presentations.mjs", "tool-presentations.d.mts", "README.md", "LICENSE"],
   "pi": { "extensions": ["./compact-shell.ts", "./index.ts", "./result-bridge.ts", "./prompt-frame.ts"] },
   "scripts": {
     "test": "node --test tests/*.test.mjs",

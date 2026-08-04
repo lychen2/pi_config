@@ -25,19 +25,20 @@
 | 路径 | 内容 | 恢复方式 |
 | --- | --- | --- |
 | `install.sh`、`install.ps1`、`install.mjs` | 跨平台环境引导和配置安装器 | 运行对应操作系统的入口脚本 |
-| `scripts/` | 本地集成的跨平台安装后检查脚本 | 在仓库根目录运行对应 Node 脚本 |
+| `scripts/` | 本地集成与工具显示 registry 的跨平台安装后检查脚本 | 在仓库根目录运行对应 Node 脚本 |
 | `extensions/` | 全部带 `pi-*/package.json` 的本地 package 和 2 个独立扩展 | 使用 `pi install` 安装 package；直接复制独立扩展 |
-| `skills/` | 58 个 `SKILL.md` 定义，包含嵌套技能集合 | 同步到 `~/.pi/agent/skills/` |
+| `skills/` | 仓库跟踪 57 个 `SKILL.md` 定义；当前有效清单另包含本机保留的 `batch-grill-me`，合计 58 个定义 | 同步到 `~/.pi/agent/skills/`；本机已有 skill 会保留 |
 | `config/` | Pi 公开设置、系统规则、扩展状态和外部 package 清单 | 检查后按需复制或合并 |
 | `themes/` | 2 个 Matugen 主题 | 复制到 `~/.pi/agent/themes/` |
-| `docs/` | 上手 Wiki、扩展和技能目录，以及 README 截图 | 打开 [`docs/WIKI.zh-CN.md`](docs/WIKI.zh-CN.md) |
+| `docs/` | 上手 Wiki、58 个 skill 和 41 个工具目录，以及 README 截图 | 打开 [`docs/WIKI.zh-CN.md`](docs/WIKI.zh-CN.md) |
 
 ## Wiki
 
 - [完整使用手册：安装、激活与基础场景](docs/USAGE.zh-CN.md)
 - [快速上手](docs/WIKI.zh-CN.md)
 - [扩展目录](docs/extensions.zh-CN.md)
-- [技能目录](docs/skills.zh-CN.md)
+- [技能目录与 58 个使用示例](docs/skills.zh-CN.md)
+- [工具目录与 41 个使用示例](docs/tools.zh-CN.md)
 
 ## 安装
 
@@ -84,9 +85,9 @@ node install.mjs
 2. 本地没有仓库时，将其下载到 `~/.pi_config`。
 3. 将现有 Pi 目录备份到 `~/.pi-backup-<timestamp>/agent`。
 4. 恢复技能、主题、独立扩展和公开配置。
-5. 安装全部带 `extensions/pi-*/package.json` 的本地 package，按目标机路径重写本地延迟工具 ID，再安装已检查的外部 package 清单。
+5. 安装全部带 `extensions/pi-*/package.json` 的本地 package，校验 52 项兼容显示 registry 的短名与 emoji，再安装已检查的外部 package 清单。52 项是显示 registry，不是当前 active 工具数量。
 6. 运行上游 Magic Context 官方安装脚本，保留其 JSONC 注释，将仓库默认执行阈值设为 `55%`，并关闭 Pi 原生自动压缩。
-7. 根据选择安装浏览器和 RTK 命令行工具。
+7. 根据选择安装 RTK 命令行工具。
 provider 凭据、模型注册表、API key、会话和环境变量继续保留在各台机器上。
 
 推荐默认值适合全新安装：
@@ -95,7 +96,6 @@ provider 凭据、模型注册表、API key、会话和环境变量继续保留�
 | --- | --- | --- |
 | 外部 Pi package | 安装 | 恢复 `config/external-packages.txt` 中记录的工具 |
 | Magic Context | 安装 | 运行上游向导并关闭 Pi 原生自动压缩 |
-| 浏览器运行时 | 安装 | 默认安装的 `pi-agent-browser-native` 依赖该运行时；已有 Chrome runtime 时会直接复用 |
 | RTK binary | 安装 | `pi-rtk-optimizer` 的命令改写依赖该 binary；Windows、Linux 和 macOS 均有预编译 release |
 | provider/model 默认值 | 保留本机值 | 仓库中的 `manager` provider 依赖本机配置 |
 
@@ -109,7 +109,6 @@ provider 凭据、模型注册表、API key、会话和环境变量继续保留�
 | `--dry-run` | 只显示计划，不修改文件或安装 package |
 | `--with-magic-context` / `--skip-magic-context` | 安装或跳过上游 Magic Context 向导 |
 | `--with-external` / `--skip-external` | 安装或跳过外部 package 清单 |
-| `--with-browser` / `--skip-browser` | 安装或跳过 `agent-browser` |
 | `--with-rtk` / `--skip-rtk` | 安装或跳过 `pi-rtk-optimizer` 使用的 RTK binary |
 | `--with-model-defaults` / `--skip-model-defaults` | 应用仓库值或保留本机 provider/model 默认值 |
 
@@ -122,8 +121,8 @@ provider 凭据、模型注册表、API key、会话和环境变量继续保留�
 # 同时应用仓库中的 provider/model 默认值
 ./install.sh --yes --with-model-defaults
 
-# 跳过 Magic Context、外部 package 和可选命令行 runtime
-./install.sh --yes --skip-magic-context --skip-external --skip-browser --skip-rtk
+# 跳过 Magic Context、外部 package 和 RTK binary
+./install.sh --yes --skip-magic-context --skip-external --skip-rtk
 ```
 
 PowerShell 使用对应的 switch 名称：
@@ -139,7 +138,11 @@ PowerShell 使用对应的 switch 名称：
 ```bash
 pi --version
 pi list
+cd ~/.pi_config
+node scripts/verify-tool-presentations.mjs
 ```
+
+显示检查会校验 52 个已知名称的短名和专属 emoji；其中包含兼容项和可选项，不代表当前 active 工具数量。当前 41 个 `functions.*` 工具的逐项示例见 [`docs/tools.zh-CN.md`](docs/tools.zh-CN.md)。
 
 启动 Pi，使用 `pi-provider` 配置自定义 provider，然后选择对应模型：
 
@@ -149,17 +152,7 @@ pi
 /model
 ```
 
-启用浏览器自动化或 RTK 后，运行对应检查：
-
-```bash
-npm exec --prefix "$HOME/.pi/agent/npm" -- pi-agent-browser-doctor
-```
-
-Windows PowerShell 使用：
-
-```powershell
-npm exec --prefix (Join-Path $HOME ".pi\agent\npm") -- pi-agent-browser-doctor
-```
+启用 RTK 后运行：
 
 ```text
 rtk --version
@@ -167,29 +160,19 @@ rtk --version
 /sensitive-guard status
 ```
 
-在仓库根目录运行下面的命令，检查本地 hashline 适配层及其依赖：
-
-```bash
-node scripts/verify-rtk-hashline-compat.mjs
-```
-
-初始工具集中应包含 `load_tools`。它是模型调用的工具，不是 slash command：在任务中明确要求语义代码、浏览器或 DAG 等能力，模型会精确激活一个匹配工具。激活步骤和完整场景见[完整使用手册](docs/USAGE.zh-CN.md)。
+扩展工具默认启用。工具现在不再运行时延迟；只有需要减少当前项目发送给模型的工具定义时，才运行 `/tools`：一级按扩展开关，`Enter` 进入二级逐工具选择，结果保存在受信任项目 `.pi/tool-selector.json`。完整用法见[使用手册](docs/USAGE.zh-CN.md)。
 
 ## 本地扩展
 
 | 扩展 | 作用 | 主要控制方式 |
 | --- | --- | --- |
 | [`pi-brand-header`](extensions/pi-brand-header/) | 显示模型、主题、工作区、技能和工具信息，并适配窄终端 | `/logo` |
-| [`pi-agent-browser-compat`](extensions/pi-agent-browser-compat/) | 归一化 provider 生成的 `agent_browser` 参数 | `PI_AGENT_BROWSER_COMPAT_DISABLE=1` |
-| [`pi-deferred-tools`](extensions/pi-deferred-tools/) | 按扩展归组工具，并按需激活 | `/deferred-tools` |
+| [`pi-deferred-tools`](extensions/pi-deferred-tools/) | 项目级两级工具选择器；工具已不再延迟，旧包名仅为兼容 | `/tools` |
 | [`pi-manager-models`](extensions/pi-manager-models/) | 刷新 OpenAI-compatible 模型目录，同时保留本地覆盖项 | provider `baseUrl` 和环境变量 |
 | [`pi-slim-skills`](extensions/pi-slim-skills/) | 压缩技能索引，并在每个 prompt 中注入一次指定技能内容 | `/slim-skills` |
 | [`pi-todo-guard`](extensions/pi-todo-guard/) | Todo 存在未完成项目时继续当前运行 | `PI_TODO_GUARD_DISABLE=1` |
-| [`pi-semantic-code`](extensions/pi-semantic-code/) | 对 C/C++、Python、Rust、JS/TS、C#、Go、LaTeX、Typst 按需提供代码结构导航、诊断和安全重命名 | 直接描述要查的定义、引用或错误；需要时自动加载 |
-| [`pi-goal-verifier`](extensions/pi-goal-verifier/) | 在 Goal 完成前运行已声明的验收命令 | `.pi/goal-verification.json`、`~/.pi/agent/goal-verification.json`、`/goal-verify` |
 | [`pi-workflow-dag`](extensions/pi-workflow-dag/) | 按依赖分波执行检查、实现、复核 worker | 直接描述有依赖的步骤；需要时自动加载 |
-| [`pi-rtk-hashline-compat`](extensions/pi-rtk-hashline-compat/) | 将 RTK 的 read 输出限制应用到 hashline，同时不修改 `write` 和 `replace` 结果 | `PI_RTK_HASHLINE_COMPAT_DISABLE=1` |
-| [`pi-tool-rails`](extensions/pi-tool-rails/) | 添加主题化工具标签、结果面板和输入框样式 | `PI_TOOL_RAILS_DISABLE_USER_FRAME=1` |
+| [`pi-tool-rails`](extensions/pi-tool-rails/) | 添加主题化结果面板、输入框样式，以及经过校验、范围大于当前 41 个工具面的 52 项名称 registry | `PI_TOOL_RAILS_DISABLE_USER_FRAME=1` |
 | [`adhd-mode.ts`](extensions/adhd-mode.ts) | 添加可跨会话保持的 ADHD 响应规则 | `/adhd` |
 | [`matugen-chrome.ts`](extensions/matugen-chrome.ts) | 使用当前 Pi theme 渲染 Cometix 风格 footer | `/matugen-chrome` |
 
@@ -197,10 +180,10 @@ node scripts/verify-rtk-hashline-compat.mjs
 
 1. 在项目目录启动 Pi：`pi`。
 2. 用目标、范围和验收命令描述任务，例如：`修复登录回调；运行相关测试；不要改其他模块。`
-3. 需要代码结构分析时，不用记工具名，直接说你要查定义、引用、类型错误或安全改名，例如：`查看 src/service.py 中 UserStore 的定义、全部引用和类型诊断；只读，并告诉我最安全的修改入口。`
-4. 长任务用 `/goal` 配合 `goal-verification.json`；小型依赖任务直接说明“先检查、再实现、最后复核”的步骤即可。
+3. 需要代码探索时，不用记工具名，直接说明目标文件或符号；AFT 提供 outline、zoom、索引搜索、inspect 与 conflict analysis。需要时要求给出最安全的修改入口。
+4. 长任务直接写明范围、验收命令和停止条件；小型依赖任务直接说明“先检查、再实现、最后复核”的步骤即可。
 
-[完整使用手册](docs/USAGE.zh-CN.md) 说明全部能力的激活方式，并提供编码、审阅、语义导航、Goal、委派、浏览器、PDF 和可视化示例。
+[完整使用手册](docs/USAGE.zh-CN.md) 说明全部能力的激活方式，并提供编码、审阅、AFT 代码探索、联网资料、委派、PDF 和可视化示例。58 个 skill 和 41 个工具的逐项示例分别见 [`docs/skills.zh-CN.md`](docs/skills.zh-CN.md) 与 [`docs/tools.zh-CN.md`](docs/tools.zh-CN.md)。
 
 常用的 package 检查命令如下：
 
@@ -209,16 +192,11 @@ cd extensions/pi-brand-header
 npm install
 npm run typecheck
 npm pack --dry-run
-
-cd ../pi-rtk-hashline-compat
-npm install
-npm run check
-npm pack --dry-run
 ```
 
 ## 技能
 
-仓库包含写作、科研可视化、文献研究、文件处理和编码工作流等技能。使用目录名调用可发现技能：
+当前有效 skill 清单有 58 个定义：仓库跟踪 57 个 `SKILL.md` 定义，另保留本机的 `batch-grill-me`；仓库内有两个同名 `mineru` 定义。完整路径、发现限制和每项示例见[技能目录](docs/skills.zh-CN.md)。使用目录名调用可发现技能：
 
 ```text
 /skill:humanizer
@@ -232,12 +210,12 @@ npm pack --dry-run
 
 [`config/external-packages.txt`](config/external-packages.txt) 是第三方 npm 和 Git package 的安装清单，覆盖以下能力：
 
-- 文件搜索、浏览器自动化、预览和外部目录访问
-- 计划、目标、Todo、结构化提问和 subagent
-- 哈希锚点编辑、输出压缩、缓存和研究工作流
-- 敏感文件保护、主题、token 速度和 raw paste
+- 文件搜索、联网资料搜索与内容抓取、预览
+- 计划、Todo、结构化提问和 subagent
+- AFT 文件编辑、输出压缩、缓存和研究工作流
+- 敏感文件保护、主题和 provider 管理
 
-`pi-rtk-optimizer` 仍作为外部 package 安装。本地 `pi-rtk-hashline-compat` 将它的 read 输出限制适配到 `pi-hashline-edit-pro` 的 `HASH│内容` 格式，只压缩成功的 `read` 结果，不处理 `write` 和 `replace`。安装或更新后运行 `/reload`。
+`pi-rtk-optimizer` 仍作为外部 package 安装。它压缩 AFT 的 `read`、`grep` 与其他通用工具输出；AFT 自己负责 Bash rewrite、压缩和后台执行。安装或更新后运行 `/reload`。
 
 ## 更新备份
 
@@ -251,7 +229,7 @@ node install.mjs --dry-run --yes
 node install.mjs --yes
 ```
 
-安装器会为正在使用的 Pi 目录创建新备份，并更新 skills、设置、本地 package、延迟工具 ID、Magic Context 默认值和公开扩展配置；它不会复制凭据或会话数据。
+安装器会为正在使用的 Pi 目录创建新备份，并初始化缺失的 skills、更新设置、本地 package、Magic Context 默认值和公开扩展配置；它不会复制凭据、项目工具选择或会话数据。
 
 ## 安全
 

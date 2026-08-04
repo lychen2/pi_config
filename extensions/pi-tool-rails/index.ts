@@ -2,9 +2,7 @@ import { homedir } from "node:os";
 import {
   createBashToolDefinition,
   createEditToolDefinition,
-  createFindToolDefinition,
   createGrepToolDefinition,
-  createLsToolDefinition,
   createReadToolDefinition,
   createWriteToolDefinition,
   keyHint,
@@ -51,7 +49,7 @@ const ASSISTANT_MARKER = "\u25cf";
 const OSC133_START = "\x1b]133;A\x07";
 const OSC133_END = "\x1b]133;B\x07\x1b]133;C\x07";
 const USER_PATCH_MARK = Symbol.for("pi.toolRails.userMessagePatch");
-const STYLED_BUILTINS = new Set(["bash", "edit", "find", "grep", "ls", "read", "write"]);
+const STYLED_BUILTINS = new Set(["bash", "edit", "grep", "read", "write"]);
 const PREVIEW_LINES = 5;
 const HOME = homedir().replace(/\\/g, "/").replace(/\/$/, "");
 
@@ -240,11 +238,17 @@ function resultSummary(
     return theme.fg("toolOutput", `${count} ${count === 1 ? "line" : "lines"} written`);
   }
   if (name === "edit") {
-    const diff = record(record(result).details).diff;
-    if (typeof diff === "string") {
-      const additions = diff.split("\n").filter((line) => line.startsWith("+") && !line.startsWith("+++" )).length;
-      const removals = diff.split("\n").filter((line) => line.startsWith("-") && !line.startsWith("---" )).length;
+    const diffValue = record(record(result).details).diff;
+    if (typeof diffValue === "string") {
+      const additions = diffValue.split("\n").filter((line) => line.startsWith("+") && !line.startsWith("+++" )).length;
+      const removals = diffValue.split("\n").filter((line) => line.startsWith("-") && !line.startsWith("---" )).length;
       return theme.fg("toolOutput", `+${additions}/-${removals}`);
+    }
+    if (diffValue && typeof diffValue === "object" && !Array.isArray(diffValue)) {
+      const diff = diffValue as RecordLike;
+      if (typeof diff.additions === "number" && typeof diff.deletions === "number") {
+        return theme.fg("toolOutput", `+${diff.additions}/-${diff.deletions}`);
+      }
     }
     return theme.fg("toolOutput", "updated");
   }
@@ -468,8 +472,6 @@ export default function toolRails(pi: ExtensionAPI): void {
       createWriteToolDefinition(ctx.cwd),
       createEditToolDefinition(ctx.cwd),
       createGrepToolDefinition(ctx.cwd),
-      createFindToolDefinition(ctx.cwd),
-      createLsToolDefinition(ctx.cwd),
     ];
     for (const tool of builtins) {
       if (STYLED_BUILTINS.has(tool.name) && isUnclaimedBuiltin(pi, tool.name)) {

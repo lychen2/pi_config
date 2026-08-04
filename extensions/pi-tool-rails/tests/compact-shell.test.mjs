@@ -18,11 +18,19 @@ const identityTheme = {
 };
 
 test("uses compact tool text labels with emoji rendered separately", () => {
-  assert.deepEqual(labelLines("add_directory"), ["add"]);
-  assert.deepEqual(labelLines("agent_browser"), ["browser"]);
+  assert.deepEqual(labelLines("web_search"), ["web"]);
+  assert.deepEqual(labelLines("fetch_content"), ["fetch"]);
+  assert.equal(labelLayout("fffind", 0, "ff find").emoji, "🧭");
+  assert.equal(labelLayout("ffgrep", 0, "ffgrep").emoji, "🔍");
   assert.deepEqual(labelLines("undo_last_replace"), ["undo"]);
-  assert.deepEqual(labelLines("todowrite"), ["todo", "write"]);
+  assert.deepEqual(labelLines("todowrite"), ["tasks"]);
   assert.deepEqual(labelLines("replace"), ["replace"]);
+  assert.deepEqual(labelLines("aft_inspect"), ["health"]);
+  assert.deepEqual(labelLines("aft_outline"), ["outline"]);
+  assert.deepEqual(labelLines("ast_grep_search"), ["ast find"]);
+  assert.equal(labelLayout("aft_inspect", 0, "health").emoji, "🩺");
+  assert.equal(labelLayout("aft_zoom", 0, "zoom").emoji, "🔬");
+  assert.equal(labelLayout("ast_grep_replace", 0, "ast edit").emoji, "🌳");
 });
 
 test("keeps a single overlong tool word compact", () => {
@@ -30,16 +38,10 @@ test("keeps a single overlong tool word compact", () => {
 });
 
 test("places the emoji immediately before centered text without shifting its center", () => {
-  assert.deepEqual(labelLayout("todowrite", 0, "todo"), {
-    emoji: "✏️",
-    text: "todo",
-    left: 2,
-    right: 4,
-  });
-  assert.deepEqual(labelLayout("todowrite", 1, "write"), {
-    emoji: "",
-    text: "write",
-    left: 3,
+  assert.deepEqual(labelLayout("todowrite", 0, "tasks"), {
+    emoji: "✅",
+    text: "tasks",
+    left: 1,
     right: 4,
   });
 });
@@ -58,6 +60,11 @@ test("keeps collapsed structured output to a useful two-line summary", () => {
     visibleToolContentLines(["Todos — 2 active", "✓ #inspect", "◐ #adjust", "○ #verify"]),
     ["Todos — 2 active", "◐ #adjust"],
   );
+  assert.deepEqual(
+    visibleToolContentLines(["inspect project", "4 warnings", "..."]),
+    ["inspect project", "4 warnings"],
+  );
+  assert.deepEqual(visibleToolContentLines(["inspect project", "..."]), ["inspect project"]);
 });
 
 test("colors structured status and task identifiers", () => {
