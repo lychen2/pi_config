@@ -292,6 +292,27 @@ async function skillExistsInOtherRoot(name) {
   return undefined;
 }
 
+async function mergeSkillTree(source, destination) {
+  if (!(await pathExists(destination)) && !installerOptions.dryRun) {
+    await mkdir(destination, { recursive: true });
+  }
+
+  for (const entry of await readdir(source, { withFileTypes: true })) {
+    if (entry.isDirectory() && entry.name === "skills") {
+      console.log(`  skip nested skill bundle ${path.relative(repoDir, path.join(source, entry.name))}`);
+      continue;
+    }
+
+    const sourceEntry = path.join(source, entry.name);
+    const destinationEntry = path.join(destination, entry.name);
+    if (entry.isDirectory()) {
+      await mergeSkillTree(sourceEntry, destinationEntry);
+    } else if (!(await pathExists(destinationEntry))) {
+      await copyPath(sourceEntry, destinationEntry);
+    }
+  }
+}
+
 async function mergeRepositorySkills() {
   const source = path.join(repoDir, "skills");
   const destination = path.join(agentDir, "skills");
@@ -307,7 +328,7 @@ async function mergeRepositorySkills() {
       console.log(`  preserve existing skill ${entry.name} from ${externalRoot}`);
       continue;
     }
-    await mergeMissingTree(path.join(source, entry.name), path.join(destination, entry.name));
+    await mergeSkillTree(path.join(source, entry.name), path.join(destination, entry.name));
   }
 }
 
