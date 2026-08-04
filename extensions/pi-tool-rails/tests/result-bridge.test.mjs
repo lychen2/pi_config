@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { visibleWidth } from "@earendil-works/pi-tui";
 import {
+  compactResult,
   locateNewLineNumbers,
   parseAftEditDiff,
   parseHashlineReadOutput,
@@ -10,6 +11,9 @@ import {
   renderReplaceDiffResult,
   renderAftEditBridgeResult,
   renderAftEditResult,
+  renderAftWriteBridgeResult,
+  renderAftWriteResult,
+  summarizeBackgroundShell,
 } from "../result-bridge.ts";
 
 const theme = {
@@ -34,6 +38,43 @@ const result = {
   },
 };
 
+test("normalizes background watcher JSONL into readable status rows", () => {
+  assert.deepEqual(
+    summarizeBackgroundShell([
+      "Task bash-test: running",
+      'Waited 46ms; matched "push-task" at offset 997.',
+      '{"type":"extension_ui_request","method":"notify","message":"Task stored. Use /start-task or /auto to start it."}',
+      '{"type":"agent_settled"}',
+      "PTY task is still running.",
+    ]),
+    [
+      "Task bash-test: running",
+      'Waited 46ms; matched "push-task" at offset 997.',
+      "Task stored. Use /start-task or /auto to start it.",
+    ],
+  );
+});
+
+test("renders normalized watcher details only when collapsed", () => {
+  const watchResult = {
+    content: [{
+      type: "text",
+      text: [
+        "Task bash-test: running",
+        'Waited 46ms; matched "push-task" at offset 997.',
+        '{"type":"extension_ui_request","method":"notify","message":"Task stored."}',
+      ].join("\n"),
+    }],
+  };
+  const collapsed = compactResult("bash_watch", watchResult, { expanded: false }, theme, {}).render(100);
+  assert.ok(collapsed.some((line) => line.includes("Task bash-test: running")));
+  assert.ok(collapsed.some((line) => line.includes("Task stored.")));
+  assert.ok(!collapsed.some((line) => line.includes('"type":"extension_ui_request"')));
+
+  const expanded = compactResult("bash_watch", watchResult, { expanded: true }, theme, {}).render(100);
+  assert.ok(expanded.some((line) => line.includes('"type":"extension_ui_request"')));
+});
+
 test("renders AFT edit counts from structured diff metadata", () => {
   const aftResult = {
     content: [{ type: "text", text: "Edited (+3/-2, 2 edits)." }],
@@ -52,6 +93,57 @@ test("renders AFT edit counts from structured diff metadata", () => {
   };
   const textFallback = renderAftEditResult(textOnlyResult, { expanded: false }, theme, {}).render(80);
   assert.deepEqual(textFallback.map((line) => line.trimEnd()), ["+16/-2 · 2 edits"]);
+});
+
+test("renders AFT writes with the same collapsed and expanded diff as edits", () => {
+  const mutationResult = {
+    content: [{ type: "text", text: "Wrote (+2/-1)." }],
+    details: {
+      additions: 2,
+      deletions: 1,
+      diff: [
+        " 4 before",
+        "-5 old value",
+        "+5 new value",
+        "+6 added value",
+        " 6 after",
+      ].join("\n"),
+    },
+  };
+  const collapsedEdit = renderAftEditResult(mutationResult, { expanded: false }, theme, {}).render(80);
+  const collapsedWrite = renderAftWriteResult(mutationResult, { expanded: false }, theme, {}).render(80);
+  assert.deepEqual(collapsedWrite, collapsedEdit);
+  assert.deepEqual(collapsedWrite.map((line) => line.trimEnd()), ["+2/-1"]);
+
+  const expandedEdit = renderAftEditBridgeResult(undefined, mutationResult, { expanded: true }, theme, {}).render(80);
+  const expandedWrite = renderAftWriteBridgeResult(undefined, mutationResult, { expanded: true }, theme, {}).render(80);
+  assert.deepEqual(expandedWrite, expandedEdit);
+  assert.ok(expandedWrite.some((line) => line.includes("- old value") && line.includes("+ new value")));
+});
+
+test("summarizes bash status instead of showing arbitrary trailing output", () => {
+  const bashResult = {
+    content: [{ type: "text", text: "first output\nfinal output" }],
+    details: { exit_code: 0, duration_ms: 1250 },
+  };
+  const collapsed = compactResult("bash", bashResult, { expanded: false }, theme, {}).render(100);
+  assert.deepEqual(collapsed.map((line) => line.trimEnd()), ["completed · exit 0 · 1.3s · 2 output lines"]);
+
+  const expanded = compactResult("bash", bashResult, { expanded: true }, theme, {}).render(100);
+  assert.deepEqual(expanded.map((line) => line.trimEnd()), [
+    "completed · exit 0 · 1.3s · 2 output lines",
+    "first output",
+    "final output",
+  ]);
+
+  const failed = compactResult(
+    "bash",
+    { content: [{ type: "text", text: "Error: missing config\n    at main.js:10" }], details: { exit_code: 1 } },
+    { expanded: false },
+    theme,
+    { isError: true },
+  ).render(100);
+  assert.deepEqual(failed.map((line) => line.trimEnd()), ["exit 1 · Error: missing config"]);
 });
 
 test("renders expanded AFT edits as a de-indented split diff", () => {

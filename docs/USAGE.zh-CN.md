@@ -5,7 +5,7 @@
 - [根 README](../README.zh-CN.md)：项目概览和安装入口
 - [扩展目录](extensions.zh-CN.md)：所有本地和第三方扩展
 - [Skill 目录](skills.zh-CN.md)：58 个有效 skill 定义及逐项示例
-- [工具目录](tools.zh-CN.md)：41 个当前 `functions.*` 工具及逐项示例
+- [工具目录](tools.zh-CN.md)：35 个当前 `functions.*` 工具及逐项示例
 
 ## 1. 安装
 
@@ -71,7 +71,7 @@ extensions/pi-tool-rails
 extensions/pi-workflow-dag
 ```
 
-还应看到 `npm:@cortexkit/aft-pi@0.49.0`、`npm:@narumitw/pi-subagents@0.46.0` 和 `npm:pi-web-access`。
+还应看到 `npm:@cortexkit/aft-pi@0.49.0`、本地 `pi-gsd` 和 `npm:pi-web-access`。
 启动 Pi：
 
 ```bash
@@ -89,7 +89,7 @@ pi
 
 ## 2. 工具默认启用与项目开关
 
-`pi-deferred-tools` 的旧包名容易误导，但 **tools are no longer deferred**：它现在只是项目级工具选择器。扩展工具默认跟随 Pi 的正常启用状态，不会在运行时通过 `load_tools` 动态加载或卸载。需要联网、subagent 或 DAG 时，直接描述任务即可：
+`pi-deferred-tools` 的旧包名容易误导，但 **tools are no longer deferred**：它现在只是项目级工具选择器。扩展工具默认跟随 Pi 的正常启用状态，不会在运行时通过 `load_tools` 动态加载或卸载。需要联网、任务分支或 DAG 时，直接描述任务即可：
 
 ```text
 搜索 2025 年 C++ sender/receiver 规范的变化，只引用 WG21 和 cppreference，并给出来源链接。
@@ -162,7 +162,7 @@ AFT 的编辑先按文本匹配；匹配的旧内容已变化时会拒绝写入�
 
 ## 5. 轻量 DAG：`workflow_dag`
 
-`workflow_dag` 适合小型的“检查 -> 实现 -> 复核”流程。普通单任务委派仍优先使用 `@narumitw/pi-subagents`。
+`workflow_dag` 适合小型的“检查 -> 实现 -> 复核”流程。普通单任务委派使用 `pi-gsd` 的 session-tree 分支。
 
 不需要记住 `workflow_dag` 的名字。直接说明步骤之间的依赖关系：
 
@@ -223,25 +223,61 @@ AFT 的编辑先按文本匹配；匹配的旧内容已变化时会拒绝写入�
 请用 workflow_dag clear 清理 auth-fix 的状态。
 ```
 
-## 6. Subagent 和自动续跑
+## 6. Session-tree 任务分支
 
-`@narumitw/pi-subagents` 用于普通的隔离委派。例子：
-
-```text
-请使用 subagent 并行完成三项只读工作：
-1. 找出相关实现文件；
-2. 找出已有测试和测试缺口；
-3. 检查最近的相关提交。
-最后由主代理综合结果，不要让子代理修改文件。
-```
-
-当前配置让 stateful subagent 完成后自动唤醒主代理综合结果，不必再手动发送一条“继续”的消息。可以用：
+`pi-gsd` 将任务放入新的 Pi session-tree 上下文。它不启动后台 worker，不注入 Superpowers 方法论，也不把任务过程藏在另一个 agent 运行时中。例子：
 
 ```text
-/subagents status
+请用 push-task 建立一个只读 review 任务：检查实现、测试和最近提交，返回文件、行号和风险，不要修改文件。
 ```
 
-查看配置和运行状态。
+需要角色和便宜模型时，直接在工具调用中提供：
+
+```json
+{"title":"Explore auth changes","role":"explore","model":"manager/gpt-5.6-luna","prompt":"只读检查 auth 改动、相关测试和风险，返回文件与行号。"}
+```
+
+推荐角色 profile：
+
+| `role` | 参考方向 | 默认边界建议 |
+| --- | --- | --- |
+| `explore` / `scout` | 探索入口、符号、依赖和历史 | 只读，返回路径和证据 |
+| `map` | 绘制模块、导入和数据流地图 | 只读，不做架构改造 |
+| `analyze` | 比较方案、约束和技术取舍 | 只读，明确假设和反例 |
+| `research` / `external-research` | 查文档、上游实现、标准和 API | 返回来源、版本和不确定性 |
+| `synthesize` | 合并多个研究或审查结果 | 不隐藏冲突，返回共识和缺口 |
+| `plan` / `planner` | 拆解任务、依赖和验收条件 | 只规划，不修改实现文件 |
+| `roadmap` | 规划阶段、里程碑和收敛标准 | 不虚构时间和需求 |
+| `plan-check` | 检查计划是否完整、可执行、可验证 | 只报告缺口，不静默改计划 |
+| `implement` / `builder` | 完成边界清楚的功能或修复 | 只改指定范围并验证 |
+| `execute` / `executor` | 原子执行一个已定义任务 | 不扩展范围，缺前提就停止 |
+| `debug` / `debugger` | 复现、验证假设、定位根因和修复 | 先保留复现，再改代码 |
+| `migrate` | API、依赖、配置或数据迁移 | 明确兼容窗口和回滚方式 |
+| `integrate` | 检查跨模块接口和集成行为 | 优先验证和最小修复 |
+| `review` / `reviewer` | 审查正确性、回归和测试缺口 | 只读，发现必须有行号证据 |
+| `audit` / `security` | 安全、架构、维护性或合规审计 | 只读，按风险分级 |
+| `performance` | 找瓶颈、基准和资源问题 | 先测量，再优化和复测 |
+| `test` / `tester` | 补测试、运行测试、找覆盖缺口 | 不削弱断言来通过测试 |
+| `verify` / `verifier` | 做最终构建、诊断、测试和 diff 检查 | 默认只读，报告精确命令 |
+| `design` / `ui-design` | 设计 API、架构、UI 或交互 | 先输出方案，再实现 |
+| `docs` | 更新 README、API 文档和示例 | 检查链接、命令和版本一致性 |
+| `release` | 版本、变更记录、打包和发布前检查 | 未明确授权时不发布 |
+
+这些 profile 提取了 `pi-maestro-flow` Agent 目录里可用于单任务分支的职责语义，但没有复制它依赖 Maestro team bus、共享 artifact、schema 或 MCP 的运行时。`team-supervisor`、`team-worker`、`cross-role-reviewer` 等协调角色不在 `pi-gsd` 中伪装实现。`role` 不是强制枚举，也不赋予权限；真正的范围、禁止事项、输出格式和验收命令必须写进 `prompt`。`model` 是可选模型匹配式，适合让探索、审查、测试、文档和验证等低风险任务使用更便宜的模型。
+
+然后按顺序操作：
+
+```text
+/start-task
+```
+
+在新上下文中完成任务；检查结果后：
+
+```text
+/finish-task
+```
+
+不需要执行时用 `/discard-task`；需要按队列连续执行时用 `/auto`。
 
 ## 7. Skills、外部 package 和其他能力
 
@@ -274,7 +310,7 @@ scientific-visualization
 
 ### 联网资料访问
 
-`pi-web-access` 默认提供 `web_search`、`source_check`、`fetch_content` 和 `get_search_content`。用自然语言说明检索目标、时间范围或可信域名；需要具体网页、PDF、GitHub 仓库或视频内容时，提供 URL 并说明要提取的证据。GitHub URL 会克隆为本地目录供后续检查，而不是只抓取渲染后的网页。项目通过 `/tools` 禁用这些工具后，它们才会从模型工具集中移除。完整的 41 个当前工具示例见[工具目录](tools.zh-CN.md)。
+`pi-web-access` 默认提供 `web_search`、`source_check`、`fetch_content` 和 `get_search_content`。用自然语言说明检索目标、时间范围或可信域名；需要具体网页、PDF、GitHub 仓库或视频内容时，提供 URL 并说明要提取的证据。GitHub URL 会克隆为本地目录供后续检查，而不是只抓取渲染后的网页。项目通过 `/tools` 禁用这些工具后，它们才会从模型工具集中移除。完整的 35 个当前工具示例见[工具目录](tools.zh-CN.md)。
 
 ```text
 搜索 2025 年 TypeScript 装饰器规范的变化，只引用 typescriptlang.org 和 GitHub 讨论，并给出来源链接。
@@ -340,9 +376,9 @@ RTK 压缩 AFT 的 `read`、`grep` 和其他通用工具结果。AFT 自己负�
 ### 场景 E：并行研究后实现
 
 ```text
-请先使用 subagent 并行调查：现有 API、测试覆盖、最近提交。
-主代理综合证据后，给出最小修改并运行测试。
-子代理只读，不要重复把完整日志带回主上下文。
+请先用 push-task 建立一个只读调查任务：检查现有 API、测试覆盖和最近提交。
+使用 /start-task 执行，完成后用 /finish-task 返回主分支。
+不要修改文件，也不要重复带回完整日志。
 ```
 
 ### 场景 F：研究、PDF 和图表

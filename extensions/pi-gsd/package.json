@@ -1,0 +1,20 @@
+{
+  "name": "pi-gsd",
+  "version": "0.1.0",
+  "description": "Lightweight session-tree task branches for Pi",
+  "license": "MIT",
+  "type": "module",
+  "keywords": ["pi-package", "pi", "tasks", "session-tree"],
+  "files": ["index.ts", "src/index.ts", "src/text-content.ts", "README.md", "LICENSE"],
+  "pi": { "extensions": ["./index.ts"] },
+  "scripts": { "typecheck": "tsc --noEmit" },
+  "peerDependencies": { "@earendil-works/pi-coding-agent": "*" },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "^0.82.0",
+    "@earendil-works/pi-ai": "^0.75.5",
+    "@earendil-works/pi-tui": "^0.82.0",
+    "@types/node": "^24.0.0",
+    "typebox": "^1.1.38",
+    "typescript": "^5.9.0"
+  }
+}

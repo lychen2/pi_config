@@ -14,9 +14,10 @@ Audited against Pi 0.82 extension, package, TUI, keybinding, provider, and lifec
 | `pi-rtk-aft-restore` | Restores captured AFT Bash diagnostics after RTK | `pi-rtk-aft-restore/index.ts` |
 | `pi-slim-skills` | Compressed skill index and deduplicated full-body injection | `pi-slim-skills/index.ts` |
 | `pi-todo-guard` | Continue settled runs while Todo tasks remain | `pi-todo-guard/index.ts` |
-| `pi-tool-rails` | Soft tool rails, verified 52-tool emoji/label registry, semantic tool headers, user-message frame, persistent prompt frame | `pi-tool-rails/compact-shell.ts`, `pi-tool-rails/tool-presentations.mjs`, `pi-tool-rails/index.ts`, `pi-tool-rails/prompt-frame.ts` |
+| `pi-gsd` | Lightweight session-tree task branches without bundled skill prompts | `pi-gsd/index.ts`, `pi-gsd/src/index.ts` |
+| `pi-tool-rails` | Soft tool rails, verified 46-tool emoji/label registry, semantic tool headers, user-message frame, persistent prompt frame | `pi-tool-rails/compact-shell.ts`, `pi-tool-rails/tool-presentations.mjs`, `pi-tool-rails/index.ts`, `pi-tool-rails/prompt-frame.ts` |
 | `pi-workflow-dag` | Dependency-aware inspect, implement, and review workers | `pi-workflow-dag/index.ts` |
-Ten package directories install from this repository.
+Eleven package directories install from this repository.
 
 ## Standalone Extensions
 
@@ -36,7 +37,6 @@ Ten package directories install from this repository.
 | `@cortexkit/aft-pi` | 0.49.0 | Native file editing, recovery checkpoints, code inspection, and indexed search |
 | `pi-slopchop` | 0.10.1 | Terminal code review and annotations |
 | `pi-workspace-history` | 0.2.2 | Workspace undo/redo history |
-| `@narumitw/pi-subagents` | 0.46.0 | Isolated subagent delegation |
 | `@juicesharp/rpiv-todo` | 2.1.0 | Persistent Todo tool and overlay |
 | `pi-rtk-optimizer` | 0.9.0 | RTK command rewriting and generic output compaction |
 | `pi-cache-optimizer` | 2.6.22 | Prompt and provider-cache optimization |
@@ -57,7 +57,7 @@ Ten package directories install from this repository.
 - Project tool selection is stored as disabled extension/tool rules; missing config keeps Pi's default active tools.
 - Tool overrides skip built-ins already owned by another extension.
 - Long generic tool output is bounded and uses the configured expansion key hint.
-- The installer verifies compact labels and dedicated emoji for 52 known registry entries; optional and compatibility entries are included, so this is not the active-tool count.
+- The installer verifies compact labels and dedicated emoji for 46 known registry entries; optional and compatibility entries are included, so this is not the active-tool count.
 - Session-scoped compatibility patches restore original methods on shutdown.
-- All ten repository packages pass TypeScript.
-- All ten repository packages pass isolated Pi loading and `npm pack --dry-run` inspection.
+- All eleven repository packages pass TypeScript.
+- All eleven repository packages pass isolated Pi loading and `npm pack --dry-run` inspection.

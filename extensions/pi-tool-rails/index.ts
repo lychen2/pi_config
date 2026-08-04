@@ -191,14 +191,9 @@ function hierarchyPreview(
   options: RenderOptions,
   theme: Theme,
   context: RenderContext,
-  direction: "head" | "tail" = "head",
 ): string {
   const expanded = options.expanded === true;
-  const shown = expanded
-    ? lines
-    : direction === "tail"
-      ? lines.slice(-PREVIEW_LINES)
-      : lines.slice(0, PREVIEW_LINES);
+  const shown = expanded ? lines : lines.slice(0, PREVIEW_LINES);
   const color = context.isError ? "error" : "toolOutput";
   const prefix = (first: boolean) => theme.fg("muted", first ? "↳ " : "  ");
   let text = shown
@@ -207,10 +202,9 @@ function hierarchyPreview(
 
   const remaining = lines.length - shown.length;
   if (remaining > 0) {
-    const position = direction === "tail" ? "earlier" : "more";
-    const hint = `${remaining} ${position} ${remaining === 1 ? "line" : "lines"} · ${keyHint("app.tools.expand", "expand")}`;
+    const hint = `${remaining} more ${remaining === 1 ? "line" : "lines"} · ${keyHint("app.tools.expand", "expand")}`;
     const line = `${theme.fg("muted", "  ")}${theme.fg("muted", hint)}`;
-    text = direction === "tail" ? `${line}\n${text}` : `${text}\n${line}`;
+    text = `${text}\n${line}`;
   }
   return text;
 }
@@ -279,7 +273,7 @@ function semanticResult(
   if (!options.expanded) return reusableText(context, summary);
   const lines = outputLines(result);
   if (!lines.length) return reusableText(context, summary);
-  return reusableText(context, `${summary}\n${hierarchyPreview(lines, options, theme, context, name === "bash" ? "tail" : "head")}`);
+  return reusableText(context, `${summary}\n${hierarchyPreview(lines, options, theme, context)}`);
 }
 
 function fallbackResult(

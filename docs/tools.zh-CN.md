@@ -1,16 +1,16 @@
 # 工具目录与使用示例
 
-本页按当前 agent-facing `functions.*` 工具面统计 **41 个工具**。示例都可以直接复制到 Pi 的普通请求中；模型会根据目标选择工具，通常不需要用户手写 JSON 参数。
+本页按当前 agent-facing `functions.*` 工具面统计 **35 个工具**。示例都可以直接复制到 Pi 的普通请求中；模型会根据目标选择工具，通常不需要用户手写 JSON 参数。
 
 ## 先分清三个数量
 
 | 数字 | 含义 |
 | ---: | --- |
-| 41 | 本页逐项解释的当前 `functions.*` 工具接口。 |
-| 52 | `pi-tool-rails` 的显示 registry，包含兼容、可选和非当前 active 的名称；不是当前工具数量。 |
+| 35 | 本页逐项解释的当前 `functions.*` 工具接口。 |
+| 46 | `pi-tool-rails` 的显示 registry，包含兼容、可选和非当前 active 的名称；不是当前工具数量。 |
 | 项目实际工具数 | 会随 `pi list`、`/tools`、`--tools`、`--exclude-tools`、信任状态和已安装 package 变化；用 `/tools list` 或 `pi --help` 核对。 |
 
-`multi_tool_use.parallel` 是外层并行调用包装器，不计入下面 41 个 `functions.*` 条目。旧的 `load_tools`、`semantic_code` 以及 AFT 的 `aft_callgraph`、`aft_delete`、`aft_move`、`aft_refactor` 不属于本页当前工具面。`pi-deferred-tools` 也不负责延迟这些工具；它只是项目级开关面板，详见[使用手册](USAGE.zh-CN.md#2-工具默认启用与项目开关)。
+`multi_tool_use.parallel` 是外层并行调用包装器，不计入下面 35 个 `functions.*` 条目。旧的 `load_tools`、`semantic_code` 以及 AFT 的 `aft_callgraph`、`aft_delete`、`aft_move`、`aft_refactor` 不属于本页当前工具面。`pi-deferred-tools` 也不负责延迟这些工具；它只是项目级开关面板，详见[使用手册](USAGE.zh-CN.md#2-工具默认启用与项目开关)。
 
 ## 文件、搜索与执行（8）
 
@@ -59,19 +59,13 @@
 
 `ctx_memory` 记录稳定事实；`ctx_note` 记录以后处理的事项；当前任务不要用 note 代替 Todo。
 
-## 子代理委派与管理（7）
+## 任务分支（1）
 
 | 工具 | 用途 | 使用示例 |
 | --- | --- | --- |
-| `subagent` | 阻塞式执行一个或一组隔离委派，并等待结果 | `使用只读 subagent 检查实现、测试和最近提交，返回后由主代理综合，不要修改文件。` |
-| `subagent_spawn` | 启动可异步回传、可寻址的后台子代理 | `启动一个独立 review 子代理检查当前 diff 的回归风险；主代理继续整理文档。` |
-| `subagent_send` | 给已完成、暂停或空闲的子代理发送下一轮工作 | `把失败测试的首个堆栈发送给刚才的 review 子代理，让它只补充根因分析。` |
-| `subagent_manage` | 列出、打断或关闭已保留的子代理及其子树 | `列出当前保留的 subagent；确认不再需要的运行后再关闭它。` |
-| `subagent_mailbox` | 不启动新回合地读取或排队投递子代理消息 | `把“只返回文件、行号和风险”排队发给指定子代理，不要立即启动新回合。` |
-| `subagent_inspect` | 只读查看 agent 定义、运行状态、模型和诊断信息 | `检查 review 子代理的运行状态和未读消息数，不改变运行状态。` |
-| `subagent_consult` | 在当前回合阻塞咨询一个受限只读子代理 | `咨询 scout：只读枚举当前仓库的配置入口和测试命令，返回后我再编辑。` |
+| `push-task` | 将任务放入 Pi session tree 的新上下文分支，等待用户启动；可选 `role` 和 `model` | `用 push-task 建立一个 role=explore、model=manager/gpt-5.6-luna 的只读 review 任务。` |
 
-普通独立调查适合 subagent；有明确 inspect → implement → review 依赖时适合 `workflow_dag`。不要让多个写 worker 同时修改同一文件。
+使用 `/start-task` 启动分支，完成后用 `/finish-task` 将最后一条助手结果带回主分支；不需要执行时用 `/discard-task`。多个任务按顺序执行可使用 `/auto`。
 
 ## 后台 shell 任务（4）
 

@@ -36,7 +36,7 @@
 
 ### `workflow_dag`
 
-这是轻量 DAG 工具，适合少量 `readonly` 检查节点、一个显式 `write` 实现节点和最后的复核节点。最多 8 个节点；只读节点最多 3 个并行；失败下游会跳过。普通独立委派仍优先使用 `@narumitw/pi-subagents`。
+这是轻量 DAG 工具，适合少量 `readonly` 检查节点、一个显式 `write` 实现节点和最后的复核节点。最多 8 个节点；只读节点最多 3 个并行；失败下游会跳过。普通独立任务使用 `pi-gsd` 的 session-tree 分支。
 
 ```text
 把这个任务拆成三个有依赖的步骤：先检查现状，再实现修改，最后复核测试。每一步只返回结论、改动文件和验证结果。
@@ -66,7 +66,7 @@
 | `@cortexkit/aft-pi` | 原生文件读写、检查点恢复、代码分析与索引搜索；Bash 接管提供 rewrite、压缩和后台任务；本地兼容层只调整模型可见的 `edit` schema | `read`、`write`、`edit`、`grep`、`bash`、`aft_outline`、`aft_zoom`、`aft_safety`；配置 `~/.config/cortexkit/aft.jsonc` |
 | `pi-slopchop` | 终端内代码审阅与注释 | `/slopchop` 或 `/diff` |
 | `pi-workspace-history` | 工作区级撤销与重做 | 在需要回退文件改动时调用其命令；先查看 `/hotkeys` 中实际注册键位 |
-| `@narumitw/pi-subagents` | 隔离子代理委派；stateful agent 完成后会自动续跑主代理 | `/subagents status`；模型按任务调用子代理工具；由 `pi-subagents.json` 配置 |
+| `pi-gsd` | 轻量 session-tree 任务分支；任务在新上下文中执行，再由用户带回主分支 | `push-task`、`/start-task`、`/finish-task`、`/auto` |
 | `@juicesharp/rpiv-todo` | 跨重载与压缩保存的任务列表 | 模型调用 `todo`；状态显示在 overlay |
 | `pi-rtk-optimizer` | RTK 命令改写和通用工具输出压缩；AFT 的 `read` 使用普通行号输出，长输出仍走 RTK 通用截断 | `/rtk verify`；需要安装 `rtk` binary |
 | `pi-cache-optimizer` | 稳定提示词和 provider cache，提高缓存命中 | `/cache-optimizer` 查看或调整状态 |

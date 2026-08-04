@@ -25,6 +25,7 @@ const agentDir = path.resolve(process.env.PI_CODING_AGENT_DIR || defaultAgentDir
 const retiredPackageSources = new Set([
   "git:github.com/Xichun123/pi-cometix-footer",
   "npm:@narumitw/pi-goal",
+  "npm:@narumitw/pi-subagents",
   "npm:@narumitw/pi-btw",
   "npm:pi-add-dir",
   "npm:@tmustier/pi-raw-paste",
@@ -393,7 +394,6 @@ async function restoreFiles() {
     "APPEND_SYSTEM.md",
     "slim-skills-whitelist.json",
     "pi-plan-mode.json",
-    "pi-subagents.json",
   ];
   for (const file of configFiles) {
     await copyPath(path.join(repoDir, "config", file), path.join(agentDir, file));

@@ -1,6 +1,6 @@
 # pi-workflow-dag-local
 
-延迟加载的轻量 DAG 工具，用于小型的“检查 -> 实现 -> 复核”流程。普通独立委派仍优先使用 `@narumitw/pi-subagents`。
+延迟加载的轻量 DAG 工具，用于小型的“检查 -> 实现 -> 复核”流程。普通独立任务使用 `pi-gsd` 的 session-tree 分支。
 
 ## 怎么用
 

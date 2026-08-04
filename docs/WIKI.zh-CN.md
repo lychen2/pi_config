@@ -4,7 +4,7 @@
 
 - [完整使用手册](USAGE.zh-CN.md)：安装、工具选择、全部能力和六个基础场景
 - [Skill 目录](skills.zh-CN.md)：58 个当前有效 skill 定义及逐项调用示例
-- [工具目录](tools.zh-CN.md)：当前 41 个 `functions.*` 工具及逐项使用示例
+- [工具目录](tools.zh-CN.md)：当前 35 个 `functions.*` 工具及逐项使用示例
 - [扩展目录](extensions.zh-CN.md)：本地 package、第三方 package、命令与工具
 - [公开设置](../config/settings-public.json)：可选的默认模型、主题与技能设置
 - [外部 package 清单](../config/external-packages.txt)：安装器会安装的第三方资源
@@ -13,14 +13,14 @@
 
 1. 在仓库根目录运行 `./install.sh --yes`，或已安装 Pi 时运行 `node install.mjs --yes`。
 2. 运行 `pi`，输入 `/provider add` 配置本机提供方，再用 `/model` 选择可用模型。
-3. 输入一个具体任务，例如“检查当前项目的测试失败原因并修复”。浏览器、subagent 和 DAG 工具默认可用；当前项目不需要某些工具时用 `/tools` 关闭。
+3. 输入一个具体任务，例如“检查当前项目的测试失败原因并修复”。浏览器、pi-gsd 和 DAG 工具默认可用；当前项目不需要某些工具时用 `/tools` 关闭。
 4. 需要明确工作流时，输入 `/skill:<名称>`，例如 `/skill:batch-grill-me`、`/skill:mineru-file-processing` 或 `/skill:scientific-visualization`。
 5. 修改 `~/.pi/agent/settings.json`、扩展或主题后，在 Pi 中运行 `/reload`。
 
 ## 当前清单和命名边界
 
 - **Skill：58 个有效定义。** 仓库跟踪 57 个 `SKILL.md` 定义；本机保留的 `batch-grill-me` 计入当前有效清单。仓库内有两个同名 `mineru` 定义，所以是 58 个定义、57 个唯一名称。
-- **工具：41 个当前 `functions.*` 接口。** 另有 52 项工具显示 registry，用于短标签和 emoji 校验；它不是 active 工具数量。完整逐项示例见[工具目录](tools.zh-CN.md)。
+- **工具：35 个当前 `functions.*` 接口。** 另有 46 项工具显示 registry，用于短标签和 emoji 校验；它不是 active 工具数量。完整逐项示例见[工具目录](tools.zh-CN.md)。
 - **`pi-deferred-tools`：旧包名，新职责。** Tools are no longer deferred. 扩展工具默认保持 Pi 的正常启用状态；它现在只是受信任项目内的 `/tools` 两级开关面板，配置写入 `.pi/tool-selector.json`。`/deferred-tools` 只是兼容别名。
 
 ## Pi 的工作方式
@@ -63,7 +63,7 @@ Pi 是终端编码代理。它将当前目录、`AGENTS.md`、已启用技能和
 | 安全重命名 | `把 handleRequest 改名为 handleRequestV2，先预览将修改的文件；我确认后才应用。` |
 | 长任务必须验证 | 在任务中写明范围、验收命令和停止条件；完成前运行验收命令。 |
 | 小型并行工作流 | `把任务拆成检查现状、实现修改、复核测试三个有依赖的步骤；每步只返回结论和验证结果。` |
-| 普通并行调查 | `使用 subagent 并行查实现、测试和最近提交；子代理只读。` |
+| 独立调查 | `使用 push-task 建立只读任务，检查实现、测试和最近提交。` |
 
 详细参数、配置 JSON 和六个完整场景在[完整使用手册](USAGE.zh-CN.md)。
 

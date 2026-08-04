@@ -94,15 +94,62 @@ export function labelLayout(name: string, index: number, label: string): { emoji
     right: padding.right,
   };
 }
-export function visibleToolContentLines(lines: string[], expanded = false): string[] {
+type ContentSelection = {
+  isError?: boolean;
+  toolName?: string;
+};
+
+const STRUCTURED_RESULT_TOOLS = new Set(["push-task"]);
+
+function isUsefulContentLine(line: string): boolean {
+  const text = plain(line).trim();
+  if (!text || /^(?:\.{3}|…)\s*$/.test(text)) return false;
+  if (/^\[AFT\s/i.test(text)) return false;
+  if (/^(?:Zoom any result|More results available|Use .* to (?:continue|expand)|Tip:)/i.test(text)) return false;
+  if (/\b(?:more|earlier) (?:line|lines|row|rows)\b.*\bexpand\b/i.test(text)) return false;
+  return true;
+}
+
+function semanticResultLine(lines: string[], selection: ContentSelection): string | undefined {
+  const candidates = lines.filter(isUsefulContentLine);
+  if (candidates.length === 0) return undefined;
+
+  const text = (line: string) => plain(line).trim();
+  const matching = (pattern: RegExp) => candidates.find((line) => pattern.test(text(line)));
+  const active = matching(/^◐\s/);
+  if (active) return active;
+
+  if (selection.isError) {
+    return matching(/^(?:×\s*)?(?:error|failed|failure|fatal|exception|denied|invalid|not found|exit\s+[1-9]\d*)\b/i)
+      ?? candidates[0];
+  }
+
+  const name = selection.toolName ?? "";
+  if (/^(?:edit|replace|write|ast_grep_replace|aft_import|aft_refactor)$/.test(name)) {
+    const mutation = matching(/^\+\d+\/-\d+(?:\s|$)|^(?:created|updated|written|applied|deleted|restored|no net change)\b/i);
+    if (mutation) return mutation;
+  }
+  if (/^(?:bash|bash_status|bash_watch|bash_kill)$/.test(name)) {
+    const command = matching(/^(?:completed|running|background task|task\s+\S+|exit\s+\d+|command failed)\b/i);
+    if (command) return command;
+  }
+
+  return matching(/^(?:✓\s*)?(?:found|matched|completed|succeeded|passed|created|updated|written|applied|deleted|restored|saved|loaded|sent|started|running|closed|cancelled)\b/i)
+    ?? matching(/^\d+\s+(?:matches?|results?|files?|entries|lines?|items?|tasks?|tools?|warnings?|errors?)\b/i)
+    ?? matching(/^\+\d+\/-\d+(?:\s|$)|^exit\s+\d+\b/i)
+    ?? candidates[0];
+}
+
+export function visibleToolContentLines(
+  lines: string[],
+  expanded = false,
+  selection: ContentSelection = {},
+): string[] {
   if (expanded || lines.length <= 1) return lines;
-  const informative = [
-    lines[0]!,
-    ...lines.slice(1).filter((line) => !/^(?:\.{3}|…)\s*$/.test(plain(line).trim())),
-  ];
-  if (informative.length <= 2) return informative;
-  const active = informative.find((line, index) => index > 0 && /^\s*◐/.test(plain(line)));
-  return [informative[0]!, active ?? informative.at(-1)!];
+  if (selection.toolName && STRUCTURED_RESULT_TOOLS.has(selection.toolName)) return lines;
+  const headline = lines[0]!;
+  const result = semanticResultLine(lines.slice(1), selection);
+  return result ? [headline, result] : [headline];
 }
 function removeRepeatedToolName(line: string, name: string): string {
   const visible = plain(line).trimStart();
@@ -265,7 +312,10 @@ function installLabeledShell(theme: ToolTheme): () => void {
     const contentStart = firstContent + (hasStandaloneHeader ? 1 : 0);
     const fullContentLines = contentLines.slice(hasStandaloneHeader ? 1 : 0);
     const renderedContentLineCount = fullContentLines.length;
-    const visibleContentLines = visibleToolContentLines(fullContentLines, execution.expanded);
+    const visibleContentLines = visibleToolContentLines(fullContentLines, execution.expanded, {
+      isError: execution.result?.isError,
+      toolName: name,
+    });
     const contentEnd = Math.min(lines.length, contentStart + renderedContentLineCount);
     const body = Array.from({ length: Math.max(visibleContentLines.length, labels.length) }, (_, index) => {
       const content = index < visibleContentLines.length

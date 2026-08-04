@@ -3,22 +3,22 @@
 Quiet TUI styling for Pi:
 
 - a fixed-width tool column with compact emoji labels; emoji sits immediately left of centered text
-- a verified registry of compact labels and purpose-specific emoji for 52 known compatibility and optional tool names
+- a verified registry of compact labels and purpose-specific emoji for 46 known compatibility and optional tool names
 - a theme `text` separator with full-block pending, success, and error backgrounds from the active Pi theme
 - reason-first built-in tool calls that show `goal → concrete target` on one line and a useful result on the next
-- collapsed third-party output limited to two useful lines, with placeholder-only `...` lines omitted; `Ctrl+O` still reveals the complete renderer output
-- short, icon-specific labels for known core, Web, context, subagent, workflow, AFT, and AST tool names instead of truncated raw identifiers; the registry is broader than the current active tool surface
+- collapsed generic third-party output limited to two semantic lines, while task tools keep their own bounded task rows; `Ctrl+O` still reveals complete renderer detail
+- short, icon-specific labels for known core, Web, context, task, workflow, AFT, and AST tool names instead of truncated raw identifiers; the registry is broader than the current active tool surface
 - structured output colors for headings, success, active, pending, error, and task identifiers
 - numbered `read` views that show source line numbers in the TUI while preserving hash anchors for the model
-- numbered, side-by-side `replace` and AFT `edit` diffs with old lines on the left, new lines on the right, multiple change groups, and shared indentation removed from each visible hunk
-- renders AFT `edit` as `+N/-N · N edits` when collapsed and with the same split diff as `replace` when expanded
+- numbered, side-by-side `replace` and AFT `edit`/`write` diffs with old lines on the left, new lines on the right, multiple change groups, and shared indentation removed from each visible hunk
+- renders AFT `edit` and `write` as `+N/-N · N edits` when collapsed and with the same split diff as `replace` when expanded
 - one blank line between tool blocks
 - a persistent framed `prompt` editor and framed user messages
 Tool ownership is conservative. The extension overrides a built-in only while Pi still owns it, and it never registers `find` or `ls`; those remain under Pi or another search owner. AFT `edit` keeps its native call renderer. Its collapsed result is a stable structured count parsed from metadata or the textual `Edited (+N/-N, N edits)` fallback, while its expanded result reuses the split `replace` renderer. Guarded presentation bridges apply the common label column and result formatting at the exported `ToolExecutionComponent` layer. Hashline `read` results are converted from `HASH│content` to `line │ content` only in the TUI renderer; the tool result sent to the model retains its anchors. Diff markers and gutters remain aligned while shared code indentation is removed per visible hunk and relative indentation is retained.
 
 ## Tool labels
 
-`tool-presentations.mjs` is the single runtime registry. It verifies 52 known names, including compatibility and optional entries; it does not claim that all 52 are active. Every text label stays within the rail's eight-column text budget; an unknown third-party tool uses `🧩` until it is added explicitly.
+`tool-presentations.mjs` is the single runtime registry. It verifies 46 known names, including compatibility and optional entries; it does not claim that all 46 are active. Every text label stays within the rail's eight-column text budget; an unknown third-party tool uses `🧩` until it is added explicitly.
 
 | Group | Display labels | Tool identifiers |
 | --- | --- | --- |
@@ -28,7 +28,7 @@ Tool ownership is conservative. The extension overrides a built-in only while Pi
 | Tasks | `📋 tasks`, `✅ tasks`, `🔀 workflow` | `todo`, `todowrite`, `workflow_dag` |
 | Web | `🌐 web`, `✅ verify`, `📥 fetch`, `📚 sources` | `web_search`, `source_check`, `fetch_content`, `get_search_content` |
 | Context | `🔭 recall`, `🧠 memory`, `🗒️ note`, `🔬 expand`, `🗜️ reduce` | `ctx_search`, `ctx_memory`, `ctx_note`, `ctx_expand`, `ctx_reduce` |
-| Subagents | `🧑‍💻 agent`, `🚀 spawn`, `📨 send`, `🎛️ manage`, `📬 mailbox`, `👥 agents`, `💬 consult` | `subagent` and `subagent_*` |
+| Task branches | `🧵 task` | `push-task` |
 | Background shell | `📊 status`, `👁️ watch`, `⌨️ input`, `🛑 stop` | `bash_status`, `bash_watch`, `bash_write`, `bash_kill` |
 | Deferred | `🧰 tools`, `🧬 semantic` | `load_tools`, `semantic_code` |
 | AFT and AST | `🔎 search`, `🧭 outline`, `🔬 zoom`, `🩺 health`, `⚔️ conflict`, `📦 imports`, `🛡️ safety`, `🕸️ calls`, `🗑️ delete`, `🚚 move`, `♻️ refactor`, `🌳 ast find/edit` | `aft_*`, `ast_grep_*` |

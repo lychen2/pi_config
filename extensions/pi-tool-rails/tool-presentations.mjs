@@ -30,13 +30,7 @@ export const TOOL_PRESENTATIONS = Object.freeze({
   ctx_expand: { label: "expand", emoji: "🔬" },
   ctx_reduce: { label: "reduce", emoji: "🗜️" },
 
-  subagent: { label: "agent", emoji: "🧑‍💻" },
-  subagent_spawn: { label: "spawn", emoji: "🚀" },
-  subagent_send: { label: "send", emoji: "📨" },
-  subagent_manage: { label: "manage", emoji: "🎛️" },
-  subagent_mailbox: { label: "mailbox", emoji: "📬" },
-  subagent_inspect: { label: "agents", emoji: "👥" },
-  subagent_consult: { label: "consult", emoji: "💬" },
+  "push-task": { label: "task", emoji: "🧵" },
 
   bash_status: { label: "status", emoji: "📊" },
   bash_watch: { label: "watch", emoji: "👁️" },
@@ -69,7 +63,7 @@ export function normalizeToolName(name) {
 export function shortToolName(name) {
   const normalized = normalizeToolName(name);
   return TOOL_PRESENTATIONS[normalized]?.label
-    ?? (normalized.replace(/^(?:ctx|subagent|aft)_/, "") || "tool");
+    ?? (normalized.replace(/^(?:ctx|aft)_/, "") || "tool");
 }
 
 export function toolEmoji(name) {

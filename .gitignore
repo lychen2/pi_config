@@ -17,7 +17,6 @@
 **/.env.*
 
 # Local/runtime state
-**/pi-subagents-state/
 **/*.sqlite
 **/*.sqlite-*
 **/*.db

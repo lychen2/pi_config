@@ -2,12 +2,159 @@
 
 **English** | [简体中文](README.zh-CN.md)
 
-A portable backup of extensions, skills, themes, and public configuration for the [Pi coding agent](https://github.com/badlogic/pi-mono). Use it to reproduce this Pi workspace on another machine or selectively reuse individual components.
+A portable, understandable, and recoverable workspace configuration for the [Pi coding agent](https://github.com/badlogic/pi-mono).
 
-> [!IMPORTANT]
-> This repository contains public configuration only. API keys, tokens, passwords, private keys, provider registries, sessions, and local runtime data are intentionally excluded.
+This repository groups the resources used to build a practical Pi environment: local extensions, reusable skills, themes, public settings, and cross-platform installers. Use it as a starting point on a new machine, or reuse only the component that fits your workflow.
+
+## Start with the Pi model
+
+Pi is a coding agent that runs in the terminal. Start it from a project directory, describe a concrete goal, and let it inspect files, run commands, edit code, and report verification results through the tools available in that workspace.
+
+This repository adds four kinds of resources:
+
+- **Extensions** add commands, tools, and interface behavior such as `/tools`, `/logo`, and delegated workflows.
+- **Skills** provide reusable procedures for tasks such as research, document processing, code review, and visualization.
+- **Configuration** keeps public Pi settings, system guidance, tool selection examples, and the external package manifest together.
+- **Themes** keep the terminal interface and status information visually consistent.
+
+The shortest useful path is: enter a project directory, start `pi`, describe a bounded task, and ask for a verification command before the task is considered complete.
+
+## Design principles
+
+### Start with the shortest path
+
+A new user needs three things to begin: install the environment, choose a model, and describe a task. Learn extensions, skills, and advanced configuration as the workflow requires them. The root README stays an entry point; detailed reference material lives in the [complete usage guide](docs/USAGE.zh-CN.md) and [quick-start Wiki](docs/WIKI.zh-CN.md).
+
+### Keep public configuration separate from machine data
+
+The repository stores portable public configuration. Provider credentials, API keys, tokens, model registries, session history, and runtime data remain on each machine. The installer backs up files it updates and preserves existing machine-owned skills, themes, and standalone extensions.
+
+### Give tasks boundaries and verification
+
+A useful request names the goal, scope, constraints, and acceptance method. Specify the directories to change, ask Pi to read existing tests before editing, and require the relevant tests before completion. This keeps changes focused and makes the result observable.
+
+### Use capabilities when they help
+
+Pi can work with file editing, code inspection, web access, skills, and delegation. Describe a simple task directly. Load a specialist workflow with `/skill:<name>` when the task needs one. Use `/tools` to reduce the tool set for a project that does not need every capability.
+
+### Make every change inspectable and recoverable
+
+Use `--dry-run` before installation, review Git diffs and test results after code changes, and use AFT's `aft_safety` checkpoints when you need finer-grained file recovery.
+
+## Five-minute setup
+
+> [!WARNING]
+> Pi extensions and third-party packages run with the current user's permissions. Read the installer before executing it and verify that the source is trusted.
+
+### New machine
+
+Linux or macOS:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/lychen2/pi_config/main/install.sh | sh
+```
+
+Windows PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/lychen2/pi_config/main/install.ps1 | iex
+```
+
+The bootstrap scripts check or install Node.js, Git, and Pi, then run this repository's configuration installer.
+
+### Existing checkout, Node.js, and Pi
+
+Run from the repository root:
+
+```bash
+node install.mjs --dry-run --yes
+node install.mjs --yes
+```
+
+The first command prints the planned actions. The second applies the recommended settings. Linux and macOS also support:
+
+```bash
+./install.sh --yes
+```
+
+Windows PowerShell:
+
+```powershell
+.\install.ps1 -Yes
+```
+
+The installer backs up the active Pi configuration, merges missing skills and themes, installs repository-local extensions, and installs external packages, Magic Context, and RTK according to the selected options. Provider credentials and model registries stay machine-local.
+
+### First launch
+
+Open a new terminal after installation and start Pi from your project directory:
+
+```bash
+cd /path/to/your/project
+pi
+```
+
+For a custom provider, use:
+
+```text
+/provider add
+/model
+```
+
+Then send a bounded task, for example:
+
+```text
+Inspect the login callback in the current project.
+Scope: change only the login module and its tests.
+Read the existing implementation and tests first, then propose the smallest fix.
+Run the focused tests before completion and report any remaining risk.
+```
+
+## Common entry points
+
+| Goal | Input |
+| --- | --- |
+| Attach a file | `@src/auth.ts` |
+| Run a command and send its output to Pi | `!git status --short` |
+| Run a command while keeping output local | `!!tail -n 100 server.log` |
+| Enter read-only planning mode | `/plan` |
+| Load a named skill | `/skill:humanizer` |
+| Adjust the current project's tools | `/tools` |
+| Reload changed configuration | `/reload` |
+
+For code tasks, ask Pi to report changed files, verification commands, and remaining risks. Start with focused tests and expand to the full suite when the change warrants it.
+
+### Use a clean task branch when useful
+
+`pi-gsd` lets Pi queue focused work with `push-task`, then run it in a fresh session-tree branch under your control:
+
+```text
+Use push-task for a read-only review of the changed files and tests. Set role to review. Return file names, line numbers, and risks.
+```
+
+Run `/start-task` to enter the branch, `/finish-task` to bring the last result back, `/abort-task` to leave without a result, or `/auto` to process queued tasks sequentially. `role` selects a short task profile, not a permission system. Profiles cover `explore`, `map`, `analyze`, `research`, `synthesize`, `plan`, `roadmap`, `plan-check`, `implement`, `execute`, `debug`, `migrate`, `integrate`, `review`, `audit`, `security`, `performance`, `test`, `verify`, `design`, `docs`, and `release`; aliases such as `scout`, `builder`, `reviewer`, `tester`, and `verifier` are accepted. The selected profile is added only inside the new branch. Put the actual scope, restrictions, and acceptance checks in the prompt. Add `model` when the task suits a cheaper or specialized model.
+
+## Repository map
+
+| Path | Contents |
+| --- | --- |
+| `install.sh`, `install.ps1`, `install.mjs` | Linux, macOS, and Windows installation entry points |
+| `config/` | Public settings, system guidance, tool-selection examples, and the external package manifest |
+| `extensions/` | Local Pi packages and standalone extensions |
+| `skills/` | Reusable task workflows and reference material |
+| `themes/` | Portable Pi themes |
+| `docs/` | Quick start, complete guide, and catalogs |
+
+## Continue from here
+
+- [Quick-start Wiki](docs/WIKI.zh-CN.md): common commands and workflows after the first installation.
+- [Complete usage guide](docs/USAGE.zh-CN.md): tool selection, AFT, workflow DAGs, task branches, web access, and research scenarios.
+- [Extension catalog](docs/extensions.zh-CN.md): purpose, commands, and configuration for local and third-party extensions.
+- [Skill catalog](docs/skills.zh-CN.md): skills grouped by task with invocation examples.
+- [Tool catalog](docs/tools.zh-CN.md): current tools with usage examples.
 
 ## Preview
+
 <table>
 <tr>
 <td width="50%" align="center"><strong>Themed Pi workspace</strong><br><img src="docs/images/pi-tui-overview.png" alt="Themed Pi workspace" width="100%"></td>
@@ -19,234 +166,22 @@ A portable backup of extensions, skills, themes, and public configuration for th
 </tr>
 </table>
 
-## Repository contents
+## Update the configuration
 
-| Path | Contents | How to restore |
-| --- | --- | --- |
-| `install.sh`, `install.ps1`, `install.mjs` | Cross-platform bootstrap and configuration installer | Run the entry point for your operating system |
-| `scripts/` | Cross-platform post-install checks for local integrations and the tool presentation registry | Run the relevant Node script from the repository root |
-| `extensions/` | All installable local `pi-*/package.json` packages and 2 standalone extensions | Install packages with `pi install`; copy standalone files |
-| `config/` | Public Pi settings, system guidance, extension state, and the external package manifest | Review, then copy or merge individual files |
-| `themes/` | 2 Matugen themes | Copy to `~/.pi/agent/themes/` |
-| `docs/` | Onboarding Wiki, 58-skill and 41-tool catalogs, plus README screenshots | Open [`docs/WIKI.zh-CN.md`](docs/WIKI.zh-CN.md) |
-
-## Documentation
-
-- [Complete usage guide (Simplified Chinese)](docs/USAGE.zh-CN.md)
-- [Quick-start Wiki (Simplified Chinese)](docs/WIKI.zh-CN.md)
-- [Extension catalog (Simplified Chinese)](docs/extensions.zh-CN.md)
-- [Skill catalog and 58 usage examples (Simplified Chinese)](docs/skills.zh-CN.md)
-- [Tool catalog and 41 usage examples (Simplified Chinese)](docs/tools.zh-CN.md)
-
-## Install
-
-The bootstrap installers support a new machine without Node.js, Git, or Pi. Review the scripts before running them because Pi extensions and third-party packages execute with full user permissions.
-
-### Linux and macOS
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/lychen2/pi_config/main/install.sh | sh
-```
-
-The script uses Pi's official installer for Node.js and Pi. On Linux, it can install Git with `apt`, `dnf`, `yum`, `apk`, `pacman`, or `zypper`. On macOS without Homebrew or Git, the system may open Apple's Command Line Tools installer.
-
-### Windows
-
-Run in PowerShell:
-
-```powershell
-irm https://raw.githubusercontent.com/lychen2/pi_config/main/install.ps1 | iex
-```
-
-The Windows bootstrap uses WinGet to install Node.js LTS and Git for Windows. Git Bash is required by Pi on native Windows. It also installs the checksum-verified RTK release binary to `~/.local/bin/rtk.exe`.
-
-### From an existing clone
-
-```bash
-# Linux or macOS
-./install.sh
-
-# Any platform with Node.js and Pi already installed
-node install.mjs
-```
-
-```powershell
-# Windows PowerShell
-.\install.ps1
-```
-
-### Installer behavior
-
-The installer performs these steps in order:
-
-1. Installs Node.js 22.19.0 or newer, Git, and Pi when the platform bootstrap is used.
-2. Downloads this repository to `~/.pi_config` when it is not already available.
-3. Backs up the existing `~/.pi/agent` and the Cortex config files it updates: `aft.jsonc` and `magic-context.jsonc`.
-4. Merges missing skills and themes while preserving existing machine-owned files; standalone extensions are copied only when absent.
-5. Merges the public settings, installs every local `extensions/pi-*/package.json` package, verifies the 52-entry compatibility label/emoji registry, then installs the reviewed external package manifest.
-6. Runs the upstream Magic Context setup script, preserves its existing JSONC content, sets the execute threshold to `55%`, and disables Pi's built-in auto-compaction.
-7. Installs the optional RTK command-line tool when selected.
-Provider credentials, model registries, API keys, sessions, and environment variables remain local to each machine.
-
-Recommended defaults are designed for a clean installation:
-
-| Component | Default | Reason |
-| --- | --- | --- |
-| External Pi packages | Install | Reproduces the tools listed in `config/external-packages.txt` |
-| Magic Context | Install | Runs the upstream setup wizard and disables Pi's built-in auto-compaction |
-| RTK binary | Install | Required by `pi-rtk-optimizer` for command rewriting; prebuilt releases support Windows, Linux, and macOS |
-| Provider/model defaults | Keep current | The repository's `manager` provider requires machine-local configuration |
-
-### Options
-
-Pass options to a local script or directly to `install.mjs`:
-
-| Option | Effect |
-| --- | --- |
-| `--yes`, `-y` | Accept the recommended defaults without prompts |
-| `--dry-run` | Print planned actions without changing files or installing packages |
-| `--with-magic-context` / `--skip-magic-context` | Run or skip the upstream Magic Context setup |
-| `--with-external` / `--skip-external` | Enable or skip the external package manifest |
-| `--with-rtk` / `--skip-rtk` | Enable or skip the RTK binary used by `pi-rtk-optimizer` |
-| `--with-model-defaults` / `--skip-model-defaults` | Apply or preserve provider/model defaults |
-
-Examples:
-
-```bash
-# Inspect every action without changing the machine
-./install.sh --dry-run --yes
-
-# Apply the repository's provider/model defaults too
-./install.sh --yes --with-model-defaults
-
-# Skip Magic Context setup, external packages, and the RTK binary
-./install.sh --yes --skip-magic-context --skip-external --skip-rtk
-```
-
-PowerShell uses matching switch names:
-
-```powershell
-.\install.ps1 -Yes -WithModelDefaults
-```
-
-### Verify
-
-Start a new terminal after installation if `pi` is not yet on `PATH`, then run:
-
-```bash
-pi --version
-pi list
-cd ~/.pi_config
-node scripts/verify-tool-presentations.mjs
-```
-
-The presentation check validates 52 known labels and emojis. This registry includes compatibility and optional entries; it is not the count of currently active tools. The current 41 `functions.*` examples are documented in [`docs/tools.zh-CN.md`](docs/tools.zh-CN.md).
-
-Start Pi, configure a custom provider with `pi-provider`, then select its model:
-
-```text
-pi
-/provider add
-/model
-```
-
-When RTK is enabled, run:
-
-```text
-rtk --version
-/rtk verify
-/cache-optimizer
-```
-
-Extension tools are enabled by default. Tools are no longer deferred at runtime. Use `/tools` only when the current project should send fewer tool definitions: toggle an extension at the first level or press `Enter` for per-tool selection. Choices are stored in the trusted project's `.pi/tool-selector.json`.
-
-### Understand the restored configuration
-
-| Repository source | Installed target | Restore behavior |
-| --- | --- | --- |
-| `config/settings-public.json` | `~/.pi/agent/settings.json` | Merges public settings; keeps machine provider/model values unless `--with-model-defaults` is used |
-| `config/aft.jsonc` | `~/.config/cortexkit/aft.jsonc` | Backs up the existing file, then applies the repository AFT configuration |
-| `config/APPEND_SYSTEM.md` and three JSON files | `~/.pi/agent/` | Replaces the repository-maintained public configuration |
-| `skills/` and `themes/` | `~/.pi/agent/` | Adds missing files and preserves existing machine content |
-| `extensions/adhd-mode.ts` and `matugen-chrome.ts` | `~/.pi/agent/extensions/` | Copies only when the target file is absent |
-| `config/external-packages.txt` | Pi package registry | Runs `pi install` when external packages are enabled |
-| Project `.pi/tool-selector.json` | The project directory | Is never copied; tool selections remain project-specific |
-
-## Local extensions
-
-| Extension | Purpose | Main control |
-| --- | --- | --- |
-| [`pi-brand-header`](extensions/pi-brand-header/) | Responsive startup header with model, theme, workspace, skill, and tool information | `/logo` |
-| [`pi-deferred-tools`](extensions/pi-deferred-tools/) | Project-scoped two-level tool selector; package name retained for compatibility because tools are no longer deferred | `/tools` |
-| [`pi-manager-models`](extensions/pi-manager-models/) | Refreshes an OpenAI-compatible model catalog while preserving local overrides | Provider `baseUrl` and environment variables |
-| [`pi-slim-skills`](extensions/pi-slim-skills/) | Compresses the skill index and injects selected skill content once per prompt | `/slim-skills` |
-| [`pi-todo-guard`](extensions/pi-todo-guard/) | Continues runs while Todo contains unfinished tasks | `PI_TODO_GUARD_DISABLE=1` |
-| [`pi-workflow-dag`](extensions/pi-workflow-dag/) | Dependency-aware inspect/implement/review workers | Describe the dependent phases; Pi invokes it when useful |
-| [`pi-tool-rails`](extensions/pi-tool-rails/) | Adds themed result panels, prompt framing, and a verified 52-name short-label/emoji registry broader than the current 41-tool surface | `PI_TOOL_RAILS_DISABLE_USER_FRAME=1` |
-| [`adhd-mode.ts`](extensions/adhd-mode.ts) | Adds session-persistent ADHD response rules | `/adhd` |
-| [`matugen-chrome.ts`](extensions/matugen-chrome.ts) | Renders a Cometix-style footer with the active Pi theme | `/matugen-chrome` |
-
-## First use
-
-1. Start Pi from the project directory: `pi`.
-2. Give a bounded request with the intended verification, for example: `Fix the login callback; run its focused tests; do not change other modules.`
-3. For code exploration, describe the target file or symbol in plain language; AFT provides outline, zoom, indexed search, inspection, and conflict analysis. Ask for the safest modification entry point when you need one.
-4. For a long task, state its scope, acceptance commands, and stop condition. For a small dependency graph, describe the inspect, implement, and review phases in plain language.
-
-The [complete usage guide](docs/USAGE.zh-CN.md) explains the installed capabilities and includes coding, review, AFT code exploration, web access, delegation, PDF, and visualization examples. The complete 58-skill and 41-tool example catalogs are [`docs/skills.zh-CN.md`](docs/skills.zh-CN.md) and [`docs/tools.zh-CN.md`](docs/tools.zh-CN.md).
-
-A typical package check looks like this:
-
-```bash
-cd extensions/pi-brand-header
-npm install
-npm run typecheck
-npm pack --dry-run
-
-```
-
-## Skills
-
-The current workspace has 58 effective skill definitions: 57 tracked in this repository plus the preserved local `batch-grill-me` skill. The repository contains two `mineru` definitions with the same name. See the [complete skill catalog](docs/skills.zh-CN.md) for paths, discovery limits, and one example for every definition. Invoke a discoverable skill by its directory name:
-
-```text
-/skill:humanizer
-/skill:scientific-visualization
-/skill:mineru-file-processing
-```
-
-Some directories are reference collections without a top-level `SKILL.md`. Pi does not register those directories as slash commands, but their files remain available for manual use.
-
-## External packages
-
-[`config/external-packages.txt`](config/external-packages.txt) is the source of truth for third-party npm and Git packages. It covers:
-
-- file search, web search and content extraction, and previews
-- planning, Todo management, structured questions, and subagents
-- AFT file editing, output compaction, caching, and research workflows
-- sensitive-file protection, themes, and provider management
-
-`pi-rtk-optimizer` remains an external package. It compacts AFT `read`, `grep`, and other general tool output, while AFT owns Bash rewrite, compression, and background execution. Run `/reload` after installation or updates.
-
-## Update this backup
-
-Pull repository changes, review them, then reapply the portable configuration:
+Pull repository changes, preview the plan, then apply them:
 
 ```bash
 cd ~/.pi_config
 git pull --ff-only
-git status
 node install.mjs --dry-run --yes
 node install.mjs --yes
 ```
 
-The installer creates a fresh backup of the active Pi directory and the Cortex config files it updates. It adds missing skills/themes, updates settings, local packages, the Magic Context threshold, and AFT configuration; it does not copy credentials, project tool selections, or session data.
+Run `/reload` inside Pi after configuration changes. Restart Pi when the installer, an extension, or repository configuration changed.
 
-## Security
+## Security checks
 
-[`.gitignore`](.gitignore) excludes credentials, model and authentication registries, sessions, caches, databases, logs, dependencies, generated assets, backups, and environment files.
-
-Run these checks before every commit:
+This repository stores public configuration only. Check the worktree and diff before committing:
 
 ```bash
 git status
@@ -254,4 +189,4 @@ git diff --check
 git grep -n -I -i -E 'BEGIN (RSA|OPENSSH|PRIVATE)|api[_-]?key|token|secret|password|/home/'
 ```
 
-Configure providers, model registries, API keys, and environment variables separately on each machine. Never commit real credentials.
+Manage API keys, tokens, passwords, private keys, and provider configuration separately on each machine. Never commit real credentials.

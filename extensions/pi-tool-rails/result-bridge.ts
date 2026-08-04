@@ -9,11 +9,11 @@ import { sliceByColumn, Text, truncateToWidth, visibleWidth, type Component } fr
 
 type Theme = {
   fg(
-    color: "dim" | "error" | "muted" | "toolDiffAdded" | "toolDiffRemoved" | "toolDiffContext" | "toolOutput",
+    color: "dim" | "error" | "muted" | "success" | "toolDiffAdded" | "toolDiffRemoved" | "toolDiffContext" | "toolOutput" | "warning",
     text: string,
   ): string;
 };
-type ResultOptions = { expanded?: boolean; isPartial?: boolean };
+type ResultOptions = { expanded?: boolean; isPartial?: boolean; toolName?: string };
 type ResultContext = { isError?: boolean; lastComponent?: unknown; [key: string]: unknown };
 type ResultRenderer = (
   result: unknown,
@@ -48,7 +48,8 @@ const HASHLINE_READ = /^[A-Za-z0-9_-]{3}│(.*)$/;
 const RESULT_PATCH = Symbol.for("pi.toolRails.resultRendererPatch");
 const REPLACE_LINE_NUMBERS = "toolRailsNewLineNumbers";
 const REPLACE_FINAL_LINE_COUNT = "toolRailsFinalLineCount";
-const COMPACT_RESULTS = new Set(["bash", "find", "grep", "ls"]);
+const COMPACT_RESULTS = new Set(["bash", "bash_status", "bash_watch", "bash_write", "bash_kill", "find", "grep", "ls"]);
+const BACKGROUND_SHELL_TOOLS = new Set(["bash_status", "bash_watch", "bash_write", "bash_kill"]);
 const PREVIEW_LINES = 5;
 const REPLACE_PREVIEW_ROWS = 10;
 const SPLIT_SEPARATOR = " │ ";
@@ -83,29 +84,144 @@ function preview(
   options: ResultOptions,
   theme: Theme,
   context: ResultContext,
-  direction: "head" | "tail",
 ): string {
-  const shown = options.expanded
-    ? lines
-    : direction === "tail"
-      ? lines.slice(-PREVIEW_LINES)
-      : lines.slice(0, PREVIEW_LINES);
+  const shown = options.expanded ? lines : lines.slice(0, PREVIEW_LINES);
   const color = context.isError ? "error" : "toolOutput";
   let text = shown.map((line) => theme.fg(color, line || " ")).join("\n");
 
   const remaining = lines.length - shown.length;
   if (remaining > 0) {
-    const position = direction === "tail" ? "earlier" : "more";
     const hint = theme.fg(
       "muted",
-      `${remaining} ${position} ${remaining === 1 ? "line" : "lines"} · ${keyHint("app.tools.expand", "expand")}`,
+      `${remaining} more ${remaining === 1 ? "line" : "lines"} · ${keyHint("app.tools.expand", "expand")}`,
     );
-    text = direction === "tail" ? `${hint}\n${text}` : `${text}\n${hint}`;
+    text = `${text}\n${hint}`;
   }
   return text;
 }
 
-function compactResult(
+function numberDetail(details: RecordLike, ...keys: string[]): number | undefined {
+  for (const key of keys) {
+    const value = details[key];
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+  }
+  return undefined;
+}
+
+function durationLabel(milliseconds: number): string {
+  if (milliseconds < 1000) return `${Math.round(milliseconds)}ms`;
+  if (milliseconds < 60_000) return `${(milliseconds / 1000).toFixed(milliseconds < 10_000 ? 1 : 0)}s`;
+  const minutes = Math.floor(milliseconds / 60_000);
+  const seconds = Math.floor((milliseconds % 60_000) / 1000);
+  return `${minutes}m ${seconds}s`;
+}
+
+function conciseLine(line: string, limit = 100): string {
+  const compact = line.replace(/\s+/g, " ").trim();
+  return compact.length <= limit ? compact : `${compact.slice(0, limit - 1)}…`;
+}
+
+function jsonLine(line: string): RecordLike | undefined {
+  const text = line.trim();
+  if (!text.startsWith("{")) return undefined;
+  try {
+    const parsed: unknown = JSON.parse(text);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed as RecordLike
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export function summarizeBackgroundShell(lines: string[]): string[] {
+  const summary: string[] = [];
+  const add = (line: string | undefined) => {
+    const value = line ? conciseLine(line, 140) : "";
+    if (value && !summary.includes(value)) summary.push(value);
+  };
+
+  for (const line of lines) {
+    const text = line.trim();
+    if (/^Task\s+\S+:/i.test(text)) add(text);
+    else if (/^Waited\s+.*;\s*matched\s+/i.test(text)) add(text);
+    else if (/^(?:PTY task is still running|background task .* (?:completed|failed))/i.test(text)) add(text);
+
+    const event = jsonLine(text);
+    if (!event) continue;
+    if (event.type === "extension_ui_request") {
+      const message = event.message;
+      if (event.method === "notify" && typeof message === "string") add(message);
+      if (event.method === "setStatus") {
+        const status = record(event).statusText;
+        if (typeof status === "string") add(status.replace(/\x1B\[[0-9;]*m/g, ""));
+      }
+    }
+    if (event.type === "agent_settled") add("agent settled");
+  }
+
+  if (summary.length > 0) return summary.slice(0, 3);
+  return lines
+    .filter((line) => line.trim() && !jsonLine(line))
+    .slice(0, 2)
+    .map((line) => conciseLine(line, 140));
+}
+
+function renderBashSummary(
+  result: unknown,
+  options: ResultOptions,
+  theme: Theme,
+  context: ResultContext,
+  lines: string[],
+): Component {
+  const details = record(record(result).details);
+  const bashLines = lines.length === 1 && /^\(?no output\)?$/i.test(lines[0]!.trim()) ? [] : lines;
+  const isBackgroundShell = BACKGROUND_SHELL_TOOLS.has(options.toolName ?? "");
+  const normalizedLines = isBackgroundShell ? summarizeBackgroundShell(bashLines) : bashLines;
+  const exitCode = numberDetail(details, "exit_code", "exitCode");
+  const duration = numberDetail(details, "duration_ms", "durationMs");
+  const taskIdValue = details.task_id ?? details.taskId;
+  const taskId = typeof taskIdValue === "string" || typeof taskIdValue === "number"
+    ? String(taskIdValue)
+    : undefined;
+
+  if (options.isPartial) {
+    const running = theme.fg("warning", "running");
+    if (!options.expanded || bashLines.length === 0) return reusableText(context, running);
+    return reusableText(context, `${running}\n${preview(bashLines, options, theme, context)}`);
+  }
+
+  if (context.isError) {
+    const status = theme.fg("error", exitCode === undefined ? "command failed" : `exit ${exitCode}`);
+    const errorLine = (isBackgroundShell ? normalizedLines : bashLines).find((line) => /(?:error|failed|fatal|exception|denied|not found|invalid)/i.test(line))
+      ?? (isBackgroundShell ? normalizedLines : bashLines).find((line) => line.trim());
+    const summary = errorLine ? `${status}${theme.fg("muted", ` · ${conciseLine(errorLine)}`)}` : status;
+    if (!options.expanded || bashLines.length === 0) return reusableText(context, summary);
+    return reusableText(context, `${summary}\n${preview(bashLines, options, theme, context)}`);
+  }
+
+  const status = taskId && exitCode === undefined
+    ? theme.fg("success", `background task ${taskId} started`)
+    : theme.fg("success", "completed");
+  const metadata = [
+    exitCode === undefined ? undefined : `exit ${exitCode}`,
+    duration === undefined ? undefined : durationLabel(duration),
+    bashLines.length === 0 ? undefined : `${bashLines.length} output ${bashLines.length === 1 ? "line" : "lines"}`,
+    details.truncated === true ? "truncated" : undefined,
+  ].filter((value): value is string => Boolean(value));
+  const summary = metadata.length > 0
+    ? `${status}${theme.fg("muted", ` · ${metadata.join(" · ")}`)}`
+    : status;
+  if (!options.expanded || bashLines.length === 0) {
+    if (isBackgroundShell && normalizedLines.length > 0) {
+      return reusableText(context, `${summary}\n${normalizedLines.map((line) => theme.fg("toolOutput", line)).join("\n")}`);
+    }
+    return reusableText(context, summary);
+  }
+  return reusableText(context, `${summary}\n${preview(bashLines, options, theme, context)}`);
+}
+
+export function compactResult(
   name: string,
   result: unknown,
   options: ResultOptions,
@@ -114,22 +230,16 @@ function compactResult(
 ): Component {
   const lines = outputLines(result);
 
-  if (name === "bash") {
-    const bashLines = lines.length === 1 && /^\(?no output\)?$/i.test(lines[0]!.trim()) ? [] : lines;
-    if (options.isPartial && bashLines.length === 0) return reusableText(context, "");
-    if (context.isError && bashLines.length === 0) {
-      return reusableText(context, theme.fg("error", "command failed"));
-    }
-    if (bashLines.length === 0) return reusableText(context, theme.fg("muted", "completed"));
-    return reusableText(context, preview(bashLines, options, theme, context, "tail"));
+  if (name === "bash" || BACKGROUND_SHELL_TOOLS.has(name)) {
+    return renderBashSummary(result, { ...options, toolName: name }, theme, context, lines);
   }
 
   if (options.isPartial) return reusableText(context, "");
   if (context.isError) {
-    return reusableText(context, preview(lines.length ? lines : ["tool failed"], options, theme, context, "head"));
+    return reusableText(context, preview(lines.length ? lines : ["tool failed"], options, theme, context));
   }
   if (options.expanded) {
-    return reusableText(context, preview(lines.length ? lines : ["(no results)"], options, theme, context, "head"));
+    return reusableText(context, preview(lines.length ? lines : ["(no results)"], options, theme, context));
   }
 
   const count = lines.filter((line) => line.trim()).length;
@@ -715,7 +825,7 @@ export function renderReplaceDiffResult(
   if (!hasChanges) {
     const lines = outputLines(result);
     const fallback = lines.length ? lines : [context.isError ? "replace failed" : "replace completed"];
-    return reusableText(context, preview(fallback, options, theme, context, "head"));
+    return reusableText(context, preview(fallback, options, theme, context));
   }
   if (!options.expanded && hasChanges) {
     const additions = rawEntries.filter((entry) => entry.kind === "add").length;
@@ -734,7 +844,8 @@ export function renderReplaceDiffResult(
   return renderDiffComponent(entries, options, theme, context);
 }
 
-export function renderAftEditResult(
+function renderAftMutationResult(
+  operation: "edit" | "write",
   result: unknown,
   options: ResultOptions,
   theme: Theme,
@@ -744,7 +855,7 @@ export function renderAftEditResult(
   const details = record(record(result).details);
   if (context.isError) {
     const lines = outputLines(result);
-    return reusableText(context, preview(lines.length ? lines : ["edit failed"], options, theme, context, "head"));
+    return reusableText(context, preview(lines.length ? lines : [`${operation} failed`], options, theme, context));
   }
   const lines = outputLines(result);
   const textCounts = lines.join(" ").match(/\(\+(\d+)\/-(\d+)(?:,\s*(\d+)\s+edits?)?\)/i);
@@ -783,6 +894,24 @@ export function renderAftEditResult(
     : reusableText(context, [summary, ...lines].filter(Boolean).join("\n"));
 }
 
+export function renderAftEditResult(
+  result: unknown,
+  options: ResultOptions,
+  theme: Theme,
+  context: ResultContext,
+): Component {
+  return renderAftMutationResult("edit", result, options, theme, context);
+}
+
+export function renderAftWriteResult(
+  result: unknown,
+  options: ResultOptions,
+  theme: Theme,
+  context: ResultContext,
+): Component {
+  return renderAftMutationResult("write", result, options, theme, context);
+}
+
 export function renderAftEditBridgeResult(
   _nativeRenderer: ResultRenderer | undefined,
   result: unknown,
@@ -791,6 +920,16 @@ export function renderAftEditBridgeResult(
   context: ResultContext,
 ): Component {
   return renderAftEditResult(result, options, theme, context);
+}
+
+export function renderAftWriteBridgeResult(
+  _nativeRenderer: ResultRenderer | undefined,
+  result: unknown,
+  options: ResultOptions,
+  theme: Theme,
+  context: ResultContext,
+): Component {
+  return renderAftWriteResult(result, options, theme, context);
 }
 
 
@@ -827,9 +966,10 @@ function installResultBridge(): () => void {
   const patched: GetResultRenderer = function (): ResultRenderer | undefined {
     const nativeRenderer = state.original.call(this);
     const name = (this as unknown as { toolName?: string }).toolName;
-    if (name === "edit") {
-      return (result, options, theme, context) =>
-        renderAftEditBridgeResult(nativeRenderer, result, options, theme, context);
+    if (name === "edit" || name === "write") {
+      return (result, options, theme, context) => name === "write"
+        ? renderAftWriteBridgeResult(nativeRenderer, result, options, theme, context)
+        : renderAftEditBridgeResult(nativeRenderer, result, options, theme, context);
     }
     if (name === "replace") {
       return (result, options, theme, context) => renderReplaceDiffResult(result, options, theme, context);
@@ -843,7 +983,7 @@ function installResultBridge(): () => void {
         const lines = outputLines(result);
         return reusableText(
           context,
-          preview(lines.length ? lines : [context.isError ? "read failed" : ""], options, theme, context, "head"),
+          preview(lines.length ? lines : [context.isError ? "read failed" : ""], options, theme, context),
         );
       };
     }

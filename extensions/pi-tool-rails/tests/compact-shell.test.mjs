@@ -67,6 +67,53 @@ test("keeps collapsed structured output to a useful two-line summary", () => {
   assert.deepEqual(visibleToolContentLines(["inspect project", "..."]), ["inspect project"]);
 });
 
+test("selects semantic results instead of the final rendered line", () => {
+  assert.deepEqual(
+    visibleToolContentLines(
+      ["find config files", "src/config.ts", "src/config.test.ts", "Found 2 results.", "[AFT E0 W0 | D0 U0]"],
+      false,
+      { toolName: "fffind" },
+    ),
+    ["find config files", "Found 2 results."],
+  );
+  assert.deepEqual(
+    visibleToolContentLines(
+      ["inspect symbols", "src/config.ts", "Zoom any result for full source", "[AFT E0 W0 | D0 U0]"],
+      false,
+      { toolName: "aft_search" },
+    ),
+    ["inspect symbols", "src/config.ts"],
+  );
+  assert.deepEqual(
+    visibleToolContentLines(
+      ["run tests", "suite output", "exit 0", "1250ms"],
+      false,
+      { toolName: "bash" },
+    ),
+    ["run tests", "exit 0"],
+  );
+});
+
+test("keeps the first actionable error instead of a trailing stack frame", () => {
+  assert.deepEqual(
+    visibleToolContentLines(
+      ["run tests", "Error: missing config", "at main.js:10", "at bootstrap.js:3"],
+      false,
+      { isError: true, toolName: "bash" },
+    ),
+    ["run tests", "Error: missing config"],
+  );
+});
+
+test("preserves task-owned rows in collapsed mode", () => {
+  const rendered = [
+    "push-task: Review implementation",
+    "Check changed files and tests",
+    "Task stored. Use /start-task or /auto to start it.",
+  ];
+  assert.deepEqual(visibleToolContentLines(rendered, false, { toolName: "push-task" }), rendered);
+});
+
 test("colors structured status and task identifiers", () => {
   const theme = {
     fg(color, text) {

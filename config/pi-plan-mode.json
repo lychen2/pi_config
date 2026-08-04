@@ -14,7 +14,6 @@
     "ctx_memory",
     "ctx_note",
     "ctx_reduce",
-    "subagent",
-    "subagent_spawn"
+    "push-task"
   ]
 }
