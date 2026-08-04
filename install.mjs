@@ -276,6 +276,41 @@ async function copyPathIfMissing(source, destination) {
   await copyPath(source, destination);
 }
 
+function externalSkillRoots() {
+  return [
+    path.join(homeDir, ".pi", "skills"),
+    path.join(homeDir, ".agents", "skills"),
+  ];
+}
+
+async function skillExistsInOtherRoot(name) {
+  for (const root of externalSkillRoots()) {
+    if (await pathExists(path.join(root, name, "SKILL.md"))) {
+      return root;
+    }
+  }
+  return undefined;
+}
+
+async function mergeRepositorySkills() {
+  const source = path.join(repoDir, "skills");
+  const destination = path.join(agentDir, "skills");
+  if (!installerOptions.dryRun) {
+    await mkdir(destination, { recursive: true });
+  }
+
+  for (const entry of await readdir(source, { withFileTypes: true })) {
+    const externalRoot = entry.isDirectory()
+      ? await skillExistsInOtherRoot(entry.name)
+      : undefined;
+    if (externalRoot) {
+      console.log(`  preserve existing skill ${entry.name} from ${externalRoot}`);
+      continue;
+    }
+    await mergeMissingTree(path.join(source, entry.name), path.join(destination, entry.name));
+  }
+}
+
 async function mergeMissingTree(source, destination) {
   if (!(await pathExists(destination))) {
     await copyPath(source, destination);
@@ -387,7 +422,7 @@ async function restoreFiles() {
     await mkdir(agentDir, { recursive: true });
   }
 
-  await mergeMissingTree(path.join(repoDir, "skills"), path.join(agentDir, "skills"));
+  await mergeRepositorySkills();
   await mergeMissingTree(path.join(repoDir, "themes"), path.join(agentDir, "themes"));
 
   const configFiles = [
