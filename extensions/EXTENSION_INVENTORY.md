@@ -14,10 +14,9 @@ Audited against Pi 0.82 extension, package, TUI, keybinding, provider, and lifec
 | `pi-rtk-aft-restore` | Restores captured AFT Bash diagnostics after RTK | `pi-rtk-aft-restore/index.ts` |
 | `pi-slim-skills` | Compressed skill index and deduplicated full-body injection | `pi-slim-skills/index.ts` |
 | `pi-todo-guard` | Continue settled runs while Todo tasks remain | `pi-todo-guard/index.ts` |
-| `pi-gsd` | Lightweight session-tree task branches without bundled skill prompts | `pi-gsd/index.ts`, `pi-gsd/src/index.ts` |
-| `pi-tool-rails` | Soft tool rails, verified 46-tool emoji/label registry, semantic tool headers, user-message frame, persistent prompt frame | `pi-tool-rails/compact-shell.ts`, `pi-tool-rails/tool-presentations.mjs`, `pi-tool-rails/index.ts`, `pi-tool-rails/prompt-frame.ts` |
-| `pi-workflow-dag` | Dependency-aware inspect, implement, and review workers | `pi-workflow-dag/index.ts` |
-Eleven package directories install from this repository.
+| `pi-gsd` | Session-tree subagents with compact queued, running, and completed rendering | `pi-gsd/index.ts`, `pi-gsd/src/index.ts` |
+| `pi-tool-rails` | Soft tool rails, verified 45-tool emoji/label registry, semantic tool headers, user-message frame, persistent prompt frame | `pi-tool-rails/compact-shell.ts`, `pi-tool-rails/tool-presentations.mjs`, `pi-tool-rails/index.ts`, `pi-tool-rails/prompt-frame.ts` |
+Ten package directories install from this repository.
 
 ## Standalone Extensions
 
@@ -57,7 +56,7 @@ Eleven package directories install from this repository.
 - Project tool selection is stored as disabled extension/tool rules; missing config keeps Pi's default active tools.
 - Tool overrides skip built-ins already owned by another extension.
 - Long generic tool output is bounded and uses the configured expansion key hint.
-- The installer verifies compact labels and dedicated emoji for 46 known registry entries; optional and compatibility entries are included, so this is not the active-tool count.
+- The installer verifies compact labels and dedicated emoji for 45 known registry entries; optional and compatibility entries are included, so this is not the active-tool count.
 - Session-scoped compatibility patches restore original methods on shutdown.
-- All eleven repository packages pass TypeScript.
-- All eleven repository packages pass isolated Pi loading and `npm pack --dry-run` inspection.
+- All ten repository packages pass TypeScript.
+- All ten repository packages pass isolated Pi loading and `npm pack --dry-run` inspection.

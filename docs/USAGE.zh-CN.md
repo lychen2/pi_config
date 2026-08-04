@@ -68,7 +68,6 @@ extensions/pi-rtk-aft-restore
 extensions/pi-slim-skills
 extensions/pi-todo-guard
 extensions/pi-tool-rails
-extensions/pi-workflow-dag
 ```
 
 还应看到 `npm:@cortexkit/aft-pi@0.49.0`、本地 `pi-gsd` 和 `npm:pi-web-access`。
@@ -159,76 +158,12 @@ pi
 
 AFT 的编辑先按文本匹配；匹配的旧内容已变化时会拒绝写入。跨文件重命名仍应先使用项目自己的重构工具或语言服务器，不要把 AFT 视为等价的 LSP rename。
 
+## 5. Session-tree subagent 任务
 
-## 5. 轻量 DAG：`workflow_dag`
-
-`workflow_dag` 适合小型的“检查 -> 实现 -> 复核”流程。普通单任务委派使用 `pi-gsd` 的 session-tree 分支。
-
-不需要记住 `workflow_dag` 的名字。直接说明步骤之间的依赖关系：
+`pi-gsd` 将任务放入新的 Pi session-tree 上下文。`push-task` 已注册为默认的 session-tree subagent 入口；直接要求“启动 subagent”即可，无需知道工具名。它不启动后台 worker，不注入 Superpowers 方法论，也不把任务过程藏在另一个 agent 运行时中。例子：
 
 ```text
-把这个任务拆成三个有依赖的步骤：先只读检查现状，再实现最小修改，最后只读复核 diff 和测试。每一步只返回结论、改动文件和验证结果。
-```
-
-模型会在适合时调用并组织这个流程。
-### 经典例子：检查、实现、复核
-
-```text
-把登录回调修复拆成一个有依赖的工作流：
-
-1. inspect：只读检查登录回调、现有测试和失败原因。
-2. implement：在 inspect 通过后实现修复，mode=write。
-3. review：在 implement 通过后只读审查 diff 和测试缺口。
-
-每个节点只返回结论、改动文件和验证结果，不要把无关日志带回主上下文。
-```
-
-模型会组织成类似这样的调用：
-
-```json
-{
-  "action": "run",
-  "workflowId": "auth-fix",
-  "nodes": [
-    {
-      "id": "inspect",
-      "prompt": "检查登录回调、现有测试和失败原因；不要修改文件。",
-      "mode": "readonly"
-    },
-    {
-      "id": "implement",
-      "prompt": "根据 inspect 的证据实现修复并运行窄测试。",
-      "dependsOn": ["inspect"],
-      "mode": "write"
-    },
-    {
-      "id": "review",
-      "prompt": "审查实现节点的 diff、测试和剩余风险；不要修改文件。",
-      "dependsOn": ["implement"],
-      "mode": "readonly"
-    }
-  ]
-}
-```
-
-规则：最多 8 个节点；没有未完成依赖的只读节点最多并行 3 个；写节点会单独执行；失败节点的下游会跳过；worker 使用独立、无扩展、无技能的 Pi 进程。状态会写入当前 session，可要求模型调用：
-
-```text
-请用 workflow_dag 查看 auth-fix 的 status。
-```
-
-清理状态：
-
-```text
-请用 workflow_dag clear 清理 auth-fix 的状态。
-```
-
-## 6. Session-tree 任务分支
-
-`pi-gsd` 将任务放入新的 Pi session-tree 上下文。它不启动后台 worker，不注入 Superpowers 方法论，也不把任务过程藏在另一个 agent 运行时中。例子：
-
-```text
-请用 push-task 建立一个只读 review 任务：检查实现、测试和最近提交，返回文件、行号和风险，不要修改文件。
+启动一个只读 review subagent：检查实现、测试和最近提交，返回文件、行号和风险，不要修改文件。
 ```
 
 需要角色和便宜模型时，直接在工具调用中提供：
@@ -277,9 +212,9 @@ AFT 的编辑先按文本匹配；匹配的旧内容已变化时会拒绝写入�
 /finish-task
 ```
 
-不需要执行时用 `/discard-task`；需要按队列连续执行时用 `/auto`。
+不需要执行时用 `/discard-task`；需要按队列连续执行时用 `/auto`。折叠视图只显示 queued、running 或 completed 状态、任务标题与真实耗时；使用 `Ctrl+O` 展开任务 prompt 或完整结果。
 
-## 7. Skills、外部 package 和其他能力
+## 6. Skills、外部 package 和其他能力
 
 ### Skills
 
@@ -341,7 +276,7 @@ RTK 压缩 AFT 的 `read`、`grep` 和其他通用工具结果。AFT 自己负�
 只保留失败原因、相关文件、下一步和验证命令；不要复制完整日志。
 ```
 
-## 8. 六个基础场景
+## 7. 六个基础场景
 
 ### 场景 A：普通修复
 
@@ -389,7 +324,7 @@ RTK 压缩 AFT 的 `read`、`grep` 和其他通用工具结果。AFT 自己负�
 然后使用 scientific-visualization 设计一张能表达主要结果的图，先给出数据和图形方案，不要编造缺失数据。
 ```
 
-## 9. 更新和排障
+## 8. 更新和排障
 
 更新仓库配置：
 

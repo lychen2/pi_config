@@ -7,7 +7,10 @@
   "keywords": ["pi-package", "pi", "tasks", "session-tree"],
   "files": ["index.ts", "src/index.ts", "src/text-content.ts", "README.md", "LICENSE"],
   "pi": { "extensions": ["./index.ts"] },
-  "scripts": { "typecheck": "tsc --noEmit" },
+  "scripts": {
+    "test": "tsc -p tsconfig.test.json && node --test tests/*.test.mjs",
+    "typecheck": "tsc --noEmit"
+  },
   "peerDependencies": { "@earendil-works/pi-coding-agent": "*" },
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "^0.82.0",

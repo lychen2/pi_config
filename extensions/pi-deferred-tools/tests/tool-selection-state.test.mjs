@@ -10,8 +10,8 @@ import {
 } from "../extensions/tool-selection-state.ts";
 
 test("uses portable IDs for local package paths", () => {
-  assert.equal(packageSourceId("../../pi_config/extensions/pi-workflow-dag"), "local:pi-workflow-dag");
-  assert.equal(packageSourceId("C:\\Users\\me\\pi-workflow-dag"), "local:pi-workflow-dag");
+  assert.equal(packageSourceId("../../pi_config/extensions/pi-gsd"), "local:pi-gsd");
+  assert.equal(packageSourceId("C:\\Users\\me\\pi-gsd"), "local:pi-gsd");
 });
 
 const group = {

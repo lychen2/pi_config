@@ -17,8 +17,7 @@
 | `pi-slim-skills` | 压缩模型可见的技能索引，降低提示词体积 | `/slim-skills remove <名称>`、`none`、`reset`、`inject <名称>` | `slim-skills-whitelist.json`；`SLIM_SKILLS_DISABLE=1` 禁用 |
 | `pi-todo-guard` | Todo 仍有未完成项目时，提醒代理继续当前任务 | 自动处理 | `PI_TODO_GUARD_DISABLE=1`；默认兼容 `todo` 工具 |
 | `pi-tool-rails` | 提供稳定的工具标签、结果面板、diff 和输入框样式；保留 AFT 原生 edit 路径/结果渲染，不注册 `find`/`ls` | 自动处理 | `PI_TOOL_RAILS_DISABLE_USER_FRAME=1` 仅关闭用户消息边框 |
-| `pi-workflow-dag` | 用依赖波次运行小型检查、实现、复核 worker | 直接描述需要拆开的依赖任务；工具默认可用 | session 中保存 `status` 和 `clear` 状态 |
-| `pi-gsd` | 本地维护的轻量 session-tree 任务分支；不携带上游 Superpowers skills、Updater 或重型提示 | `push-task`、`/start-task`、`/finish-task`、`/abort-task`、`/discard-task`、`/auto` | `role` 选择短 profile；`model` 可指定任务模型 |
+| `pi-gsd` | 本地维护的轻量 session-tree subagent；不携带上游 Superpowers skills、Updater 或重型提示 | 模型用 `push-task` 入队；用户用 `/start-task` 或 `/auto` 启动 | `/finish-task` 返回结果；`role` 选择短 profile；`model` 可指定任务模型 |
 
 
 ### 项目工具选择
@@ -34,16 +33,6 @@
 这个选择器只控制模型可调用的工具，不会卸载扩展 package、命令或事件处理器。要禁用整个 package 资源，在终端运行 `pi config -l`。新增或更新 package 后运行 `/reload`，选择器会重新发现工具归属。
 
 
-
-### `workflow_dag`
-
-这是轻量 DAG 工具，适合少量 `readonly` 检查节点、一个显式 `write` 实现节点和最后的复核节点。最多 8 个节点；只读节点最多 3 个并行；失败下游会跳过。普通独立任务使用 `pi-gsd` 的 session-tree 分支。
-
-```text
-把这个任务拆成三个有依赖的步骤：先检查现状，再实现修改，最后复核测试。每一步只返回结论、改动文件和验证结果。
-```
-
-工具的 `status` 和 `clear` 由模型调用；完整节点 JSON 例子见[完整使用手册](USAGE.zh-CN.md#5-轻量-dagworkflow_dag)。
 
 ## 独立扩展
 

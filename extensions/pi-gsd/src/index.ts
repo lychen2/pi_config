@@ -226,45 +226,29 @@ function buildTaskPrompt(prompt: string, role: string | undefined): string {
 export function toolPushTask(pi: PushTaskAPI): ToolDefinition {
   return defineTool({
     name: "push-task",
-    label: "Push Task",
+    label: "Subagent Task",
     description:
-      "Queue focused work for a fresh, user-controlled session-tree branch.",
+      "Queue a session-tree subagent for isolated work in a fresh-context branch. Use this when the user asks for a subagent. The task starts only through /start-task or /auto.",
     promptGuidelines: [
-      "Use push-task for independent work that benefits from a clean context or explicit user control.",
-      "Put all context and the concrete output request in prompt; the task waits for /start-task or /auto.",
-      "Use a role profile such as explore, map, analyze, research, synthesize, plan, roadmap, implement, execute, debug, migrate, integrate, review, audit, security, performance, test, verify, design, docs, or release; use model when a cheaper or specialized registered model is appropriate.",
+      "Use push-task when the user asks to delegate focused work to a subagent or when a task benefits from a clean context.",
+      "push-task queues the subagent; it does not start immediately. Never claim execution started until the user runs /start-task or /auto.",
+      "Put all context and the concrete output request in prompt; choose a role such as explore, analyze, implement, debug, review, test, or verify, and use model only when a cheaper or specialized registered model is appropriate.",
     ],
     parameters: pushTaskParameters,
     renderCall(args: PushTaskParams, theme, context) {
       const title = args.title.trim();
       const role = args.role?.trim();
       const model = args.model?.trim();
-      const metadata = [role && `role: ${role}`, model && `model: ${model}`]
+      const metadata = [role && `role ${role}`, model && `model ${model}`]
         .filter(Boolean)
         .join(" · ");
-      const header = theme.fg(
-        "toolTitle",
-        theme.bold(`push-task: ${title}${metadata ? ` (${metadata})` : ""}`),
-      );
+      const status = `${theme.fg("muted", "○")} ${theme.fg("toolTitle", theme.bold(title))}${theme.fg("dim", ` · queued${metadata ? ` · ${metadata}` : ""}`)}`;
+      if (!context.expanded) return new Text(status, 0, 0);
 
-      const promptLines = args.prompt.split("\n");
-      const maxLines = context.expanded ? promptLines.length : 7;
-      const displayLines = promptLines
-        .slice(0, maxLines)
-        .map((l) => theme.fg("dim", l.trimEnd() || " "));
-
-      if (!context.expanded && promptLines.length > maxLines) {
-        const totalLines = promptLines.length;
-        const moreLines = totalLines - maxLines;
-        displayLines.push(
-          theme.fg(
-            "muted",
-            `... (${moreLines} more lines, ${totalLines} total, ctrl+o to expand)`,
-          ),
-        );
-      }
-
-      return new Text([header, ...displayLines].join("\n"), 0, 0);
+      const prompt = args.prompt
+        .split("\n")
+        .map((line) => theme.fg("dim", line.trimEnd() || " "));
+      return new Text([status, ...prompt].join("\n"), 0, 0);
     },
     renderResult() {
       return new Text("", 0, 0);
@@ -433,17 +417,56 @@ export function cmdAuto(pi: AutoCommandAPI): CommandOptions {
   };
 }
 
-export const rendererTaskResult: MessageRenderer<{ title?: string }> = (
+type TaskResultDetails = {
+  title?: string;
+  durationMs?: number;
+};
+
+type TaskResultTheme = Pick<Theme, "bold" | "fg">;
+
+export function formatTaskDuration(durationMs: number | undefined): string | undefined {
+  if (typeof durationMs !== "number" || !Number.isFinite(durationMs) || durationMs < 0) return undefined;
+  if (durationMs < 1_000) return "<1s";
+  if (durationMs < 10_000) return `${(durationMs / 1_000).toFixed(1)}s`;
+
+  const totalSeconds = Math.round(durationMs / 1_000);
+  if (totalSeconds < 60) return `${totalSeconds}s`;
+  const totalMinutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (totalMinutes < 60) return `${totalMinutes}m ${String(seconds).padStart(2, "0")}s`;
+  const hours = Math.floor(totalMinutes / 60);
+  return `${hours}h ${String(totalMinutes % 60).padStart(2, "0")}m`;
+}
+
+export function taskResultDisplay(
+  details: TaskResultDetails | undefined,
+  body: string,
+  expanded: boolean,
+  theme: TaskResultTheme,
+): string {
+  const title = taskTitle(details?.title);
+  const duration = formatTaskDuration(details?.durationMs);
+  const header = [
+    theme.fg("success", "✓"),
+    theme.fg("customMessageLabel", theme.bold(`🧵 ${title}`)),
+    theme.fg("dim", `· completed${duration ? ` · ${duration}` : ""}`),
+  ].join(" ");
+  return expanded && body ? `${header}\n${body}` : header;
+}
+
+export const rendererTaskResult: MessageRenderer<TaskResultDetails> = (
   message,
-  _options,
+  options,
   theme,
 ): Box => {
-  const label = message.details?.title
-    ? theme.fg("customMessageLabel", `${message.details.title} result:`)
-    : theme.fg("customMessageLabel", "result:");
-  const text = renderTextContent(message.content);
-  const box = new Box(1, 1, (t: string) => theme.bg("customMessageBg", t));
-  box.addChild(new Text(`${label}\n${text}`, 0, 0));
+  const text = taskResultDisplay(
+    message.details,
+    renderTextContent(message.content),
+    options.expanded,
+    theme,
+  );
+  const box = new Box(1, 1, (value: string) => theme.bg("customMessageBg", value));
+  box.addChild(new Text(text, 0, 0));
   return box;
 };
 
@@ -458,7 +481,7 @@ export function updateTaskStatus(
   if (pending) {
     setStatus(
       "task",
-      `${prefix}${theme.fg("dim", `pending task: ${taskTitle(pending.data.title)}`)}`,
+      `${prefix}${theme.fg("muted", "○")} ${theme.fg("dim", `subagent ${taskTitle(pending.data.title)} · queued`)}`,
     );
     return;
   }
@@ -467,12 +490,30 @@ export function updateTaskStatus(
   if (active) {
     setStatus(
       "task",
-      `${prefix}${theme.fg("dim", `current task: ${taskTitle(active.data.title)}`)}`,
+      `${prefix}${theme.fg("accent", "●")} ${theme.fg("dim", `subagent ${taskTitle(active.data.title)} · running`)}`,
     );
     return;
   }
 
   setStatus("task", undefined);
+}
+
+export function recordTaskSettled(
+  pi: Pick<ExtensionAPI, "appendEntry">,
+  session: ReadonlySessionLike,
+  endedAt = Date.now(),
+): void {
+  const taskStart = currentTask(session);
+  const assistant = findLastEntry(session, isAssistantMessageEntry);
+  if (typeof taskStart?.data.startedAt !== "number" || !assistant) return;
+
+  const latest = findLastEntry(session, isTaskSettledEntry);
+  if (latest?.data.taskStartId === taskStart.id && latest.data.assistantEntryId === assistant.id) return;
+  pi.appendEntry(TASK_SETTLED_ENTRY_TYPE, {
+    taskStartId: taskStart.id,
+    assistantEntryId: assistant.id,
+    endedAt,
+  } satisfies TaskSettledData);
 }
 
 type CommandOptions = Omit<RegisteredCommand, "name" | "sourceInfo">;
@@ -566,6 +607,7 @@ async function startTask(
   const startEntryData: TaskStartData = {
     title: taskTitle(activeTask.data.title),
     returnTo: departureLeafId,
+    startedAt: Date.now(),
   };
   if (previousModel) {
     startEntryData.previousModel = previousModel;
@@ -617,6 +659,10 @@ async function finishTask(
   const lastAssistantId = lastAssistant?.id;
 
   const title = taskTitle(taskStart.data.title);
+  const endedAt = taskSettledAt(ctx.sessionManager, taskStart) ?? Date.now();
+  const durationMs = typeof taskStart.data.startedAt === "number"
+    ? Math.max(0, endedAt - taskStart.data.startedAt)
+    : undefined;
 
   const result = await ctx.navigateTree(taskStart.data.returnTo, {
     summarize: false,
@@ -631,7 +677,7 @@ async function finishTask(
         // Content is filtered to only TextContent blocks (or original string)
         content: lastAssistantContent,
         display: true,
-        details: { title },
+        details: { title, ...(durationMs !== undefined ? { durationMs } : {}) },
       },
       { triggerTurn: true },
     );
@@ -810,6 +856,13 @@ function currentTask(session: ReadonlySessionLike): TaskStartEntry | null {
   return findLastEntry(session, isTaskStartEntry) ?? null;
 }
 
+function taskSettledAt(session: ReadonlySessionLike, taskStart: TaskStartEntry): number | undefined {
+  const settled = [...session.getBranch()]
+    .reverse()
+    .find((entry): entry is TaskSettledEntry => isTaskSettledEntry(entry) && entry.data.taskStartId === taskStart.id);
+  return settled?.data.endedAt;
+}
+
 function findLastEntry<T extends SessionEntry>(
   session: ReadonlySessionLike,
   predicate: (entry: SessionEntry) => entry is T,
@@ -887,7 +940,8 @@ function isTaskStartData(value: unknown): value is TaskStartData {
   if (
     !isRecord(value) ||
     typeof value.returnTo !== "string" ||
-    (value.title !== undefined && typeof value.title !== "string")
+    (value.title !== undefined && typeof value.title !== "string") ||
+    (value.startedAt !== undefined && (typeof value.startedAt !== "number" || !Number.isFinite(value.startedAt)))
   ) {
     return false;
   }
@@ -904,7 +958,30 @@ function isTaskStartData(value: unknown): value is TaskStartData {
 interface TaskStartData {
   title?: string;
   returnTo: string;
+  startedAt?: number;
   previousModel?: { provider: string; modelId: string };
+}
+
+function isTaskSettledEntry(entry: SessionEntry): entry is TaskSettledEntry {
+  return isCustomEntry(entry, TASK_SETTLED_ENTRY_TYPE, isTaskSettledData);
+}
+
+type TaskSettledEntry = CustomEntry<typeof TASK_SETTLED_ENTRY_TYPE, TaskSettledData>;
+
+const TASK_SETTLED_ENTRY_TYPE = "task-settled";
+
+interface TaskSettledData {
+  taskStartId: string;
+  assistantEntryId: string;
+  endedAt: number;
+}
+
+function isTaskSettledData(value: unknown): value is TaskSettledData {
+  return isRecord(value) &&
+    typeof value.taskStartId === "string" &&
+    typeof value.assistantEntryId === "string" &&
+    typeof value.endedAt === "number" &&
+    Number.isFinite(value.endedAt);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

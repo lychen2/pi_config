@@ -1,16 +1,16 @@
 # 工具目录与使用示例
 
-本页按当前 agent-facing `functions.*` 工具面统计 **35 个工具**。示例都可以直接复制到 Pi 的普通请求中；模型会根据目标选择工具，通常不需要用户手写 JSON 参数。
+本页按当前 agent-facing `functions.*` 工具面统计 **34 个工具**。示例都可以直接复制到 Pi 的普通请求中；模型会根据目标选择工具，通常不需要用户手写 JSON 参数。
 
 ## 先分清三个数量
 
 | 数字 | 含义 |
 | ---: | --- |
-| 35 | 本页逐项解释的当前 `functions.*` 工具接口。 |
-| 46 | `pi-tool-rails` 的显示 registry，包含兼容、可选和非当前 active 的名称；不是当前工具数量。 |
+| 34 | 本页逐项解释的当前 `functions.*` 工具接口。 |
+| 45 | `pi-tool-rails` 的显示 registry，包含兼容、可选和非当前 active 的名称；不是当前工具数量。 |
 | 项目实际工具数 | 会随 `pi list`、`/tools`、`--tools`、`--exclude-tools`、信任状态和已安装 package 变化；用 `/tools list` 或 `pi --help` 核对。 |
 
-`multi_tool_use.parallel` 是外层并行调用包装器，不计入下面 35 个 `functions.*` 条目。旧的 `load_tools`、`semantic_code` 以及 AFT 的 `aft_callgraph`、`aft_delete`、`aft_move`、`aft_refactor` 不属于本页当前工具面。`pi-deferred-tools` 也不负责延迟这些工具；它只是项目级开关面板，详见[使用手册](USAGE.zh-CN.md#2-工具默认启用与项目开关)。
+`multi_tool_use.parallel` 是外层并行调用包装器，不计入下面 34 个 `functions.*` 条目。旧的 `load_tools`、`semantic_code` 以及 AFT 的 `aft_callgraph`、`aft_delete`、`aft_move`、`aft_refactor` 不属于本页当前工具面。`pi-deferred-tools` 也不负责延迟这些工具；它只是项目级开关面板，详见[使用手册](USAGE.zh-CN.md#2-工具默认启用与项目开关)。
 
 ## 文件、搜索与执行（8）
 
@@ -25,16 +25,13 @@
 | `fffind` | 按路径和名称模糊查找文件 | `找出所有与 auth、session 或 token 相关的配置文件，排除 node_modules。` |
 | `preview_export` | 将 Markdown、LaTeX 或本地文件导出为 PDF、HTML 或 PNG | `把 docs/report.md 导出为 PDF，输出到 artifacts/report.pdf，并确认标题和图片都能渲染。` |
 
-## 提问、任务与工作流（4）
+## 提问与任务（3）
 
 | 工具 | 用途 | 使用示例 |
 | --- | --- | --- |
 | `ask_user_question` | 在存在真实决策分支时给出 2 到 4 个结构化选项 | `数据库迁移方案有多个互斥选择时，先用结构化问题询问我，并把推荐方案放第一项。` |
 | `todo` | 创建、更新、查询、删除或清空持久任务项 | `把这个任务拆成检查、实现、测试三个 Todo；每次只保留一个 in_progress。` |
 | `todowrite` | 一次性替换当前会话的完整 Todo 列表 | `用 todowrite 建立完整清单：核对配置、更新文档、运行检查；完成一项就立即标记。` |
-| `workflow_dag` | 执行最多 8 个有依赖的只读检查、写入实现和复核节点 | `把任务拆成 inspect → implement → review 三个有依赖节点，inspect 和 review 只读，最后返回每个节点的改动和验证结果。` |
-
-`todo` 适合主代理持续跟踪任务；`workflow_dag` 适合把隔离 worker 组织成依赖波次。两者不是同一个状态系统。
 
 ## Web、来源与内容提取（4）
 
@@ -63,9 +60,9 @@
 
 | 工具 | 用途 | 使用示例 |
 | --- | --- | --- |
-| `push-task` | 将任务放入 Pi session tree 的新上下文分支，等待用户启动；可选 `role` 和 `model` | `用 push-task 建立一个 role=explore、model=manager/gpt-5.6-luna 的只读 review 任务。` |
+| `push-task` | 将 subagent 放入 Pi session tree 的新上下文分支，等待用户启动；可选 `role` 和 `model` | `启动一个 role=explore、model=manager/gpt-5.6-luna 的只读 subagent，检查当前改动。` |
 
-使用 `/start-task` 启动分支，完成后用 `/finish-task` 将最后一条助手结果带回主分支；不需要执行时用 `/discard-task`。多个任务按顺序执行可使用 `/auto`。
+模型会把“启动 subagent”路由到 `push-task`。使用 `/start-task` 启动分支，完成后用 `/finish-task` 将最后一条助手结果带回主分支；不需要执行时用 `/discard-task`。多个任务按顺序执行可使用 `/auto`。
 
 ## 后台 shell 任务（4）
 
@@ -112,7 +109,7 @@ AST 改写前先用 `dryRun`，确认捕获范围、文件范围和测试命令�
 ```
 
 ```text
-用 workflow_dag 拆成 inspect、implement、review 三个有依赖节点；implement 完成后运行最窄测试，review 只读审查 diff。
+用 push-task 建立一个 role=review 的只读 subagent，审查当前 diff、最窄测试和剩余风险。
 ```
 
 ```text

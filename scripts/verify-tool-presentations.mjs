@@ -23,7 +23,6 @@ const EXPECTED_TOOL_NAMES = [
   "ask_user_question",
   "todo",
   "todowrite",
-  "workflow_dag",
   "web_search",
   "source_check",
   "fetch_content",

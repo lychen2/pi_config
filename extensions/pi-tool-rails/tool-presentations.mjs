@@ -17,7 +17,6 @@ export const TOOL_PRESENTATIONS = Object.freeze({
 
   todo: { label: "tasks", emoji: "📋" },
   todowrite: { label: "tasks", emoji: "✅" },
-  workflow_dag: { label: "workflow", emoji: "🔀" },
 
   web_search: { label: "web", emoji: "🌐" },
   source_check: { label: "verify", emoji: "✅" },
