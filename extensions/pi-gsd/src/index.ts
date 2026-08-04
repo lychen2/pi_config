@@ -341,6 +341,20 @@ export function cmdAbortTask(pi: TaskCommandAPI): CommandOptions {
 export function cmdAuto(pi: AutoCommandAPI): CommandOptions {
   let running = false;
   let stopCurrentRun: (() => void) | null = null;
+  let taskSettledVersion = 0;
+  let resolveTaskSettled: (() => void) | null = null;
+
+  const wakeTaskSettledWaiter = () => {
+    const resolve = resolveTaskSettled;
+    resolveTaskSettled = null;
+    resolve?.();
+  };
+
+  pi.on("agent_settled", async (_event, ctx) => {
+    recordTaskSettled(pi, ctx.sessionManager);
+    taskSettledVersion++;
+    wakeTaskSettledWaiter();
+  });
 
   pi.on("session_shutdown", async () => {
     stopCurrentRun?.();
@@ -359,6 +373,7 @@ export function cmdAuto(pi: AutoCommandAPI): CommandOptions {
       let sawTaskActivity = false;
       stopCurrentRun = () => {
         stopped = true;
+        wakeTaskSettledWaiter();
       };
 
       const autoStatusOptions = {
@@ -388,7 +403,21 @@ export function cmdAuto(pi: AutoCommandAPI): CommandOptions {
             continue;
           }
 
-          if (currentTask(ctx.sessionManager)) {
+          const taskStart = currentTask(ctx.sessionManager);
+          if (taskStart) {
+            if (taskSettledAt(ctx.sessionManager, taskStart) === undefined) {
+              const observedVersion = taskSettledVersion;
+              if (taskSettledAt(ctx.sessionManager, taskStart) === undefined) {
+                await new Promise<void>((resolve) => {
+                  resolveTaskSettled = resolve;
+                  if (stopped || taskSettledVersion !== observedVersion) {
+                    wakeTaskSettledWaiter();
+                  }
+                });
+              }
+              continue;
+            }
+
             const result = await finishTask(pi, ctx, {
               statusPrefix: autoStatusOptions.prefix,
             });
@@ -521,7 +550,7 @@ type CommandOptions = Omit<RegisteredCommand, "name" | "sourceInfo">;
 type PushTaskAPI = Pick<ExtensionAPI, "appendEntry">;
 
 interface AutoCommandAPI extends TaskCommandAPI {
-  on(eventName: "session_shutdown", handler: () => unknown): void;
+  on: ExtensionAPI["on"];
 }
 
 type TaskStatusTheme = Pick<Theme, "fg">;

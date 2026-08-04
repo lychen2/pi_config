@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  cmdAuto,
   formatTaskDuration,
   recordTaskSettled,
   taskResultDisplay,
@@ -88,6 +89,98 @@ test("records the last settled assistant turn once for accurate elapsed time", (
 
   entries.push({ id: "settled", type: "custom", ...appended[0] });
   recordTaskSettled({ appendEntry() { assert.fail("duplicate settle entry"); } }, session(entries), 10_000);
+});
+
+test("auto waits for the task agent to settle before finishing the branch", async () => {
+  const root = {
+    id: "root",
+    parentId: null,
+    type: "message",
+    message: { role: "user", content: "parent prompt" },
+  };
+  const queued = {
+    id: "queued",
+    parentId: "root",
+    type: "custom",
+    customType: "task",
+    data: { title: "inspect", prompt: "inspect the repository" },
+  };
+  let branch = [root, queued];
+  let nextEntryId = 0;
+  const handlers = new Map();
+  const navigations = [];
+  const notifications = [];
+  const taskResults = [];
+
+  const appendEntry = (customType, data) => {
+    branch.push({
+      id: `custom-${++nextEntryId}`,
+      parentId: branch.at(-1)?.id ?? null,
+      type: "custom",
+      customType,
+      data,
+    });
+  };
+  const pi = {
+    appendEntry,
+    on(eventName, handler) {
+      const eventHandlers = handlers.get(eventName) ?? [];
+      eventHandlers.push(handler);
+      handlers.set(eventName, eventHandlers);
+    },
+    sendMessage(message) { taskResults.push(message); },
+    sendUserMessage(content) {
+      branch.push({
+        id: "task-prompt",
+        parentId: branch.at(-1)?.id ?? null,
+        type: "message",
+        message: { role: "user", content },
+      });
+    },
+    async setModel() { return true; },
+  };
+  const ctx = {
+    hasPendingMessages() { return false; },
+    hasUI: false,
+    model: undefined,
+    modelRegistry: {},
+    async navigateTree(targetId) {
+      navigations.push(targetId);
+      branch = targetId === "root" ? [root] : [root, queued];
+      return { cancelled: false };
+    },
+    sessionManager: {
+      getBranch() { return branch; },
+      getLeafId() { return branch.at(-1)?.id ?? null; },
+    },
+    ui: {
+      notify(message) { notifications.push(message); },
+      setStatus() {},
+      theme,
+    },
+    async waitForIdle() {},
+  };
+
+  const run = cmdAuto(pi).handler("", ctx);
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.deepEqual(navigations, ["root"]);
+  assert.equal(notifications.some((message) => message.startsWith("Task finished.")), false);
+
+  branch.push({
+    id: "assistant",
+    parentId: branch.at(-1)?.id ?? null,
+    type: "message",
+    message: { role: "assistant", content: "inspection complete" },
+  });
+  for (const handler of handlers.get("agent_settled") ?? []) {
+    await handler({}, ctx);
+  }
+  await run;
+
+  assert.deepEqual(navigations, ["root", "queued"]);
+  assert.equal(taskResults[0]?.content, "inspection complete");
+  assert.ok(notifications.includes("Task finished. Last response attached."));
 });
 
 test("shows explicit queued and running subagent states in the footer", () => {

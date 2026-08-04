@@ -8,7 +8,6 @@ import {
   toolPushTask,
   cmdStartTask,
   rendererTaskResult,
-  recordTaskSettled,
   setModelRegistry,
   updateTaskStatus,
 } from "./src/index.js";
@@ -40,9 +39,6 @@ export default function register(pi: ExtensionAPI): void {
     );
   });
 
-  pi.on("agent_settled", async (_event, ctx) => {
-    recordTaskSettled(pi, ctx.sessionManager);
-  });
 
   pi.on("session_tree", async (_event, ctx) => {
     updateTaskStatus(
