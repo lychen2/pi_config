@@ -18,6 +18,7 @@
 | `pi-todo-guard` | Todo 仍有未完成项目时，提醒代理继续当前任务 | 自动处理 | `PI_TODO_GUARD_DISABLE=1`；默认兼容 `todo` 工具 |
 | `pi-tool-rails` | 提供稳定的工具标签、结果面板、diff 和输入框样式；保留 AFT 原生 edit 路径/结果渲染，不注册 `find`/`ls` | 自动处理 | `PI_TOOL_RAILS_DISABLE_USER_FRAME=1` 仅关闭用户消息边框 |
 | `pi-workflow-dag` | 用依赖波次运行小型检查、实现、复核 worker | 直接描述需要拆开的依赖任务；工具默认可用 | session 中保存 `status` 和 `clear` 状态 |
+| `pi-gsd` | 本地维护的轻量 session-tree 任务分支；不携带上游 Superpowers skills、Updater 或重型提示 | `push-task`、`/start-task`、`/finish-task`、`/abort-task`、`/discard-task`、`/auto` | `role` 选择短 profile；`model` 可指定任务模型 |
 
 
 ### 项目工具选择
@@ -66,7 +67,6 @@
 | `@cortexkit/aft-pi` | 原生文件读写、检查点恢复、代码分析与索引搜索；Bash 接管提供 rewrite、压缩和后台任务；本地兼容层只调整模型可见的 `edit` schema | `read`、`write`、`edit`、`grep`、`bash`、`aft_outline`、`aft_zoom`、`aft_safety`；配置 `~/.config/cortexkit/aft.jsonc` |
 | `pi-slopchop` | 终端内代码审阅与注释 | `/slopchop` 或 `/diff` |
 | `pi-workspace-history` | 工作区级撤销与重做 | 在需要回退文件改动时调用其命令；先查看 `/hotkeys` 中实际注册键位 |
-| `pi-gsd` | 轻量 session-tree 任务分支；任务在新上下文中执行，再由用户带回主分支 | `push-task`、`/start-task`、`/finish-task`、`/auto` |
 | `@juicesharp/rpiv-todo` | 跨重载与压缩保存的任务列表 | 模型调用 `todo`；状态显示在 overlay |
 | `pi-rtk-optimizer` | RTK 命令改写和通用工具输出压缩；AFT 的 `read` 使用普通行号输出，长输出仍走 RTK 通用截断 | `/rtk verify`；需要安装 `rtk` binary |
 | `pi-cache-optimizer` | 稳定提示词和 provider cache，提高缓存命中 | `/cache-optimizer` 查看或调整状态 |
