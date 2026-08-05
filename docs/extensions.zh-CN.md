@@ -50,7 +50,6 @@
 | Package | 能力 | 常用入口 |
 | --- | --- | --- |
 | `pi-markdown-preview` | Markdown、LaTeX、浏览器和 PDF 预览 | `/preview`、`/preview-browser`、`/preview-pdf` |
-| `@ff-labs/pi-fff` | 模糊文件与内容搜索 | 工具 `fffind`、`ffgrep`；`/fff-mode`、`/fff-health`、`/fff-rescan` |
 | `@narumitw/pi-plan-mode` | 只读的计划协作模式 | `/plan` |
 | `@juicesharp/rpiv-ask-user-question` | 有选项、可结构化回答的问题组件 | 模型在需要澄清时调用 `ask_user_question` |
 | `@cortexkit/aft-pi` | 原生文件读写、检查点恢复、代码分析与索引搜索；Bash 接管提供 rewrite、压缩和后台任务；本地兼容层只调整模型可见的 `edit` schema | `read`、`write`、`edit`、`grep`、`bash`、`aft_outline`、`aft_zoom`、`aft_safety`；配置 `~/.config/cortexkit/aft.jsonc` |

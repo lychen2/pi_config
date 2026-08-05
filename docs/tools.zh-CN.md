@@ -1,18 +1,18 @@
 # 工具目录与使用示例
 
-本页按当前 agent-facing `functions.*` 工具面统计 **34 个工具**。示例都可以直接复制到 Pi 的普通请求中；模型会根据目标选择工具，通常不需要用户手写 JSON 参数。
+本页按当前 agent-facing `functions.*` 工具面统计 **32 个工具**。示例都可以直接复制到 Pi 的普通请求中；模型会根据目标选择工具，通常不需要用户手写 JSON 参数。
 
 ## 先分清三个数量
 
 | 数字 | 含义 |
 | ---: | --- |
-| 34 | 本页逐项解释的当前 `functions.*` 工具接口。 |
-| 45 | `pi-tool-rails` 的显示 registry，包含兼容、可选和非当前 active 的名称；不是当前工具数量。 |
+| 32 | 本页逐项解释的当前 `functions.*` 工具接口。 |
+| 43 | `pi-tool-rails` 的显示 registry，包含兼容、可选和非当前 active 的名称；不是当前工具数量。 |
 | 项目实际工具数 | 会随 `pi list`、`/tools`、`--tools`、`--exclude-tools`、信任状态和已安装 package 变化；用 `/tools list` 或 `pi --help` 核对。 |
 
-`multi_tool_use.parallel` 是外层并行调用包装器，不计入下面 34 个 `functions.*` 条目。旧的 `load_tools`、`semantic_code` 以及 AFT 的 `aft_callgraph`、`aft_delete`、`aft_move`、`aft_refactor` 不属于本页当前工具面。`pi-deferred-tools` 也不负责延迟这些工具；它只是项目级开关面板，详见[使用手册](USAGE.zh-CN.md#2-工具默认启用与项目开关)。
+`multi_tool_use.parallel` 是外层并行调用包装器，不计入下面 32 个 `functions.*` 条目。旧的 `load_tools`、`semantic_code` 以及 AFT 的 `aft_callgraph`、`aft_delete`、`aft_move`、`aft_refactor` 不属于本页当前工具面。`pi-deferred-tools` 也不负责延迟这些工具；它只是项目级开关面板，详见[使用手册](USAGE.zh-CN.md#2-工具默认启用与项目开关)。
 
-## 文件、搜索与执行（8）
+## 文件、搜索与执行（6）
 
 | 工具 | 用途 | 使用示例 |
 | --- | --- | --- |
@@ -21,8 +21,6 @@
 | `edit` | 以精确匹配、行范围或符号替换修改文件 | `把 config.ts 中的超时时间从 30 改为 60，只修改这个字段，并显示 diff。` |
 | `bash` | 执行 shell 命令，可按配置改写、压缩或后台运行 | `运行 npm test -- auth.spec.ts，等待完成；失败时保留首个失败堆栈。` |
 | `grep` | 在指定路径按正则搜索文本 | `在 src/ 中搜索 handleRequest 的所有引用，排除 test/，只返回文件和行号。` |
-| `ffgrep` | 使用模糊匹配查找相关内容 | `用模糊搜索找出项目里所有与 token refresh 失败相关的错误信息。` |
-| `fffind` | 按路径和名称模糊查找文件 | `找出所有与 auth、session 或 token 相关的配置文件，排除 node_modules。` |
 | `preview_export` | 将 Markdown、LaTeX 或本地文件导出为 PDF、HTML 或 PNG | `把 docs/report.md 导出为 PDF，输出到 artifacts/report.pdf，并确认标题和图片都能渲染。` |
 
 ## 提问与任务（3）

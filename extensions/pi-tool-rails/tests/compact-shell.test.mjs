@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { visibleWidth } from "@earendil-works/pi-tui";
 
 import {
+  backgroundLine,
   isStandaloneToolNameLine,
   labelLayout,
   labelLines,
@@ -20,8 +22,6 @@ const identityTheme = {
 test("uses compact tool text labels with emoji rendered separately", () => {
   assert.deepEqual(labelLines("web_search"), ["web"]);
   assert.deepEqual(labelLines("fetch_content"), ["fetch"]);
-  assert.equal(labelLayout("fffind", 0, "ff find").emoji, "🧭");
-  assert.equal(labelLayout("ffgrep", 0, "ffgrep").emoji, "🔍");
   assert.deepEqual(labelLines("undo_last_replace"), ["undo"]);
   assert.deepEqual(labelLines("todowrite"), ["tasks"]);
   assert.deepEqual(labelLines("replace"), ["replace"]);
@@ -72,7 +72,7 @@ test("selects semantic results instead of the final rendered line", () => {
     visibleToolContentLines(
       ["find config files", "src/config.ts", "src/config.test.ts", "Found 2 results.", "[AFT E0 W0 | D0 U0]"],
       false,
-      { toolName: "fffind" },
+      { toolName: "grep" },
     ),
     ["find config files", "Found 2 results."],
   );
@@ -112,6 +112,35 @@ test("preserves task-owned rows in collapsed mode", () => {
     "Task stored. Use /start-task or /auto to start it.",
   ];
   assert.deepEqual(visibleToolContentLines(rendered, false, { toolName: "push-task" }), rendered);
+});
+
+test("keeps tool text neutral while tinting the adjacent diff divider", () => {
+  const neutral = "\u001b[48;2;71;71;71m";
+  const red = "\u001b[48;2;82;57;61m";
+  const green = "\u001b[48;2;35;70;55m";
+  const theme = {
+    bg(_color, text) {
+      return `${neutral}${text}\u001b[49m`;
+    },
+    fg(_color, text) {
+      return text;
+    },
+    getBgAnsi() {
+      return neutral;
+    },
+  };
+  const rendered = backgroundLine(
+    ` edit │ ${red}208 │ - function backgroundLine(  \u001b[49m${red} \u001b[49m${green}│ \u001b[49m${green}234 │ + export function backgroundLine( \u001b[49m`,
+    80,
+    "toolSuccessBg",
+    theme,
+  );
+
+  assert.ok(rendered.startsWith(`${neutral} edit ${red}│ ${red}208`), "left divider must join the removed cell");
+  assert.ok(rendered.includes(`${red} ${neutral}${green}│ `), "red must switch directly to green at the center divider");
+  assert.ok(rendered.includes(`${green}│ ${neutral}${green}234`), "center divider and right line number must be green");
+  assert.ok(!rendered.startsWith(red), "removed tint must not color the tool label text");
+  assert.equal(visibleWidth(rendered), 80);
 });
 
 test("colors structured status and task identifiers", () => {

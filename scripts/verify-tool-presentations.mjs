@@ -18,8 +18,6 @@ const EXPECTED_TOOL_NAMES = [
   "preview_export",
   "undo_last_replace",
   "multi_tool_use.parallel",
-  "ffgrep",
-  "fffind",
   "ask_user_question",
   "todo",
   "todowrite",

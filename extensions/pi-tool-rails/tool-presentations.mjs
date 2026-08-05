@@ -11,8 +11,6 @@ export const TOOL_PRESENTATIONS = Object.freeze({
   undo_last_replace: { label: "undo", emoji: "↩️" },
   multi_tool_use_parallel: { label: "parallel", emoji: "⚡" },
 
-  ffgrep: { label: "ff grep", emoji: "🔍" },
-  fffind: { label: "ff find", emoji: "🧭" },
   ask_user_question: { label: "ask", emoji: "❓" },
 
   todo: { label: "tasks", emoji: "📋" },

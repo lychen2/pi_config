@@ -2,16 +2,20 @@ import { readFile } from "node:fs/promises";
 import { isAbsolute, resolve } from "node:path";
 import {
   ToolExecutionComponent,
+  getLanguageFromPath,
+  highlightCode,
   keyHint,
   type ExtensionAPI,
 } from "@earendil-works/pi-coding-agent";
 import { sliceByColumn, Text, truncateToWidth, visibleWidth, type Component } from "@earendil-works/pi-tui";
 
+type DiffColor = "toolDiffAdded" | "toolDiffContext" | "toolDiffRemoved";
 type Theme = {
   fg(
-    color: "dim" | "error" | "muted" | "success" | "toolDiffAdded" | "toolDiffRemoved" | "toolDiffContext" | "toolOutput" | "warning",
+    color: "dim" | "error" | "muted" | "success" | DiffColor | "toolOutput" | "warning",
     text: string,
   ): string;
+  getFgAnsi?(color: DiffColor): string;
 };
 type ResultOptions = { expanded?: boolean; isPartial?: boolean; toolName?: string };
 type ResultContext = { isError?: boolean; lastComponent?: unknown; [key: string]: unknown };
@@ -30,6 +34,7 @@ type ResultPatch = {
 };
 type RecordLike = Record<string, unknown>;
 type DiffKind = "add" | "context" | "meta" | "remove";
+type CodeLineHighlighter = (line: string) => string;
 type ReplaceDiffEntry = {
   kind: DiffKind;
   content: string;
@@ -54,6 +59,11 @@ const PREVIEW_LINES = 5;
 const REPLACE_PREVIEW_ROWS = 10;
 const SPLIT_SEPARATOR = " │ ";
 const MIN_SPLIT_WIDTH = 58;
+const DIFF_BACKGROUND_INTENSITY = 0.32;
+const TRUECOLOR_FOREGROUND = /^\x1b\[38;2;(\d+);(\d+);(\d+)m$/;
+const INDEXED_FOREGROUND = /^\x1b\[38;5;\d+m$/;
+const ANSI_SGR = /\x1b\[[0-?]*[ -/]*m/g;
+const DIFF_BACKGROUND = /\x1b\[48;(?:2;\d+;\d+;\d+|5;(?:22|52))m/;
 
 function record(value: unknown): RecordLike {
   return value && typeof value === "object" && !Array.isArray(value) ? value as RecordLike : {};
@@ -71,6 +81,42 @@ function outputLines(result: unknown): string[] {
     .replace(/\r/g, "")
     .trimEnd();
   return text ? text.split("\n") : [];
+}
+
+function sourcePathFromContext(context: ResultContext): string | undefined {
+  const args = record(context.args);
+  for (const key of ["path", "filePath", "file_path"]) {
+    const value = args[key];
+    if (typeof value === "string" && value.trim()) return value.replace(/^@/, "").trim();
+  }
+  return undefined;
+}
+
+function createCodeLineHighlighter(sourcePath: string | undefined): CodeLineHighlighter {
+  if (!sourcePath) return (line) => line.replace(ANSI_ESCAPE, "");
+
+  let language: string | undefined;
+  try {
+    language = getLanguageFromPath(sourcePath);
+  } catch {
+    return (line) => line.replace(ANSI_ESCAPE, "");
+  }
+  if (!language) return (line) => line.replace(ANSI_ESCAPE, "");
+
+  const cache = new Map<string, string>();
+  return (line) => {
+    const source = line.replace(ANSI_ESCAPE, "");
+    const cached = cache.get(source);
+    if (cached !== undefined) return cached;
+    try {
+      const highlighted = highlightCode(source, language)[0] ?? source;
+      cache.set(source, highlighted);
+      return highlighted;
+    } catch {
+      cache.set(source, source);
+      return source;
+    }
+  };
 }
 
 function reusableText(context: ResultContext, content: string): Text {
@@ -621,28 +667,72 @@ function wrapCellContent(
   return lines;
 }
 
+function diffColor(kind: DiffKind): DiffColor {
+  return kind === "add"
+    ? "toolDiffAdded"
+    : kind === "remove"
+      ? "toolDiffRemoved"
+      : "toolDiffContext";
+}
+
+function applyDiffBackground(kind: DiffKind, line: string, theme: Theme): string {
+  if (kind !== "add" && kind !== "remove") return line;
+
+  const foreground = theme.getFgAnsi?.(diffColor(kind));
+  const truecolor = foreground?.match(TRUECOLOR_FOREGROUND);
+  const background = truecolor
+    ? `\x1b[48;2;${truecolor.slice(1)
+      .map((channel) => Math.round(Number(channel) * DIFF_BACKGROUND_INTENSITY))
+      .join(";")}m`
+    : foreground && INDEXED_FOREGROUND.test(foreground)
+      ? kind === "add" ? "\x1b[48;5;22m" : "\x1b[48;5;52m"
+      : undefined;
+  if (!background) return line;
+
+  const coloredLine = line.replace(
+    ANSI_SGR,
+    (sequence) => sequence === "\x1b[49m" ? background : `${sequence}${background}`,
+  );
+  return `${background}${coloredLine}\x1b[49m`;
+}
+
+function firstDiffBackground(line: string): string | undefined {
+  return line.match(DIFF_BACKGROUND)?.[0];
+}
+
+function tintSeparatorPart(text: string, background: string | undefined): string {
+  if (!background) return text;
+  const coloredText = text.replace(ANSI_SGR, (sequence) => `${sequence}${background}`);
+  return `${background}${coloredText}\x1b[49m`;
+}
+
+function splitRowSeparator(left: string, right: string, theme: Theme): string {
+  const leftGap = tintSeparatorPart(theme.fg("dim", " "), firstDiffBackground(left));
+  const rightBoundary = tintSeparatorPart(theme.fg("dim", "│ "), firstDiffBackground(right));
+  return `${leftGap}${rightBoundary}`;
+}
+
 function formatDiffEntryLines(
   entry: ReplaceDiffEntry | undefined,
   side: "left" | "right",
   width: number,
   numberWidth: number,
   theme: Theme,
+  highlightLine: CodeLineHighlighter,
 ): string[] {
   const number = side === "left" ? entry?.oldLineNumber : entry?.newLineNumber;
-  const prefix = `${theme.fg("muted", formatLineNumber(number, numberWidth))} ${theme.fg("dim", "│")} `;
+  const color = entry ? diffColor(entry.kind) : "toolDiffContext";
+  const numberColor = entry?.kind === "add" || entry?.kind === "remove" ? color : "muted";
+  const prefix = `${theme.fg(numberColor, formatLineNumber(number, numberWidth))} ${theme.fg("dim", "│")} `;
   if (!entry) return [fitCell(prefix, width)];
 
   const code = entry.content.replace(/\t/g, "    ");
   const indentation = code.match(/^\s*/)?.[0] ?? "";
   const continuationPrefix = `${" ".repeat(numberWidth)} ${theme.fg("dim", "│")} ${" ".repeat(2 + visibleWidth(indentation))}`;
   const marker = entry.kind === "add" ? "+" : entry.kind === "remove" ? "-" : " ";
-  const color = entry.kind === "add"
-    ? "toolDiffAdded"
-    : entry.kind === "remove"
-      ? "toolDiffRemoved"
-      : "toolDiffContext";
   const firstPrefix = `${prefix}${theme.fg(color, marker)} `;
-  return wrapCellContent(firstPrefix, continuationPrefix, theme.fg(color, code), width);
+  return wrapCellContent(firstPrefix, continuationPrefix, highlightLine(code), width)
+    .map((line) => applyDiffBackground(entry.kind, line, theme));
 }
 
 function formatMetaCellLines(text: string, width: number, numberWidth: number, theme: Theme): string[] {
@@ -662,14 +752,50 @@ function headerCell(label: "old" | "new", width: number, numberWidth: number, th
   return fitCell(prefix, width);
 }
 
-function diffSummary(width: number, additions: number, removals: number, mode: "split" | "unified", theme: Theme): string {
+function changeRatioBar(additions: number, removals: number, width: number, theme: Theme): string | undefined {
+  const total = additions + removals;
+  if (total === 0 || width < 20) return undefined;
+
+  const slots = Math.max(8, Math.min(24, Math.floor(width / 12)));
+  let additionSlots = Math.max(0, Math.min(slots, Math.round((additions / total) * slots)));
+  if (additions > 0 && additionSlots === 0) additionSlots = 1;
+  if (removals > 0 && additionSlots >= slots) additionSlots = slots - 1;
+  const removalSlots = slots - additionSlots;
+  return [
+    theme.fg("dim", "["),
+    additionSlots > 0 ? theme.fg("toolDiffAdded", "━".repeat(additionSlots)) : "",
+    removalSlots > 0 ? theme.fg("toolDiffRemoved", "━".repeat(removalSlots)) : "",
+    theme.fg("dim", "]"),
+  ].join("");
+}
+
+function summaryWithChangeRatio(
+  summary: string,
+  additions: number,
+  removals: number,
+  width: number,
+  theme: Theme,
+): string {
+  const bar = changeRatioBar(additions, removals, width, theme);
+  if (!bar || visibleWidth(summary) + 1 + visibleWidth(bar) > width) return truncateToWidth(summary, width, "");
+  return `${summary} ${bar}`;
+}
+
+function diffSummary(
+  width: number,
+  additions: number,
+  removals: number,
+  mode: "split" | "unified",
+  theme: Theme,
+  showRatioBar: boolean,
+): string {
   const text = [
     theme.fg("toolOutput", "↳ diff"),
     theme.fg("toolDiffAdded", `+${additions}`),
     theme.fg("toolDiffRemoved", `-${removals}`),
     theme.fg("muted", mode),
   ].join(" ");
-  return fitCell(text, width);
+  return fitCell(showRatioBar ? summaryWithChangeRatio(text, additions, removals, width, theme) : text, width);
 }
 
 function visibleRows(rows: ReplaceDiffRow[], expanded: boolean): { rows: ReplaceDiffRow[]; remaining: number } {
@@ -683,6 +809,8 @@ function renderSplitDiff(
   theme: Theme,
   additions: number,
   removals: number,
+  highlightLine: CodeLineHighlighter,
+  showRatioBar: boolean,
 ): string[] {
   const separatorWidth = visibleWidth(SPLIT_SEPARATOR);
   const leftWidth = Math.floor((width - separatorWidth) / 2);
@@ -691,25 +819,25 @@ function renderSplitDiff(
   const separator = theme.fg("dim", SPLIT_SEPARATOR);
   const topSeparator = theme.fg("dim", "─┼─");
   const output = [
-    diffSummary(width, additions, removals, "split", theme),
+    diffSummary(width, additions, removals, "split", theme, showRatioBar),
     `${topBorderCell(leftWidth, numberWidth, theme)}${topSeparator}${topBorderCell(rightWidth, numberWidth, theme)}`,
     `${headerCell("old", leftWidth, numberWidth, theme)}${separator}${headerCell("new", rightWidth, numberWidth, theme)}`,
   ];
 
-  const emptyLeft = formatDiffEntryLines(undefined, "left", leftWidth, numberWidth, theme)[0]!;
-  const emptyRight = formatDiffEntryLines(undefined, "right", rightWidth, numberWidth, theme)[0]!;
+  const emptyLeft = formatDiffEntryLines(undefined, "left", leftWidth, numberWidth, theme, highlightLine)[0]!;
+  const emptyRight = formatDiffEntryLines(undefined, "right", rightWidth, numberWidth, theme, highlightLine)[0]!;
   for (const row of rows) {
     const leftLines = row.meta !== undefined
       ? formatMetaCellLines(row.meta, leftWidth, numberWidth, theme)
-      : formatDiffEntryLines(row.left, "left", leftWidth, numberWidth, theme);
+      : formatDiffEntryLines(row.left, "left", leftWidth, numberWidth, theme, highlightLine);
     const rightLines = row.meta !== undefined
       ? formatMetaCellLines(row.meta, rightWidth, numberWidth, theme)
-      : formatDiffEntryLines(row.right, "right", rightWidth, numberWidth, theme);
+      : formatDiffEntryLines(row.right, "right", rightWidth, numberWidth, theme, highlightLine);
     const height = Math.max(leftLines.length, rightLines.length);
     for (let index = 0; index < height; index++) {
-      output.push(
-        `${leftLines[index] ?? emptyLeft}${separator}${rightLines[index] ?? emptyRight}`,
-      );
+      const leftLine = leftLines[index] ?? emptyLeft;
+      const rightLine = rightLines[index] ?? emptyRight;
+      output.push(`${leftLine}${splitRowSeparator(leftLine, rightLine, theme)}${rightLine}`);
     }
   }
   return output;
@@ -721,12 +849,18 @@ function renderUnifiedDiff(
   theme: Theme,
   additions: number,
   removals: number,
+  highlightLine: CodeLineHighlighter,
+  showRatioBar: boolean,
 ): string[] {
   const numberWidth = lineNumberWidth(rows);
-  const gutter = (oldLine?: number, newLine?: number) =>
-    `${theme.fg("muted", formatLineNumber(oldLine, numberWidth))} ${theme.fg("muted", formatLineNumber(newLine, numberWidth))} ${theme.fg("dim", "│")} `;
+  const gutter = (oldLine?: number, newLine?: number, kind?: DiffKind) => {
+    const color = kind ? diffColor(kind) : "toolDiffContext";
+    const oldColor = kind === "remove" ? color : "muted";
+    const newColor = kind === "add" ? color : "muted";
+    return `${theme.fg(oldColor, formatLineNumber(oldLine, numberWidth))} ${theme.fg(newColor, formatLineNumber(newLine, numberWidth))} ${theme.fg("dim", "│")} `;
+  };
   const output = [
-    diffSummary(width, additions, removals, "unified", theme),
+    diffSummary(width, additions, removals, "unified", theme, showRatioBar),
     fitCell(`${theme.fg("muted", "old".padEnd(numberWidth))} ${theme.fg("muted", "new".padEnd(numberWidth))} ${theme.fg("dim", "│")}`, width),
   ];
   for (const row of rows) {
@@ -739,21 +873,17 @@ function renderUnifiedDiff(
       : [row.left, row.right].filter((entry): entry is ReplaceDiffEntry => entry !== undefined);
     for (const entry of entries) {
       const marker = entry.kind === "add" ? "+" : entry.kind === "remove" ? "-" : " ";
-      const color = entry.kind === "add"
-        ? "toolDiffAdded"
-        : entry.kind === "remove"
-          ? "toolDiffRemoved"
-          : "toolDiffContext";
+      const color = diffColor(entry.kind);
       const code = entry.content.replace(/\t/g, "    ");
       const indentation = code.match(/^\s*/)?.[0] ?? "";
-      const firstPrefix = `${gutter(entry.oldLineNumber, entry.newLineNumber)}${theme.fg(color, marker)} `;
+      const firstPrefix = `${gutter(entry.oldLineNumber, entry.newLineNumber, entry.kind)}${theme.fg(color, marker)} `;
       const continuationPrefix = `${gutter()}${" ".repeat(2 + visibleWidth(indentation))}`;
       output.push(...wrapCellContent(
         firstPrefix,
         continuationPrefix,
-        theme.fg(color, code),
+        highlightLine(code),
         width,
-      ));
+      ).map((line) => applyDiffBackground(entry.kind, line, theme)));
     }
   }
   return output;
@@ -763,17 +893,40 @@ class ReplaceDiffComponent implements Component {
   private entries: ReplaceDiffEntry[];
   private expanded: boolean;
   private theme: Theme;
+  private sourcePath: string | undefined;
+  private highlightLine: CodeLineHighlighter;
+  private showRatioBar: boolean;
 
-  constructor(entries: ReplaceDiffEntry[], expanded: boolean, theme: Theme) {
+  constructor(
+    entries: ReplaceDiffEntry[],
+    expanded: boolean,
+    theme: Theme,
+    sourcePath: string | undefined,
+    showRatioBar: boolean,
+  ) {
     this.entries = stripCommonIndent(entries);
     this.expanded = expanded;
     this.theme = theme;
+    this.sourcePath = sourcePath;
+    this.highlightLine = createCodeLineHighlighter(sourcePath);
+    this.showRatioBar = showRatioBar;
   }
 
-  update(entries: ReplaceDiffEntry[], expanded: boolean, theme: Theme): void {
+  update(
+    entries: ReplaceDiffEntry[],
+    expanded: boolean,
+    theme: Theme,
+    sourcePath: string | undefined,
+    showRatioBar: boolean,
+  ): void {
     this.entries = stripCommonIndent(entries);
     this.expanded = expanded;
     this.theme = theme;
+    this.showRatioBar = showRatioBar;
+    if (this.sourcePath !== sourcePath) {
+      this.sourcePath = sourcePath;
+      this.highlightLine = createCodeLineHighlighter(sourcePath);
+    }
   }
 
   render(width: number): string[] {
@@ -782,8 +935,8 @@ class ReplaceDiffComponent implements Component {
     const removals = this.entries.filter((entry) => entry.kind === "remove").length;
     const preview = visibleRows(buildReplaceRows(this.entries), this.expanded);
     const lines = safeWidth >= MIN_SPLIT_WIDTH
-      ? renderSplitDiff(preview.rows, safeWidth, this.theme, additions, removals)
-      : renderUnifiedDiff(preview.rows, safeWidth, this.theme, additions, removals);
+      ? renderSplitDiff(preview.rows, safeWidth, this.theme, additions, removals, this.highlightLine, this.showRatioBar)
+      : renderUnifiedDiff(preview.rows, safeWidth, this.theme, additions, removals, this.highlightLine, this.showRatioBar);
 
     if (preview.remaining > 0) {
       lines.push(fitCell(this.theme.fg(
@@ -802,13 +955,15 @@ function renderDiffComponent(
   options: ResultOptions,
   theme: Theme,
   context: ResultContext,
+  sourcePath: string | undefined,
+  showRatioBar: boolean,
 ): Component {
   const existing = context.lastComponent;
   if (existing instanceof ReplaceDiffComponent) {
-    existing.update(entries, options.expanded === true, theme);
+    existing.update(entries, options.expanded === true, theme, sourcePath, showRatioBar);
     return existing;
   }
-  return new ReplaceDiffComponent(entries, options.expanded === true, theme);
+  return new ReplaceDiffComponent(entries, options.expanded === true, theme, sourcePath, showRatioBar);
 }
 
 export function renderReplaceDiffResult(
@@ -841,7 +996,49 @@ export function renderReplaceDiffResult(
     ? details[REPLACE_FINAL_LINE_COUNT]
     : undefined;
   const entries = numberedEntries(rawEntries, storedNumbers, firstChangedLine, finalLineCount);
-  return renderDiffComponent(entries, options, theme, context);
+  return renderDiffComponent(entries, options, theme, context, sourcePathFromContext(context), false);
+}
+
+class MutationSummaryComponent implements Component {
+  private summary: string;
+  private additions: number;
+  private removals: number;
+  private theme: Theme;
+
+  constructor(summary: string, additions: number, removals: number, theme: Theme) {
+    this.summary = summary;
+    this.additions = additions;
+    this.removals = removals;
+    this.theme = theme;
+  }
+
+  update(summary: string, additions: number, removals: number, theme: Theme): void {
+    this.summary = summary;
+    this.additions = additions;
+    this.removals = removals;
+    this.theme = theme;
+  }
+
+  render(width: number): string[] {
+    return [summaryWithChangeRatio(this.summary, this.additions, this.removals, Math.max(0, width), this.theme)];
+  }
+
+  invalidate(): void {}
+}
+
+function renderMutationSummary(
+  summary: string,
+  additions: number,
+  removals: number,
+  theme: Theme,
+  context: ResultContext,
+): Component {
+  const existing = context.lastComponent;
+  if (existing instanceof MutationSummaryComponent) {
+    existing.update(summary, additions, removals, theme);
+    return existing;
+  }
+  return new MutationSummaryComponent(summary, additions, removals, theme);
 }
 
 function renderAftMutationResult(
@@ -884,13 +1081,17 @@ function renderAftMutationResult(
   const summary = additions !== undefined && deletions !== undefined
     ? `${theme.fg("toolDiffAdded", `+${additions}`)}${theme.fg("muted", "/")}${theme.fg("toolDiffRemoved", `-${deletions}`)}${editsApplied === undefined ? "" : theme.fg("muted", ` · ${editsApplied} edits`)}`
     : theme.fg("muted", "updated");
-  if (!options.expanded) return reusableText(context, summary);
+  if (!options.expanded) {
+    return additions !== undefined && deletions !== undefined
+      ? renderMutationSummary(summary, additions, deletions, theme, context)
+      : reusableText(context, summary);
+  }
 
   const diffText = typeof details.diff === "string" ? details.diff : "";
   const entries = diffText ? parseAftEditDiff(diffText) : [];
   const hasChanges = entries.some((entry) => entry.kind === "add" || entry.kind === "remove");
   return hasChanges
-    ? renderDiffComponent(entries, options, theme, context)
+    ? renderDiffComponent(entries, options, theme, context, sourcePathFromContext(context), true)
     : reusableText(context, [summary, ...lines].filter(Boolean).join("\n"));
 }
 
@@ -998,7 +1199,8 @@ function installResultBridge(): () => void {
 }
 
 export default function resultBridge(pi: ExtensionAPI): void {
-  let cleanup = () => {};
+  // Install immediately so extension reloads patch subsequent tool results too.
+  const cleanup = installResultBridge();
 
   pi.on("tool_result", async (event, ctx) => {
     if (event.toolName !== "replace" || event.isError) return;
@@ -1025,11 +1227,5 @@ export default function resultBridge(pi: ExtensionAPI): void {
     }
   });
 
-  pi.on("session_start", (_event, ctx) => {
-    if (ctx.mode === "tui") cleanup = installResultBridge();
-  });
-  pi.on("session_shutdown", () => {
-    cleanup();
-    cleanup = () => {};
-  });
+  pi.on("session_shutdown", cleanup);
 }

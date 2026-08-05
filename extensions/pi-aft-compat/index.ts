@@ -129,7 +129,7 @@ export default function (pi) {
     if (!active.includes(AFT_SEARCH)) return;
     pi.setActiveTools(active.filter((name) => name !== AFT_SEARCH));
     return {
-      systemPrompt: `${event.systemPrompt}\n\nAFT semantic search is unavailable because the current directory is not a Git worktree. Use grep or ffgrep for content search, and fffind for file discovery.`,
+      systemPrompt: `${event.systemPrompt}\n\nAFT semantic search is unavailable because the current directory is not a Git worktree. Use grep for content search and Pi's native file discovery tools when they are enabled.`,
     };
   });
 
@@ -137,7 +137,7 @@ export default function (pi) {
     if (event.toolName === AFT_SEARCH && !semanticSearchAllowed(ctx.cwd)) {
       return {
         block: true,
-        reason: "aft_search is disabled outside a Git worktree. Start Pi from the project root, or use grep, ffgrep, or fffind.",
+        reason: "aft_search is disabled outside a Git worktree. Start Pi from the project root, or use grep and Pi's native file discovery tools.",
       };
     }
   });

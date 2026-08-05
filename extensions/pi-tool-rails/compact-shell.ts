@@ -37,6 +37,7 @@ type ExecutionState = {
 };
 
 const ANSI_ESCAPE = /\x1B(?:\][^\x07\x1B]*(?:\x07|\x1B\\)|\[[0-?]*[ -/]*[@-~]|[@-Z\\-_])/g;
+const DIFF_BACKGROUND = /\x1b\[48;(?:2;\d+;\d+;\d+|5;(?:22|52))m/;
 const SHELL_PATCH = Symbol.for("pi.toolRails.labeledShellPatch");
 // Two cells keep the leading emoji from crowding the centered tool text.
 const LABEL_WIDTH = 12;
@@ -190,6 +191,15 @@ function keepBackground(text: string, bgOpen: string): string {
     .replace(/\x1b\[49m/g, bgOpen);
 }
 
+function tintToolDivider(text: string): string {
+  const match = text.match(DIFF_BACKGROUND);
+  const matchIndex = match?.index;
+  const dividerIndex = text.indexOf("│");
+  if (!match || matchIndex === undefined || dividerIndex < 0 || dividerIndex >= matchIndex) return text;
+  if (plain(text.slice(dividerIndex + 1, matchIndex)).trim() !== "") return text;
+  return `${text.slice(0, dividerIndex)}${match[0]}${text.slice(dividerIndex)}`;
+}
+
 function boldLabel(text: string, theme: ToolTheme, color: "error" | "toolTitle" | "warning"): string {
   // Avoid chalk.bold (often emits \x1b[0m). Use intensity only.
   return `\x1b[1m${theme.fg(color, text)}\x1b[22m`;
@@ -205,14 +215,14 @@ export function styleStructuredLine(line: string, theme: ToolTheme): string {
   return `${match[1]}${theme.fg(color, match[2])}${rest}`;
 }
 
-function backgroundLine(
+export function backgroundLine(
   line: string,
   width: number,
   background: "toolErrorBg" | "toolPendingBg" | "toolSuccessBg",
   theme: ToolTheme,
 ): string {
   const bgOpen = bgOpenCode(theme, background);
-  const clipped = truncateToWidth(line, width, "");
+  const clipped = tintToolDivider(truncateToWidth(line, width, ""));
   const padded = clipped + " ".repeat(Math.max(0, width - visibleWidth(clipped)));
   return theme.bg(background, keepBackground(padded, bgOpen));
 }

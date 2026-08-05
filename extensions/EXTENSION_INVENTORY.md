@@ -30,7 +30,6 @@ Ten package directories install from this repository.
 | Package | Installed version | Purpose |
 | --- | ---: | --- |
 | `pi-markdown-preview` | 0.10.0 | Markdown, LaTeX, browser, and PDF preview |
-| `@ff-labs/pi-fff` | 0.9.6 | Fuzzy file and content search |
 | `@narumitw/pi-plan-mode` | 0.31.0 | Read-only planning mode |
 | `@juicesharp/rpiv-ask-user-question` | 2.1.0 | Structured user questions |
 | `@cortexkit/aft-pi` | 0.49.0 | Native file editing, recovery checkpoints, code inspection, and indexed search |

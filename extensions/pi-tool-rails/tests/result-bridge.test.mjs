@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { initTheme, ToolExecutionComponent } from "@earendil-works/pi-coding-agent";
 import { visibleWidth } from "@earendil-works/pi-tui";
-import {
+import resultBridge, {
   compactResult,
   locateNewLineNumbers,
   parseAftEditDiff,
@@ -37,6 +38,24 @@ const result = {
     ].join("\n"),
   },
 };
+
+test("installs the result bridge during extension load for hot reloads", () => {
+  const original = ToolExecutionComponent.prototype.getResultRenderer;
+  const handlers = new Map();
+  resultBridge({
+    on(event, handler) {
+      handlers.set(event, handler);
+    },
+  });
+
+  assert.notEqual(ToolExecutionComponent.prototype.getResultRenderer, original);
+  assert.ok(handlers.has("tool_result"));
+  assert.ok(handlers.has("session_shutdown"));
+  assert.ok(!handlers.has("session_start"));
+
+  handlers.get("session_shutdown")();
+  assert.equal(ToolExecutionComponent.prototype.getResultRenderer, original);
+});
 
 test("normalizes background watcher JSONL into readable status rows", () => {
   assert.deepEqual(
@@ -84,7 +103,7 @@ test("renders AFT edit counts from structured diff metadata", () => {
     },
   };
   const collapsed = renderAftEditResult(aftResult, { expanded: false }, theme, {}).render(80);
-  assert.deepEqual(collapsed.map((line) => line.trimEnd()), ["+3/-2 · 2 edits"]);
+  assert.deepEqual(collapsed.map((line) => line.trimEnd()), ["+3/-2 · 2 edits [━━━━━━━━]"]);
   const expanded = renderAftEditResult(aftResult, { expanded: true }, theme, {}).render(80);
   assert.ok(expanded.some((line) => line.includes("Edited (+3/-2, 2 edits).")));
 
@@ -92,7 +111,7 @@ test("renders AFT edit counts from structured diff metadata", () => {
     content: [{ type: "text", text: "Edited (+16/-2, 2 edits)." }],
   };
   const textFallback = renderAftEditResult(textOnlyResult, { expanded: false }, theme, {}).render(80);
-  assert.deepEqual(textFallback.map((line) => line.trimEnd()), ["+16/-2 · 2 edits"]);
+  assert.deepEqual(textFallback.map((line) => line.trimEnd()), ["+16/-2 · 2 edits [━━━━━━━━]"]);
 });
 
 test("renders AFT writes with the same collapsed and expanded diff as edits", () => {
@@ -113,7 +132,7 @@ test("renders AFT writes with the same collapsed and expanded diff as edits", ()
   const collapsedEdit = renderAftEditResult(mutationResult, { expanded: false }, theme, {}).render(80);
   const collapsedWrite = renderAftWriteResult(mutationResult, { expanded: false }, theme, {}).render(80);
   assert.deepEqual(collapsedWrite, collapsedEdit);
-  assert.deepEqual(collapsedWrite.map((line) => line.trimEnd()), ["+2/-1"]);
+  assert.deepEqual(collapsedWrite.map((line) => line.trimEnd()), ["+2/-1 [━━━━━━━━]"]);
 
   const expandedEdit = renderAftEditBridgeResult(undefined, mutationResult, { expanded: true }, theme, {}).render(80);
   const expandedWrite = renderAftWriteBridgeResult(undefined, mutationResult, { expanded: true }, theme, {}).render(80);
@@ -178,7 +197,7 @@ test("renders expanded AFT edits as a de-indented split diff", () => {
     theme,
     {},
   ).render(80);
-  assert.deepEqual(collapsed.map((line) => line.trimEnd()), ["+2/-1 · 2 edits"]);
+  assert.deepEqual(collapsed.map((line) => line.trimEnd()), ["+2/-1 · 2 edits [━━━━━━━━]"]);
 
   const expanded = renderAftEditBridgeResult(
     nativeRenderer,
@@ -190,7 +209,7 @@ test("renders expanded AFT edits as a de-indented split diff", () => {
   const changedLine = expanded.find((line) => line.includes("- old") && line.includes("+ new"));
   const childLine = expanded.find((line) => line.includes("child"));
 
-  assert.equal(expanded[0].trim(), "↳ diff +2 -1 split");
+  assert.equal(expanded[0].trim(), "↳ diff +2 -1 split [━━━━━━━━]");
   assert.match(changedLine, /^\s*5 │ - old.*│\s*5 │ \+ new/);
   assert.ok(childLine.includes("+     child"), "one relative indentation level must remain");
   assert.ok(expanded.some((line) => /^\s*20 │/.test(line) && /│\s*21 │/.test(line)));
@@ -303,6 +322,61 @@ test("uses semantic foreground colors for diff rows", () => {
   assert.ok(colors.includes("toolDiffAdded"));
   assert.ok(colors.includes("toolDiffRemoved"));
   assert.ok(colors.includes("toolDiffContext"));
+});
+
+test("tints added and removed rows while coloring their line numbers", () => {
+  const foregrounds = [];
+  const semanticTheme = {
+    fg(color, text) {
+      foregrounds.push([color, text]);
+      return text;
+    },
+    getFgAnsi(color) {
+      return color === "toolDiffAdded"
+        ? "\u001b[38;2;100;200;150m"
+        : "\u001b[38;2;200;100;50m";
+    },
+  };
+  const component = renderReplaceDiffResult(result, { expanded: true }, semanticTheme, {});
+  const splitLines = component.render(80);
+  const split = splitLines.join("\n");
+  const unifiedLines = component.render(32);
+  const unified = unifiedLines.join("\n");
+  const removedBackground = "\u001b[48;2;64;32;16m";
+  const addedBackground = "\u001b[48;2;32;64;48m";
+  const pairedLine = splitLines.find((line) => line.includes("oldValue") && line.includes("newValue"));
+
+  assert.ok(foregrounds.some(([color, text]) => color === "toolDiffRemoved" && text.trim() === "42"));
+  assert.ok(foregrounds.some(([color, text]) => color === "toolDiffAdded" && text.trim() === "42"));
+  const assertBackgroundRegion = (rendered, background, content) => {
+    let start = rendered.indexOf(background);
+    while (start >= 0) {
+      const end = rendered.indexOf("\u001b[49m", start);
+      assert.ok(end > start, "expected a complete background region");
+      const region = rendered.slice(start, end);
+      if (region.includes("│") && region.includes(content)) return;
+      start = rendered.indexOf(background, end + 1);
+    }
+    assert.fail(`expected ${content} inside a complete background region`);
+  };
+  assert.ok(pairedLine?.startsWith(`${removedBackground} 42`), "removed tint must begin before the old line number");
+  assert.ok(
+    pairedLine?.includes(`${removedBackground} \u001b[49m${addedBackground}│ `),
+    "separator gap must stay red and switch directly to green at the center divider",
+  );
+  assert.ok(
+    pairedLine?.includes(`${addedBackground}│ \u001b[49m${addedBackground} 42`),
+    "center divider and new line number must use the added tint",
+  );
+  assert.ok(!pairedLine?.includes("\u001b[49m │ "), "split separator must not contain a neutral cell");
+  for (const rendered of [split, unified]) {
+    assertBackgroundRegion(rendered, removedBackground, "-");
+    assertBackgroundRegion(rendered, addedBackground, "+");
+  }
+  const removedUnifiedLine = unifiedLines.find((line) => line.startsWith(removedBackground) && line.includes("-"));
+  const addedUnifiedLine = unifiedLines.find((line) => line.startsWith(addedBackground) && line.includes("+"));
+  assert.ok(removedUnifiedLine, "unified removed row must start with the removed tint");
+  assert.ok(addedUnifiedLine, "unified added row must start with the added tint");
 });
 
 test("keeps empty split cells bordered and continuation indentation aligned", () => {
@@ -418,4 +492,45 @@ test("parses deletion entries whose hash is unavailable", () => {
     entries.map(({ kind, content }) => [kind, content]),
     [["remove", "const LABEL_WIDTH = 9;"], ["add", "const LABEL_WIDTH = 10;"]],
   );
+});
+
+
+test("renders a proportionate add/remove bar with semantic colors", () => {
+  const colors = [];
+  const coloredTheme = {
+    fg(color, text) {
+      colors.push([color, text]);
+      return text;
+    },
+  };
+  const result = {
+    content: [{ type: "text", text: "Edited (+1/-3)." }],
+    details: { additions: 1, deletions: 3 },
+  };
+  renderAftEditResult(result, { expanded: false }, coloredTheme, {}).render(80);
+
+  assert.ok(colors.some(([color, text]) => color === "toolDiffAdded" && text === "━━"));
+  assert.ok(colors.some(([color, text]) => color === "toolDiffRemoved" && text === "━━━━━━"));
+});
+
+test("syntax highlights expanded AFT write and edit code using the target path", () => {
+  initTheme("dark");
+  const result = {
+    content: [{ type: "text", text: "Edited (+1/-1)." }],
+    details: {
+      additions: 1,
+      deletions: 1,
+      diff: [
+        " 1 const before = true;",
+        "-2 const value = oldValue;",
+        "+2 const value = newValue;",
+      ].join("\n"),
+    },
+  };
+  const context = { args: { path: "src/demo.ts" } };
+  const editLines = renderAftEditResult(result, { expanded: true }, theme, context).render(80);
+  const writeLines = renderAftWriteResult(result, { expanded: true }, theme, context).render(80);
+
+  assert.ok(editLines.some((line) => line.includes("\u001b[")), "expected TypeScript syntax highlighting");
+  assert.deepEqual(writeLines, editLines);
 });

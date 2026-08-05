@@ -3,7 +3,7 @@
 Quiet TUI styling for Pi:
 
 - a fixed-width tool column with compact emoji labels; emoji sits immediately left of centered text
-- a verified registry of compact labels and purpose-specific emoji for 45 known compatibility and optional tool names
+- a verified registry of compact labels and purpose-specific emoji for 43 known compatibility and optional tool names
 - a theme `text` separator with full-block pending, success, and error backgrounds from the active Pi theme
 - reason-first built-in tool calls that show `goal → concrete target` on one line and a useful result on the next
 - collapsed generic third-party output limited to two semantic lines, while task tools keep their own bounded task rows; `Ctrl+O` still reveals complete renderer detail
@@ -18,13 +18,13 @@ Tool ownership is conservative. The extension overrides a built-in only while Pi
 
 ## Tool labels
 
-`tool-presentations.mjs` is the single runtime registry. It verifies 45 known names, including compatibility and optional entries; it does not claim that all 45 are active. Every text label stays within the rail's eight-column text budget; an unknown third-party tool uses `🧩` until it is added explicitly.
+`tool-presentations.mjs` is the single runtime registry. It verifies 43 known names, including compatibility and optional entries; it does not claim that all 43 are active. Every text label stays within the rail's eight-column text budget; an unknown third-party tool uses `🧩` until it is added explicitly.
 
 | Group | Display labels | Tool identifiers |
 | --- | --- | --- |
 | Files and shell | `📖 read`, `📝 write`, `✏️ edit`, `🔁 replace`, `🔎 grep`, `🗂️ find`, `📂 list`, `💻 shell` | `read`, `write`, `edit`, `replace`, `grep`, `find`, `ls`, `bash` |
 | Preview and orchestration | `🖼️ preview`, `↩️ undo`, `⚡ parallel` | `preview_export`, `undo_last_replace`, `multi_tool_use.parallel` |
-| Fast search and questions | `🔍 ff grep`, `🧭 ff find`, `❓ ask` | `ffgrep`, `fffind`, `ask_user_question` |
+| Search and questions | `🔎 grep`, `❓ ask` | `grep`, `ask_user_question` |
 | Tasks | `📋 tasks`, `✅ tasks` | `todo`, `todowrite` |
 | Web | `🌐 web`, `✅ verify`, `📥 fetch`, `📚 sources` | `web_search`, `source_check`, `fetch_content`, `get_search_content` |
 | Context | `🔭 recall`, `🧠 memory`, `🗒️ note`, `🔬 expand`, `🗜️ reduce` | `ctx_search`, `ctx_memory`, `ctx_note`, `ctx_expand`, `ctx_reduce` |
