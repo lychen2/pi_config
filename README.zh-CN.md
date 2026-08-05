@@ -4,6 +4,19 @@
 
 给 [Pi coding agent](https://github.com/badlogic/pi-mono) 的一套可迁移、可理解、可恢复的工作环境配置。
 
+## 界面预览
+
+<table>
+<tr>
+<td width="50%" align="center"><strong>主题化 Pi 工作区</strong><br><img src="docs/images/pi-tui-overview.png" alt="主题化 Pi 工作区" width="100%"></td>
+<td width="50%" align="center"><strong>工具 rail</strong><br><img src="docs/images/pi-tui-replace.png" alt="Pi 工具 rail" width="100%"></td>
+</tr>
+<tr>
+<td width="50%" align="center"><strong>结构化结果</strong><br><img src="docs/images/pi-tui-tools.png" alt="Pi 结构化结果" width="100%"></td>
+<td width="50%" align="center"><strong>会话布局</strong><br><img src="docs/images/pi-tui-session.png" alt="Pi 会话布局" width="100%"></td>
+</tr>
+</table>
+
 这个仓库把日常使用 Pi 所需的几类资源放在一起：本地扩展、可复用的技能、主题、公开设置，以及跨平台安装器。它适合作为一台新机器的起点，也适合从中挑选某个扩展或技能加入自己的 Pi 环境。
 
 ## 先了解 Pi
@@ -154,19 +167,6 @@ pi
 - [扩展目录](docs/extensions.zh-CN.md)：查看每个本地或第三方扩展的用途、命令和配置方式。
 - [技能目录](docs/skills.zh-CN.md)：按任务查找技能和调用示例。
 - [工具目录](docs/tools.zh-CN.md)：查看当前可用工具和示例。
-
-## 界面预览
-
-<table>
-<tr>
-<td width="50%" align="center"><strong>主题化 Pi 工作区</strong><br><img src="docs/images/pi-tui-overview.png" alt="主题化 Pi 工作区" width="100%"></td>
-<td width="50%" align="center"><strong>工具 rail</strong><br><img src="docs/images/pi-tui-replace.png" alt="Pi 工具 rail" width="100%"></td>
-</tr>
-<tr>
-<td width="50%" align="center"><strong>结构化结果</strong><br><img src="docs/images/pi-tui-tools.png" alt="Pi 结构化结果" width="100%"></td>
-<td width="50%" align="center"><strong>会话布局</strong><br><img src="docs/images/pi-tui-session.png" alt="Pi 会话布局" width="100%"></td>
-</tr>
-</table>
 
 ## 更新配置
 

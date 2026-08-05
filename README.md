@@ -4,6 +4,19 @@
 
 A portable, understandable, and recoverable workspace configuration for the [Pi coding agent](https://github.com/badlogic/pi-mono).
 
+## Preview
+
+<table>
+<tr>
+<td width="50%" align="center"><strong>Themed Pi workspace</strong><br><img src="docs/images/pi-tui-overview.png" alt="Themed Pi workspace" width="100%"></td>
+<td width="50%" align="center"><strong>Tool rails</strong><br><img src="docs/images/pi-tui-replace.png" alt="Pi tool rails" width="100%"></td>
+</tr>
+<tr>
+<td width="50%" align="center"><strong>Structured results</strong><br><img src="docs/images/pi-tui-tools.png" alt="Structured Pi results" width="100%"></td>
+<td width="50%" align="center"><strong>Session layout</strong><br><img src="docs/images/pi-tui-session.png" alt="Pi session layout" width="100%"></td>
+</tr>
+</table>
+
 This repository groups the resources used to build a practical Pi environment: local extensions, reusable skills, themes, public settings, and cross-platform installers. Use it as a starting point on a new machine, or reuse only the component that fits your workflow.
 
 ## Start with the Pi model
@@ -154,19 +167,6 @@ Use `push-task` proactively only for bounded independent or reviewable work when
 - [Extension catalog](docs/extensions.zh-CN.md): purpose, commands, and configuration for local and third-party extensions.
 - [Skill catalog](docs/skills.zh-CN.md): skills grouped by task with invocation examples.
 - [Tool catalog](docs/tools.zh-CN.md): current tools with usage examples.
-
-## Preview
-
-<table>
-<tr>
-<td width="50%" align="center"><strong>Themed Pi workspace</strong><br><img src="docs/images/pi-tui-overview.png" alt="Themed Pi workspace" width="100%"></td>
-<td width="50%" align="center"><strong>Tool rails</strong><br><img src="docs/images/pi-tui-replace.png" alt="Pi tool rails" width="100%"></td>
-</tr>
-<tr>
-<td width="50%" align="center"><strong>Structured results</strong><br><img src="docs/images/pi-tui-tools.png" alt="Structured Pi results" width="100%"></td>
-<td width="50%" align="center"><strong>Session layout</strong><br><img src="docs/images/pi-tui-session.png" alt="Pi session layout" width="100%"></td>
-</tr>
-</table>
 
 ## Update the configuration
 
