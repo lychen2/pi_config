@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, test } from "node:test";
 
-import { exclusiveEditSchema, rewriteProviderEditSchema } from "../index.ts";
+import aftCompat, { exclusiveEditSchema, rewriteProviderEditSchema } from "../index.ts";
 import { isGitWorktree } from "../normalize.mjs";
 
 const temporaryDirectories = [];
@@ -68,4 +68,39 @@ test("detects Git and non-Git workspaces", async () => {
 
   assert.equal(isGitWorktree(plain), false);
   assert.equal(isGitWorktree(repository), true);
+});
+
+test("keeps grep while removing Git-only AFT tools outside a repository", async () => {
+  const plain = await mkdtemp(join(tmpdir(), "pi-aft-plain-"));
+  temporaryDirectories.push(plain);
+  const previousSearchOverride = process.env.PI_AFT_SEARCH_ALLOW_NO_GIT;
+  delete process.env.PI_AFT_SEARCH_ALLOW_NO_GIT;
+
+  try {
+    const handlers = new Map();
+    let active = ["grep", "aft_search", "aft_conflicts", "aft_outline"];
+    aftCompat({
+      on(name, handler) {
+        handlers.set(name, handler);
+      },
+      getActiveTools() {
+        return active;
+      },
+      setActiveTools(next) {
+        active = next;
+      },
+    });
+
+    const start = await handlers.get("before_agent_start")({ systemPrompt: "base" }, { cwd: plain });
+    assert.deepEqual(active, ["grep", "aft_outline"]);
+    assert.match(start.systemPrompt, /aft_search, aft_conflicts/);
+
+    const grep = await handlers.get("tool_call")({ toolName: "grep" }, { cwd: plain });
+    const conflicts = await handlers.get("tool_call")({ toolName: "aft_conflicts" }, { cwd: plain });
+    assert.equal(grep, undefined);
+    assert.equal(conflicts.block, true);
+  } finally {
+    if (previousSearchOverride === undefined) delete process.env.PI_AFT_SEARCH_ALLOW_NO_GIT;
+    else process.env.PI_AFT_SEARCH_ALLOW_NO_GIT = previousSearchOverride;
+  }
 });

@@ -1,7 +1,7 @@
 {
   "name": "pi-aft-compat",
   "version": "0.2.0",
-  "description": "Exclusive AFT edit schemas and a no-Git semantic search guard",
+  "description": "Exclusive AFT edit schemas and no-Git AFT tool guards",
   "license": "MIT",
   "type": "module",
   "keywords": ["pi-package", "pi", "aft"],

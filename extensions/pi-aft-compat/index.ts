@@ -1,6 +1,7 @@
 import { isGitWorktree } from "./normalize.mjs";
 
 const AFT_SEARCH = "aft_search";
+const AFT_CONFLICTS = "aft_conflicts";
 const ALLOW_NO_GIT_SEARCH = "PI_AFT_SEARCH_ALLOW_NO_GIT";
 
 const integerOrString = (description) => ({
@@ -119,17 +120,23 @@ function semanticSearchAllowed(cwd) {
   return process.env[ALLOW_NO_GIT_SEARCH] === "1" || isGitWorktree(cwd);
 }
 
+function gitConflictInspectionAllowed(cwd) {
+  return isGitWorktree(cwd);
+}
+
 export default function (pi) {
   pi.on("before_provider_request", async (event) => rewriteProviderEditSchema(event.payload));
 
   pi.on("before_agent_start", async (event, ctx) => {
-    if (semanticSearchAllowed(ctx.cwd)) return;
-
     const active = pi.getActiveTools();
-    if (!active.includes(AFT_SEARCH)) return;
-    pi.setActiveTools(active.filter((name) => name !== AFT_SEARCH));
+    const unavailable = [];
+    if (active.includes(AFT_SEARCH) && !semanticSearchAllowed(ctx.cwd)) unavailable.push(AFT_SEARCH);
+    if (active.includes(AFT_CONFLICTS) && !gitConflictInspectionAllowed(ctx.cwd)) unavailable.push(AFT_CONFLICTS);
+    if (!unavailable.length) return;
+
+    pi.setActiveTools(active.filter((name) => !unavailable.includes(name)));
     return {
-      systemPrompt: `${event.systemPrompt}\n\nAFT semantic search is unavailable because the current directory is not a Git worktree. Use grep for content search and Pi's native file discovery tools when they are enabled.`,
+      systemPrompt: `${event.systemPrompt}\n\nUnavailable outside a Git worktree: ${unavailable.join(", ")}. Use grep for content search; it remains available without Git.`,
     };
   });
 
@@ -137,7 +144,13 @@ export default function (pi) {
     if (event.toolName === AFT_SEARCH && !semanticSearchAllowed(ctx.cwd)) {
       return {
         block: true,
-        reason: "aft_search is disabled outside a Git worktree. Start Pi from the project root, or use grep and Pi's native file discovery tools.",
+        reason: "aft_search is disabled outside a Git worktree. Start Pi from the project root, or use grep for content search.",
+      };
+    }
+    if (event.toolName === AFT_CONFLICTS && !gitConflictInspectionAllowed(ctx.cwd)) {
+      return {
+        block: true,
+        reason: "aft_conflicts is disabled outside a Git worktree. Start Pi from the repository root.",
       };
     }
   });
