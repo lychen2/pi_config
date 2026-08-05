@@ -32,8 +32,11 @@ test("registers push-task as the session-tree subagent entry point", () => {
 
   assert.equal(tool.label, "Subagent Task");
   assert.match(tool.description, /session-tree subagent/i);
-  assert.match(tool.description, /user asks for a subagent/i);
+  assert.match(tool.description, /bounded independent task/i);
+  assert.match(tool.description, /skip trivial or tightly coupled work/i);
   assert.ok(tool.promptGuidelines.some((line) => /does not start immediately/i.test(line)));
+  assert.ok(tool.promptGuidelines.some((line) => /do not paste the full conversation/i.test(line)));
+  assert.match(tool.parameters.properties.prompt.description, /minimal self-contained task brief/i);
 });
 
 test("renders a queued subagent as one collapsed line and reveals its prompt when expanded", () => {

@@ -228,11 +228,12 @@ export function toolPushTask(pi: PushTaskAPI): ToolDefinition {
     name: "push-task",
     label: "Subagent Task",
     description:
-      "Queue a session-tree subagent for isolated work in a fresh-context branch. Use this when the user asks for a subagent. The task starts only through /start-task or /auto.",
+      "Queue a session-tree subagent for isolated work in a fresh-context branch. Use when the user requests a subagent or a bounded independent task would materially benefit from clean context, parallel progress, or independent review. Skip trivial or tightly coupled work. The task starts only through /start-task or /auto.",
     promptGuidelines: [
-      "Use push-task when the user asks to delegate focused work to a subagent or when a task benefits from a clean context.",
+      "Use push-task proactively for a bounded independent subtask when fresh context, parallel progress, or independent review materially improves the result. Keep trivial, tightly coupled, and continuously context-dependent work in the parent agent.",
       "push-task queues the subagent; it does not start immediately. Never claim execution started until the user runs /start-task or /auto.",
-      "Put all context and the concrete output request in prompt; choose a role such as explore, analyze, implement, debug, review, test, or verify, and use model only when a cheaper or specialized registered model is appropriate.",
+      "Give the subagent only the context it needs: goal, scoped paths or current state, constraints, acceptance checks, and expected output. Do not paste the full conversation or unrelated exploration logs.",
+      "Keep each subagent within one ownership boundary. The parent agent owns integration, verification, and the final answer; use model only when a cheaper or specialized registered model is appropriate.",
     ],
     parameters: pushTaskParameters,
     renderCall(args: PushTaskParams, theme, context) {
@@ -1088,7 +1089,7 @@ const pushTaskParameters = Type.Object({
   }),
   prompt: Type.String({
     description:
-      "Full prompt for the task, including all context and instructions.",
+      "Minimal self-contained task brief: goal, scoped paths or current state, constraints, acceptance checks, and expected output.",
   }),
   role: Type.Optional(
     Type.String({

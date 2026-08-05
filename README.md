@@ -134,6 +134,8 @@ Use push-task for a read-only review of the changed files and tests. Set role to
 
 Run `/start-task` to enter the branch, `/finish-task` to bring the last result back, `/abort-task` to leave without a result, or `/auto` to process queued tasks sequentially. `role` selects a short task profile, not a permission system. Profiles cover `explore`, `map`, `analyze`, `research`, `synthesize`, `plan`, `roadmap`, `plan-check`, `implement`, `execute`, `debug`, `migrate`, `integrate`, `review`, `audit`, `security`, `performance`, `test`, `verify`, `design`, `docs`, and `release`; aliases such as `scout`, `builder`, `reviewer`, `tester`, and `verifier` are accepted. The selected profile is added only inside the new branch. Put the actual scope, restrictions, and acceptance checks in the prompt. Add `model` when the task suits a cheaper or specialized model.
 
+Use `push-task` proactively only for bounded independent or reviewable work when fresh context, parallel progress, or an independent perspective materially improves the result. Keep trivial, tightly coupled, and continuously context-dependent work in the parent agent. Pass a minimal task brief instead of the full conversation; the parent agent owns integration and final verification.
+
 ## Repository map
 
 | Path | Contents |

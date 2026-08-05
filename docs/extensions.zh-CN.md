@@ -17,7 +17,7 @@
 | `pi-slim-skills` | 压缩模型可见的技能索引，降低提示词体积 | `/slim-skills remove <名称>`、`none`、`reset`、`inject <名称>` | `slim-skills-whitelist.json`；`SLIM_SKILLS_DISABLE=1` 禁用 |
 | `pi-todo-guard` | Todo 仍有未完成项目时，提醒代理继续当前任务 | 自动处理 | `PI_TODO_GUARD_DISABLE=1`；默认兼容 `todo` 工具 |
 | `pi-tool-rails` | 提供稳定的工具标签、结果面板、diff 和输入框样式；保留 AFT 原生 edit 路径/结果渲染，不注册 `find`/`ls` | 自动处理 | `PI_TOOL_RAILS_DISABLE_USER_FRAME=1` 仅关闭用户消息边框 |
-| `pi-gsd` | 本地维护的轻量 session-tree subagent；不携带上游 Superpowers skills、Updater 或重型提示 | 模型用 `push-task` 入队；用户用 `/start-task` 或 `/auto` 启动 | `/finish-task` 返回结果；`role` 选择短 profile；`model` 可指定任务模型 |
+| `pi-gsd` | 本地维护的轻量 session-tree subagent；不携带上游 Superpowers skills、Updater 或重型提示 | 对边界清楚、可独立执行或审查且确有上下文收益的任务，模型用 `push-task` 入队；用户用 `/start-task` 或 `/auto` 启动 | 简单、强串行或持续依赖主会话的任务留在主 agent；`/finish-task` 返回结果；`role` 选择短 profile；`model` 可指定任务模型 |
 
 
 ### 项目工具选择

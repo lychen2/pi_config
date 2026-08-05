@@ -134,6 +134,8 @@ pi
 
 输入 `/start-task` 进入分支，`/finish-task` 把最后结果带回主分支，`/abort-task` 放弃当前分支但不带回结果，`/auto` 按顺序处理队列中的任务。`role` 会选择一段简短的任务 profile，但不是权限系统。profile 覆盖 `explore`、`map`、`analyze`、`research`、`synthesize`、`plan`、`roadmap`、`plan-check`、`implement`、`execute`、`debug`、`migrate`、`integrate`、`review`、`audit`、`security`、`performance`、`test`、`verify`、`design`、`docs` 和 `release`；也接受 `scout`、`builder`、`reviewer`、`tester`、`verifier` 等别名。profile 只会注入新分支，不会增加主会话常驻提示。实际范围、工具限制和验收条件仍要写进 prompt；任务适合更便宜或更专用的模型时再填写 `model`。
 
+只在子任务边界清楚、可以独立执行或审查，并且新上下文、并行推进或独立视角确实有收益时主动使用 `push-task`。简单任务、强串行任务和持续依赖主会话上下文的任务留在主 agent。传递最小任务简报，不要复制完整对话；主 agent 负责集成和最终验证。
+
 ## 仓库结构
 
 | 路径 | 内容 |

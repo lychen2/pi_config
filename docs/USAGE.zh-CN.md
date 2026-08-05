@@ -160,7 +160,7 @@ AFT 的编辑先按文本匹配；匹配的旧内容已变化时会拒绝写入�
 
 ## 5. Session-tree subagent 任务
 
-`pi-gsd` 将任务放入新的 Pi session-tree 上下文。`push-task` 已注册为默认的 session-tree subagent 入口；直接要求“启动 subagent”即可，无需知道工具名。它不启动后台 worker，不注入 Superpowers 方法论，也不把任务过程藏在另一个 agent 运行时中。例子：
+`pi-gsd` 将任务放入新的 Pi session-tree 上下文。`push-task` 已注册为默认的 session-tree subagent 入口；对于边界清楚、可独立执行或审查，且新上下文、并行推进或独立视角确实有收益的子任务，模型可以主动使用它。简单任务、强串行任务和持续依赖主会话上下文的任务留在主 agent。它不启动后台 worker，不注入 Superpowers 方法论，也不把任务过程藏在另一个 agent 运行时中。传给子任务最小的自包含简报，不要复制完整对话和无关探索日志。主 agent 负责集成和最终验证。例子：
 
 ```text
 启动一个只读 review subagent：检查实现、测试和最近提交，返回文件、行号和风险，不要修改文件。

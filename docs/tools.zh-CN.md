@@ -60,7 +60,7 @@
 | --- | --- | --- |
 | `push-task` | 将 subagent 放入 Pi session tree 的新上下文分支，等待用户启动；可选 `role` 和 `model` | `启动一个 role=explore、model=manager/gpt-5.6-luna 的只读 subagent，检查当前改动。` |
 
-模型会把“启动 subagent”路由到 `push-task`。使用 `/start-task` 启动分支，完成后用 `/finish-task` 将最后一条助手结果带回主分支；不需要执行时用 `/discard-task`。多个任务按顺序执行可使用 `/auto`。
+模型会在符合条件时主动把边界清楚、可独立执行或审查的子任务路由到 `push-task`；简单、强串行或持续依赖主会话上下文的任务不应委派。使用 `/start-task` 启动分支，完成后用 `/finish-task` 将最后一条助手结果带回主分支；不需要执行时用 `/discard-task`。多个任务按顺序执行可使用 `/auto`。
 
 ## 后台 shell 任务（4）
 

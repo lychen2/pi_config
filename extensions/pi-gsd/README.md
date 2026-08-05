@@ -15,6 +15,8 @@ This local version excludes the upstream skill bundle, skill updater, skill-refe
 
 `role` is an open label, not an enum or permission system. Known profiles cover exploration, mapping, analysis, research, synthesis, planning, implementation, debugging, migration, integration, review, security, performance, testing, verification, design, documentation, and release work. Common aliases such as `scout`, `builder`, `reviewer`, `tester`, and `verifier` are accepted. Put scope, restrictions, output format, and acceptance checks in the prompt. Use `model` when a task fits a cheaper or specialized model.
 
+Use `push-task` proactively when a bounded subtask is independently executable or reviewable and fresh context, parallel progress, or an independent perspective materially improves the result. Keep trivial, tightly coupled, and continuously context-dependent work in the parent agent. Pass a minimal self-contained brief instead of the full conversation; the parent remains responsible for integration and final verification.
+
 ## Example
 
 Ask Pi:
