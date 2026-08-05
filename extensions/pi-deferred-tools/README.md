@@ -16,6 +16,14 @@ Open the project tool selector in Pi:
 
 The first level lists extensions. Press `Space` to toggle every tool from an extension, or `Enter` to configure that extension's tools individually. Changes affect the current project's model tool set immediately; they do not unload the package, commands, or event handlers. The legacy `/deferred-tools` command opens the same interface, and `/tools list` shows the current selection without opening the TUI.
 
+Use `/tools aft` to choose a global AFT resource profile:
+
+- `balanced`: keeps indexed search and disables semantic search, call-graph storage, and all language-server routing.
+- `minimal`: also disables the background search index.
+- `full`: restores semantic search, call-graph storage, and language-server routing.
+
+Use `/tools aft balanced`, `/tools aft minimal`, `/tools aft full`, or `/tools aft status` in any mode. Profiles are stored in `~/.config/cortexkit/aft.jsonc` (or `$XDG_CONFIG_HOME/cortexkit/aft.jsonc`) and apply after every Pi session has restarted.
+
 Selections are stored in the trusted project's `.pi/tool-selector.json`:
 
 ```json

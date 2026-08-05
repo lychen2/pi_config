@@ -8,6 +8,15 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { Key, matchesKey, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 import {
+  aftConfigPath,
+  aftProfileLabel,
+  applyAftProfile,
+  currentAftProfile,
+  loadAftConfig,
+  parseAftProfile,
+  saveAftConfig,
+} from "./aft-profiles.js";
+import {
   EMPTY_TOOL_SELECTION,
   enabledToolCount,
   isToolDisabled,
@@ -141,6 +150,55 @@ function applyGroupSelection(
 
 function notify(ctx: ExtensionCommandContext, message: string, level: "info" | "warning" | "error" = "info"): void {
   if (ctx.hasUI) ctx.ui.notify(message, level);
+}
+
+async function configureAftProfile(args: string, ctx: ExtensionCommandContext): Promise<void> {
+  const argument = normalize(args);
+  const configPath = aftConfigPath();
+
+  let config;
+  try {
+    config = loadAftConfig(configPath);
+  } catch (error) {
+    notify(ctx, error instanceof Error ? error.message : String(error), "error");
+    return;
+  }
+
+  if (argument === "status") {
+    notify(ctx, `AFT profile: ${currentAftProfile(config)} (${configPath})`);
+    return;
+  }
+
+  let profile = parseAftProfile(argument);
+  if (!profile) {
+    if (argument) {
+      notify(ctx, "Usage: /tools aft [balanced|minimal|full|status]", "warning");
+      return;
+    }
+    if (ctx.mode !== "tui") {
+      notify(ctx, "Use /tools aft [balanced|minimal|full|status] outside TUI mode.", "warning");
+      return;
+    }
+
+    const choices = ["balanced", "minimal", "full"] as const;
+    const selected = await ctx.ui.select(
+      "AFT resource profile",
+      choices.map((choice) => aftProfileLabel(choice)),
+    );
+    if (!selected) return;
+    profile = choices.find((choice) => aftProfileLabel(choice) === selected);
+    if (!profile) return;
+  }
+
+  try {
+    saveAftConfig(applyAftProfile(config, profile), configPath);
+    notify(
+      ctx,
+      `AFT ${profile} profile saved. Restart every Pi session to stop existing language servers and apply the new profile.`,
+    );
+  } catch (error) {
+    notify(ctx, error instanceof Error ? error.message : String(error), "error");
+  }
 }
 
 function paddedLine(text: string, width: number): string {
@@ -378,6 +436,12 @@ export default function toolSelector(pi: ExtensionAPI): void {
   };
 
   const openSelector = async (args: string, ctx: ExtensionCommandContext): Promise<void> => {
+    const [command, ...rest] = normalize(args).split(/\s+/);
+    if (command === "aft") {
+      await configureAftProfile(rest.join(" "), ctx);
+      return;
+    }
+
     const path = projectConfigPath(ctx);
     if (!path) {
       notify(ctx, "Project tool selection requires a trusted project. Run /trust, restart Pi, then use /tools.", "warning");
@@ -398,7 +462,7 @@ export default function toolSelector(pi: ExtensionAPI): void {
       return;
     }
     if (args.trim()) {
-      notify(ctx, "Usage: /tools [list]", "warning");
+      notify(ctx, "Usage: /tools [list | aft [balanced|minimal|full|status]]", "warning");
       return;
     }
     if (ctx.mode !== "tui") {
@@ -439,11 +503,11 @@ export default function toolSelector(pi: ExtensionAPI): void {
   };
 
   pi.registerCommand("tools", {
-    description: "Configure project extension tools",
+    description: "Configure project tools or the global AFT resource profile",
     handler: openSelector,
   });
   pi.registerCommand("deferred-tools", {
-    description: "Open the project tool selector (legacy alias)",
+    description: "Open the project tool selector or configure AFT (legacy alias)",
     handler: openSelector,
   });
 
