@@ -21,6 +21,8 @@ const ICONS = {
   usage: cp(0xf0a9e),
 };
 const GIT_STATUS_TTL_MS = 3000;
+// Pi has no generic tertiary foreground slot; Matugen maps mdCode to tertiary.
+const TERTIARY_THEME_TOKEN = "mdCode" as const;
 
 interface GitStatus {
   dirty: boolean;
@@ -172,7 +174,7 @@ function installFooter(pi: ExtensionAPI, ctx: ExtensionContext): void {
           : modelText;
 
         const directorySegment = [
-          theme.fg("warning", ICONS.dir),
+          theme.fg(TERTIARY_THEME_TOKEN, ICONS.dir),
           theme.fg("muted", fmtCwd(ctx.sessionManager.getCwd(), home)),
         ].join(" ");
 

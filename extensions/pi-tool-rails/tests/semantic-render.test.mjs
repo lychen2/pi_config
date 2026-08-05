@@ -58,6 +58,30 @@ test("uses compact fallback goals and target text", () => {
   assert.deepEqual(lines(result), ["done"]);
 });
 
+test("colors non-empty grep summaries as success", () => {
+  const colorTheme = {
+    ...theme,
+    fg(color, text) { return `<${color}>${text}</${color}>`; },
+  };
+  const tool = decorateTool(sourceTool("grep"));
+  const args = { pattern: "TODO", path: "." };
+  const matches = tool.renderResult(
+    { content: [{ type: "text", text: "src/a.ts:1:TODO\nsrc/b.ts:2:TODO" }] },
+    { expanded: false, isPartial: false },
+    colorTheme,
+    { args, isError: false },
+  );
+  const empty = tool.renderResult(
+    { content: [] },
+    { expanded: false, isPartial: false },
+    colorTheme,
+    { args, isError: false },
+  );
+
+  assert.deepEqual(lines(matches), ["<success>2 matches</success>"]);
+  assert.deepEqual(lines(empty), ["<toolOutput>0 matches</toolOutput>"]);
+});
+
 test("adds reasoning to the schema and strips it before execution", async () => {
   const tool = decorateTool(sourceTool("read"));
   assert.ok(tool.parameters.required.includes("reasoning"));

@@ -14,7 +14,7 @@ import {
 import { Text, visibleWidth, type Component } from "@earendil-works/pi-tui";
 
 type Theme = {
-  fg(color: "accent" | "borderAccent" | "borderMuted" | "error" | "muted" | "text" | "toolOutput" | "toolTitle" | "warning", text: string): string;
+  fg(color: "accent" | "borderAccent" | "borderMuted" | "error" | "muted" | "success" | "text" | "toolOutput" | "toolTitle" | "warning", text: string): string;
   bg(color: "userMessageBg", text: string): string;
   bold(text: string): string;
 };
@@ -249,7 +249,8 @@ function resultSummary(
   if (name === "bash") return theme.fg("toolOutput", "done");
   if (name === "grep") {
     const count = lines.filter((line) => line.trim()).length;
-    return theme.fg("toolOutput", `${count} ${count === 1 ? "match" : "matches"}`);
+    const color = count > 0 ? "success" : "toolOutput";
+    return theme.fg(color, `${count} ${count === 1 ? "match" : "matches"}`);
   }
   if (name === "find" || name === "ls") {
     const count = lines.filter((line) => line.trim()).length;

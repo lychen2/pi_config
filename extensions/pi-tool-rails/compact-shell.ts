@@ -14,7 +14,7 @@ type ShellPrototype = {
 };
 type ToolTheme = {
   bg(color: "toolErrorBg" | "toolPendingBg" | "toolSuccessBg", text: string): string;
-  fg(color: "accent" | "error" | "muted" | "success" | "text" | "toolTitle" | "warning", text: string): string;
+  fg(color: "accent" | "error" | "muted" | "success" | "syntaxFunction" | "text" | "toolOutput" | "toolTitle" | "warning", text: string): string;
   getBgAnsi?(color: "toolErrorBg" | "toolPendingBg" | "toolSuccessBg"): string;
   bold(text: string): string;
 };
@@ -205,7 +205,24 @@ function boldLabel(text: string, theme: ToolTheme, color: "error" | "toolTitle" 
   return `\x1b[1m${theme.fg(color, text)}\x1b[22m`;
 }
 
-export function styleStructuredLine(line: string, theme: ToolTheme): string {
+const DELIMITED_SUMMARY_TOOLS = new Set(["aft_inspect"]);
+// Pi has no generic secondary foreground slot; Matugen maps syntaxFunction to secondary.
+const DELIMITED_SUMMARY_COLORS = ["success", "accent", "syntaxFunction", "toolOutput", "muted"] as const;
+
+function styleDelimitedSummary(line: string, theme: ToolTheme, selection: ContentSelection): string | undefined {
+  if (selection.isError || !selection.toolName || !DELIMITED_SUMMARY_TOOLS.has(selection.toolName)) return undefined;
+  const visible = plain(line);
+  const leading = visible.match(/^\s*/)?.[0] ?? "";
+  const segments = visible.slice(leading.length).split(" · ");
+  if (segments.length < 2 || segments.some((segment) => !segment)) return undefined;
+  return `${leading}${segments
+    .map((segment, index) => `${index === 0 ? "" : theme.fg("muted", " · ")}${theme.fg(DELIMITED_SUMMARY_COLORS[index % DELIMITED_SUMMARY_COLORS.length]!, segment)}`)
+    .join("")}`;
+}
+
+export function styleStructuredLine(line: string, theme: ToolTheme, selection: ContentSelection = {}): string {
+  const delimited = styleDelimitedSummary(line, theme, selection);
+  if (delimited) return delimited;
   if (line.includes("\x1b[")) return line;
   if (/^\s*Todos\b/.test(line)) return theme.fg("toolTitle", line);
   const match = line.match(/^(\s*)([✓◐○×•])(.*)$/);
@@ -331,7 +348,15 @@ function installLabeledShell(theme: ToolTheme): () => void {
       const content = index < visibleContentLines.length
         ? visibleContentLines[index]
         : "";
-      return backgroundLine(`${prefixFor(labels[index] ?? "", index)}${styleStructuredLine(content, state.theme)}`, width, background, state.theme);
+      return backgroundLine(
+        `${prefixFor(labels[index] ?? "", index)}${styleStructuredLine(content, state.theme, {
+          isError: execution.result?.isError,
+          toolName: name,
+        })}`,
+        width,
+        background,
+        state.theme,
+      );
     });
     const blank = backgroundLine("", width, background, state.theme);
 

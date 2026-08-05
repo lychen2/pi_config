@@ -74,6 +74,25 @@ test("normalizes background watcher JSONL into readable status rows", () => {
   );
 });
 
+test("colors non-empty grep summaries as success", () => {
+  initTheme("dark");
+  const colors = [];
+  const semanticTheme = {
+    fg(color, text) {
+      colors.push(color);
+      return text;
+    },
+  };
+  const matches = { content: [{ type: "text", text: "src/a.ts:1:TODO\nsrc/b.ts:2:TODO" }] };
+
+  compactResult("grep", matches, { expanded: false }, semanticTheme, {}).render(100);
+  assert.deepEqual(colors, ["success", "muted", "accent"]);
+
+  colors.length = 0;
+  compactResult("grep", { content: [] }, { expanded: false }, semanticTheme, {}).render(100);
+  assert.deepEqual(colors, ["muted"]);
+});
+
 test("renders normalized watcher details only when collapsed", () => {
   const watchResult = {
     content: [{
@@ -138,6 +157,33 @@ test("renders AFT writes with the same collapsed and expanded diff as edits", ()
   const expandedWrite = renderAftWriteBridgeResult(undefined, mutationResult, { expanded: true }, theme, {}).render(80);
   assert.deepEqual(expandedWrite, expandedEdit);
   assert.ok(expandedWrite.some((line) => line.includes("- old value") && line.includes("+ new value")));
+});
+
+test("colors each bash summary segment independently", () => {
+  const colors = [];
+  const semanticTheme = {
+    fg(color, text) {
+      colors.push(color);
+      return text;
+    },
+  };
+  const bashResult = {
+    content: [{ type: "text", text: "first output\nfinal output" }],
+    details: { exit_code: 0, duration_ms: 1250 },
+  };
+
+  compactResult("bash", bashResult, { expanded: false }, semanticTheme, {}).render(100);
+  assert.deepEqual(colors, ["success", "muted", "accent", "muted", "syntaxFunction", "muted", "toolOutput"]);
+
+  colors.length = 0;
+  compactResult(
+    "bash",
+    { content: [{ type: "text", text: "Error: missing config" }], details: { exit_code: 1 } },
+    { expanded: false },
+    semanticTheme,
+    { isError: true },
+  ).render(100);
+  assert.deepEqual(colors, ["error", "muted", "toolOutput"]);
 });
 
 test("summarizes bash status instead of showing arbitrary trailing output", () => {

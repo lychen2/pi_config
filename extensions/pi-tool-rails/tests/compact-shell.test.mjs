@@ -154,6 +154,22 @@ test("colors structured status and task identifiers", () => {
     "<warning>◐</warning> <accent>#adjust</accent> improve blur",
   );
   assert.equal(styleStructuredLine("Todos — 2 active", theme), "<toolTitle>Todos — 2 active</toolTitle>");
+  assert.equal(
+    styleStructuredLine(
+      "\u001b[37mtodos 0 · diagnostics 0 errors/0 warnings/0 info/0 hints · metrics 2\u001b[0m",
+      theme,
+      { toolName: "aft_inspect" },
+    ),
+    [
+      "<success>todos 0</success>",
+      "<muted> · </muted>",
+      "<accent>diagnostics 0 errors/0 warnings/0 info/0 hints</accent>",
+      "<muted> · </muted>",
+      "<syntaxFunction>metrics 2</syntaxFunction>",
+    ].join(""),
+  );
+  const coloredDiff = "\u001b[32m+2/-1 · 2 edits\u001b[0m";
+  assert.equal(styleStructuredLine(coloredDiff, theme, { toolName: "edit" }), coloredDiff);
   assert.equal(styleStructuredLine("plain result", identityTheme), "plain result");
 });
 

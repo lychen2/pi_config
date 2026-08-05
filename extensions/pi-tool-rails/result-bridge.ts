@@ -12,7 +12,7 @@ import { sliceByColumn, Text, truncateToWidth, visibleWidth, type Component } fr
 type DiffColor = "toolDiffAdded" | "toolDiffContext" | "toolDiffRemoved";
 type Theme = {
   fg(
-    color: "dim" | "error" | "muted" | "success" | DiffColor | "toolOutput" | "warning",
+    color: "accent" | "dim" | "error" | "muted" | "success" | "syntaxFunction" | DiffColor | "toolOutput" | "warning",
     text: string,
   ): string;
   getFgAnsi?(color: DiffColor): string;
@@ -123,6 +123,15 @@ function reusableText(context: ResultContext, content: string): Text {
   const text = context.lastComponent instanceof Text ? context.lastComponent : new Text("", 0, 0);
   text.setText(content);
   return text;
+}
+
+type SummaryColor = "accent" | "error" | "muted" | "success" | "syntaxFunction" | "toolOutput" | "warning";
+type SummarySegment = { color: SummaryColor; text: string };
+
+function styledSummary(theme: Theme, segments: SummarySegment[]): string {
+  return segments
+    .map((segment, index) => `${index === 0 ? "" : theme.fg("muted", " · ")}${theme.fg(segment.color, segment.text)}`)
+    .join("");
 }
 
 function preview(
@@ -238,26 +247,30 @@ function renderBashSummary(
   }
 
   if (context.isError) {
-    const status = theme.fg("error", exitCode === undefined ? "command failed" : `exit ${exitCode}`);
+    const status = exitCode === undefined ? "command failed" : `exit ${exitCode}`;
     const errorLine = (isBackgroundShell ? normalizedLines : bashLines).find((line) => /(?:error|failed|fatal|exception|denied|not found|invalid)/i.test(line))
       ?? (isBackgroundShell ? normalizedLines : bashLines).find((line) => line.trim());
-    const summary = errorLine ? `${status}${theme.fg("muted", ` · ${conciseLine(errorLine)}`)}` : status;
+    const summary = styledSummary(theme, [
+      { color: "error", text: status },
+      ...(errorLine ? [{ color: "toolOutput" as const, text: conciseLine(errorLine) }] : []),
+    ]);
     if (!options.expanded || bashLines.length === 0) return reusableText(context, summary);
     return reusableText(context, `${summary}\n${preview(bashLines, options, theme, context)}`);
   }
 
   const status = taskId && exitCode === undefined
-    ? theme.fg("success", `background task ${taskId} started`)
-    : theme.fg("success", "completed");
-  const metadata = [
-    exitCode === undefined ? undefined : `exit ${exitCode}`,
-    duration === undefined ? undefined : durationLabel(duration),
-    bashLines.length === 0 ? undefined : `${bashLines.length} output ${bashLines.length === 1 ? "line" : "lines"}`,
-    details.truncated === true ? "truncated" : undefined,
-  ].filter((value): value is string => Boolean(value));
-  const summary = metadata.length > 0
-    ? `${status}${theme.fg("muted", ` · ${metadata.join(" · ")}`)}`
-    : status;
+    ? `background task ${taskId} started`
+    : "completed";
+  const summary = styledSummary(theme, [
+    { color: "success", text: status },
+    ...(exitCode === undefined ? [] : [{ color: "accent" as const, text: `exit ${exitCode}` }]),
+    // Matugen maps Pi's syntaxFunction slot to its generated secondary color.
+    ...(duration === undefined ? [] : [{ color: "syntaxFunction" as const, text: durationLabel(duration) }]),
+    ...(bashLines.length === 0
+      ? []
+      : [{ color: "toolOutput" as const, text: `${bashLines.length} output ${bashLines.length === 1 ? "line" : "lines"}` }]),
+    ...(details.truncated === true ? [{ color: "error" as const, text: "truncated" }] : []),
+  ]);
   if (!options.expanded || bashLines.length === 0) {
     if (isBackgroundShell && normalizedLines.length > 0) {
       return reusableText(context, `${summary}\n${normalizedLines.map((line) => theme.fg("toolOutput", line)).join("\n")}`);
@@ -292,8 +305,12 @@ export function compactResult(
   const unit = name === "grep"
     ? (count === 1 ? "match" : "matches")
     : (count === 1 ? "result" : "results");
-  const hint = count > 0 ? ` · ${keyHint("app.tools.expand", "expand")}` : "";
-  return reusableText(context, theme.fg("muted", `${count} ${unit}${hint}`));
+  const segments: SummarySegment[] = [{
+    color: name === "grep" && count > 0 ? "success" : "muted",
+    text: `${count} ${unit}`,
+  }];
+  if (count > 0) segments.push({ color: "accent", text: keyHint("app.tools.expand", "expand") });
+  return reusableText(context, styledSummary(theme, segments));
 }
 
 export function parseHashlineReadOutput(lines: string[], startLine = 1): ReadDisplayEntry[] {
