@@ -664,25 +664,30 @@ async function installOptionalTools(choices) {
 
   if (choices.rtk) {
     installedAny = true;
-    if (isWindows) {
-      run(
-        "powershell.exe",
-        [
-          "-NoProfile",
-          "-ExecutionPolicy",
-          "Bypass",
-          "-File",
-          path.join(repoDir, "scripts", "install-rtk.ps1"),
-        ],
-      );
-    } else {
-      run(
-        "sh",
-        [
-          "-c",
-          "curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh",
-        ],
-      );
+    try {
+      if (isWindows) {
+        run(
+          "powershell.exe",
+          [
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            path.join(repoDir, "scripts", "install-rtk.ps1"),
+          ],
+        );
+      } else {
+        run(
+          "sh",
+          [
+            "-c",
+            "curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh",
+          ],
+        );
+      }
+    } catch (error) {
+      console.warn(`  RTK installation skipped: ${error.message}`);
+      console.warn("  Pi configuration is complete; install RTK manually after resolving the local script policy.");
     }
   }
 
