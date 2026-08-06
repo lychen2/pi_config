@@ -189,6 +189,11 @@ function Install-Prerequisites {
     }
 }
 
+function Expand-ZipArchive([string]$ArchivePath, [string]$DestinationPath) {
+    Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction Stop
+    [System.IO.Compression.ZipFile]::ExtractToDirectory($ArchivePath, $DestinationPath)
+}
+
 function Install-Pi {
     if (Get-Command pi.cmd -ErrorAction SilentlyContinue) {
         return
@@ -221,7 +226,7 @@ function Sync-Repository([string]$Destination) {
 
     try {
         Invoke-WebRequest -Uri $ArchiveUrl -OutFile $archive -UseBasicParsing
-        Expand-Archive -Path $archive -DestinationPath $expanded
+        Expand-ZipArchive -ArchivePath $archive -DestinationPath $expanded
         $source = Get-ChildItem -Path $expanded -Directory | Select-Object -First 1
         if (-not $source -or -not (Test-Path (Join-Path $source.FullName "install.mjs"))) {
             throw "The downloaded archive does not contain install.mjs."
