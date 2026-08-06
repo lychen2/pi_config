@@ -219,15 +219,15 @@ function Sync-Repository([string]$Destination) {
     $action = if (Test-Path $Destination) { "Refreshing" } else { "Downloading" }
     Write-Step "$action pi_config at $Destination"
 
-    $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("pi-config-" + [guid]::NewGuid())
+    # Keep archive extraction below Windows' legacy path-length limit for nested skills.
+    $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("pc-" + [guid]::NewGuid().ToString("N").Substring(0, 8))
     $archive = Join-Path $tempRoot "pi_config.zip"
-    $expanded = Join-Path $tempRoot "expanded"
     New-Item -ItemType Directory -Path $tempRoot | Out-Null
 
     try {
         Invoke-WebRequest -Uri $ArchiveUrl -OutFile $archive -UseBasicParsing
-        Expand-ZipArchive -ArchivePath $archive -DestinationPath $expanded
-        $source = Get-ChildItem -Path $expanded -Directory | Select-Object -First 1
+        Expand-ZipArchive -ArchivePath $archive -DestinationPath $tempRoot
+        $source = Get-ChildItem -Path $tempRoot -Directory | Select-Object -First 1
         if (-not $source -or -not (Test-Path (Join-Path $source.FullName "install.mjs"))) {
             throw "The downloaded archive does not contain install.mjs."
         }
