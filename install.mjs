@@ -651,6 +651,9 @@ async function installMagicContext(enabled) {
       "curl -fsSL https://raw.githubusercontent.com/cortexkit/magic-context/master/scripts/install.sh | bash",
     ]);
   }
+
+  // The upstream setup wizard registers the package but does not install it.
+  run(commandName("pi"), ["install", "npm:@cortexkit/pi-magic-context"]);
   await configureMagicContextThreshold();
 }
 
