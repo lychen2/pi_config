@@ -666,16 +666,7 @@ async function installOptionalTools(choices) {
     installedAny = true;
     try {
       if (isWindows) {
-        run(
-          "powershell.exe",
-          [
-            "-NoProfile",
-            "-ExecutionPolicy",
-            "Bypass",
-            "-File",
-            path.join(repoDir, "scripts", "install-rtk.ps1"),
-          ],
-        );
+        run(process.execPath, [path.join(repoDir, "scripts", "install-rtk.mjs")]);
       } else {
         run(
           "sh",
