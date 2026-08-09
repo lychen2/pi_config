@@ -14,8 +14,6 @@ const DEEPSEEK_V4_FLASH_PROMPT = `
 For analytical, mathematical, and technical questions: read every stated condition carefully, derive the result before answering, check edge cases, and validate the conclusion.
 `;
 
-let enabled = true;
-
 export default function adhdMode(pi: ExtensionAPI) {
   // Restore state from previous session entries on startup
   pi.on("session_start", async (_event, ctx) => {
