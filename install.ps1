@@ -11,7 +11,8 @@ param(
     [switch]$WithRtk,
     [switch]$SkipRtk,
     [switch]$WithModelDefaults,
-    [switch]$SkipModelDefaults
+    [switch]$SkipModelDefaults,
+    [switch]$CleanPlugins
 )
 
 $ErrorActionPreference = "Stop"
@@ -299,6 +300,7 @@ if ($WithRtk) { $installerArgs += "--with-rtk" }
 if ($SkipRtk) { $installerArgs += "--skip-rtk" }
 if ($WithModelDefaults) { $installerArgs += "--with-model-defaults" }
 if ($SkipModelDefaults) { $installerArgs += "--skip-model-defaults" }
+if ($CleanPlugins) { $installerArgs += "--clean-plugins" }
 
 Write-Step "Running the pi_config installer"
 & node (Join-Path $repository "install.mjs") @installerArgs
