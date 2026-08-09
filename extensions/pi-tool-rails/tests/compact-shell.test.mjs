@@ -2,9 +2,16 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { visibleWidth } from "@earendil-works/pi-tui";
 
+import { materialToolIcon, toolIcon } from "../tool-presentations.mjs";
+import { compactBashBody, compactToolBody } from "../tool-body-polish.ts";
+
 import {
   backgroundLine,
+  isInternalToolDiagnosticLine,
   isStandaloneToolNameLine,
+  toolBoxBottom,
+  toolBoxLine,
+  toolBoxTop,
   labelLayout,
   labelLines,
   labelPadding,
@@ -19,6 +26,30 @@ const identityTheme = {
   },
 };
 
+test("renders reference-style tool box chrome without putting emoji on the rail", () => {
+  const theme = {
+    fg(_color, text) { return text; },
+    bg(_color, text) { return text; },
+    bold(text) { return text; },
+  };
+  const execution = { toolName: "read", isPartial: false, result: { isError: false } };
+  const top = toolBoxTop(execution, 48, theme);
+  const middle = toolBoxLine("result", 48, theme);
+  const bottom = toolBoxBottom(48, theme);
+  assert.match(top, /^╭─ ✓ 📖 READ · COMPLETE ─+╮$/);
+  assert.equal(visibleWidth(top), 48);
+  assert.equal(visibleWidth(toolBoxTop(execution, 77, theme)), 77);
+  assert.equal(
+    visibleWidth(toolBoxTop({ toolName: "an_incredibly_long_external_tool", isPartial: false, result: {} }, 20, theme)),
+    20,
+  );
+  assert.equal(visibleWidth(toolBoxTop(execution, 4, theme)), 4);
+  assert.equal(middle.slice(0, 2), "┃ ");
+  assert.equal(middle.at(-1), "│");
+  assert.equal(middle.includes("📖"), false);
+  assert.equal(bottom, `╰${"─".repeat(46)}╯`);
+});
+
 test("uses compact tool text labels with emoji rendered separately", () => {
   assert.deepEqual(labelLines("web_search"), ["web"]);
   assert.deepEqual(labelLines("fetch_content"), ["fetch"]);
@@ -31,6 +62,12 @@ test("uses compact tool text labels with emoji rendered separately", () => {
   assert.equal(labelLayout("aft_inspect", 0, "health").emoji, "🩺");
   assert.equal(labelLayout("aft_zoom", 0, "zoom").emoji, "🔬");
   assert.equal(labelLayout("ast_grep_replace", 0, "ast edit").emoji, "🌳");
+});
+
+test("exposes Material Symbols Rounded glyphs as an explicit icon fallback", () => {
+  assert.equal(toolIcon("read"), "📖");
+  assert.equal(materialToolIcon("read").codePointAt(0), 0xe873);
+  assert.equal(materialToolIcon("unknown").codePointAt(0), 0xe65f);
 });
 
 test("keeps a single overlong tool word compact", () => {
@@ -92,6 +129,39 @@ test("selects semantic results instead of the final rendered line", () => {
     ),
     ["run tests", "exit 0"],
   );
+});
+
+test("hides RTK rewrite diagnostics until a tool body is expanded", () => {
+  const lines = ["RTK rewrite: printf '%s\\n' /home/zonazcy/*", "run project scan", "exit 0"];
+  assert.equal(isInternalToolDiagnosticLine(lines[0]), true);
+  assert.deepEqual(
+    visibleToolContentLines(lines, false, { toolName: "bash" }),
+    ["run project scan", "exit 0"],
+  );
+  assert.deepEqual(visibleToolContentLines(lines, true, { toolName: "bash" }), lines);
+});
+
+test("uses reference-style body compression instead of a two-line collapse", () => {
+  const lines = Array.from({ length: 16 }, (_, index) => `result ${index + 1}`);
+  assert.equal(compactToolBody(lines, { theme: identityTheme }).length, 13);
+  assert.match(compactToolBody(lines, { theme: identityTheme }).at(-1), /\+4 lines.*expand/);
+  assert.equal(compactToolBody(lines, { theme: identityTheme, expanded: true }).length, 16);
+});
+
+test("summarizes huge heredoc output while keeping the tool actionable", () => {
+  const lines = ["$ cat > src/generated.ts <<'EOF'", ...Array.from({ length: 50 }, (_, index) => `line ${index}`), "EOF"];
+  const compacted = compactToolBody(lines, { theme: identityTheme });
+  assert.ok(compacted.some((line) => line.includes("collapsed large payload")));
+  assert.ok(compacted.some((line) => line.includes("lines") && line.includes("expand to show")));
+  assert.ok(compacted.length < lines.length);
+});
+
+test("keeps the head and live tail of a long Bash stream", () => {
+  const lines = Array.from({ length: 24 }, (_, index) => `line ${index + 1}`);
+  const compacted = compactBashBody(lines, identityTheme);
+  assert.deepEqual(compacted.slice(0, 3), ["line 1", "line 2", "line 3"]);
+  assert.match(compacted[3], /\+5 lines/);
+  assert.equal(compacted.at(-1), "line 24");
 });
 
 test("keeps the first actionable error instead of a trailing stack frame", () => {

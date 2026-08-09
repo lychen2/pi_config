@@ -455,17 +455,20 @@ async function restoreFiles() {
     await copyPath(path.join(repoDir, "config", file), path.join(agentDir, file));
   }
 
-  for (const file of ["adhd-mode.ts", "matugen-chrome.ts"]) {
+  for (const file of ["adhd-mode.ts", "matugen-chrome.ts", "matugen-footer-core.mjs"]) {
     await copyPathIfMissing(
       path.join(repoDir, "extensions", file),
       path.join(agentDir, "extensions", file),
     );
   }
+  await mergeMissingTree(
+    path.join(repoDir, "extensions", "matugen-footer"),
+    path.join(agentDir, "extensions", "matugen-footer"),
+  );
   await copyPath(
     path.join(repoDir, "config", "aft.jsonc"),
     cortexConfigPath("aft.jsonc"),
-  );
-}
+  );}
 
 async function mergePublicSettings(includeModelDefaults) {
   console.log("\n[3/7] Merging public settings");

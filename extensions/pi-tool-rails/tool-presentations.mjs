@@ -66,3 +66,70 @@ export function shortToolName(name) {
 export function toolEmoji(name) {
   return TOOL_PRESENTATIONS[normalizeToolName(name)]?.emoji ?? "🧩";
 }
+
+
+// Material Symbols Rounded codepoints. The terminal cannot select a font per
+// emoji character, so this is an explicit fallback mode for terminals with
+// Material Symbols installed: PI_TOOL_RAILS_ICON_STYLE=material.
+const MATERIAL_ICONS = Object.freeze({
+  read: 0xe873,
+  write: 0xe161,
+  edit: 0xe150,
+  replace: 0xe627,
+  grep: 0xe8b6,
+  find: 0xe8b6,
+  ls: 0xe2c7,
+  bash: 0xeb8e,
+  preview_export: 0xe3f4,
+  undo_last_replace: 0xe28e,
+  multi_tool_use_parallel: 0xe97a,
+  ask_user_question: 0xe887,
+  todo: 0xe2e6,
+  todowrite: 0xe2e6,
+  web_search: 0xe894,
+  source_check: 0xe2e6,
+  fetch_content: 0xe171,
+  get_search_content: 0xe02f,
+  ctx_search: 0xe8b6,
+  ctx_memory: 0xe322,
+  ctx_note: 0xe06f,
+  ctx_expand: 0xe8b6,
+  ctx_reduce: 0xe94d,
+  "push-task": 0xe97a,
+  bash_status: 0xe8b6,
+  bash_watch: 0xe8b6,
+  bash_write: 0xe150,
+  bash_kill: 0xe047,
+  load_tools: 0xe2e6,
+  semantic_code: 0xead3,
+  aft_search: 0xe8b6,
+  aft_outline: 0xe97a,
+  aft_zoom: 0xe8b6,
+  aft_inspect: 0xe868,
+  aft_conflicts: 0xe000,
+  aft_import: 0xe2c7,
+  aft_safety: 0xe002,
+  aft_callgraph: 0xe97a,
+  aft_delete: 0xe872,
+  aft_move: 0xe2c7,
+  aft_refactor: 0xe028,
+  ast_grep_search: 0xe97a,
+  ast_grep_replace: 0xe150,
+});
+
+const MATERIAL_FALLBACK = 0xe65f;
+const iconStyle = (process.env.PI_TOOL_RAILS_ICON_STYLE || "emoji").trim().toLowerCase();
+
+export function toolIcon(name) {
+  const normalized = normalizeToolName(name);
+  if (iconStyle === "material") {
+    return String.fromCodePoint(MATERIAL_ICONS[normalized] ?? MATERIAL_FALLBACK);
+  }
+  if (iconStyle === "text") return "•";
+  return toolEmoji(name);
+}
+
+export function materialToolIcon(name) {
+  const normalized = normalizeToolName(name);
+  return String.fromCodePoint(MATERIAL_ICONS[normalized] ?? MATERIAL_FALLBACK);
+}

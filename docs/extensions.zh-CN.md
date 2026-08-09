@@ -39,9 +39,9 @@
 | 扩展 | 用途 | 入口 |
 | --- | --- | --- |
 | `adhd-mode.ts` | 将面向 ADHD 的输出规则注入每轮系统提示词，状态写入会话 | `/adhd` 开关 |
-| `matugen-chrome.ts` | 使用当前主题绘制 footer 和工作动画 | `/matugen-chrome` 开关 |
+| `matugen-chrome.ts` + `matugen-footer-core.mjs` | Matugen footer：实时 Context、Git 操作状态、扩展状态清洗和 working 行 | `/matugen-chrome` 开关 |
 
-这两个文件只在 `~/.pi/agent/extensions/` 中不存在时复制；本机已有文件会保留。修改文件后在 Pi 内运行 `/reload`。
+这些文件只在 `~/.pi/agent/extensions/` 中不存在时复制；本机已有文件会保留。修改文件后在 Pi 内运行 `/reload`。
 
 ## 第三方 package
 

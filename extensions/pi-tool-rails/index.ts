@@ -7,15 +7,16 @@ import {
   createWriteToolDefinition,
   keyHint,
   AssistantMessageComponent,
-  UserMessageComponent,
   type ExtensionAPI,
   type ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
-import { Text, visibleWidth, type Component } from "@earendil-works/pi-tui";
+import { Text, type Component } from "@earendil-works/pi-tui";
+import { installThinkingMessageStyle } from "./thinking-message.ts";
+import { installThinkingShimmer } from "./thinking-shimmer.ts";
+import { installUserMessageStyle } from "./user-message.ts";
 
 type Theme = {
   fg(color: "accent" | "borderAccent" | "borderMuted" | "error" | "muted" | "success" | "text" | "toolOutput" | "toolTitle" | "warning", text: string): string;
-  bg(color: "userMessageBg", text: string): string;
   bold(text: string): string;
 };
 type RecordLike = Record<string, unknown>;
@@ -26,13 +27,6 @@ type RenderContext = {
   isError?: boolean;
   isPartial?: boolean;
   lastComponent?: unknown;
-};
-type UserMessageRender = (this: UserMessageComponent, width: number) => string[];
-type UserMessagePatch = {
-  theme: Theme;
-  originalRender: UserMessageRender;
-  patchedRender: UserMessageRender;
-  owners: Set<symbol>;
 };
 type AssistantMessageRender = (this: AssistantMessageComponent, width: number) => string[];
 type AssistantMessagePatch = {
@@ -48,7 +42,6 @@ const ASSISTANT_PATCH_MARK = Symbol.for("pi.toolRails.assistantMessagePatch");
 const ASSISTANT_MARKER = "\u25cf";
 const OSC133_START = "\x1b]133;A\x07";
 const OSC133_END = "\x1b]133;B\x07\x1b]133;C\x07";
-const USER_PATCH_MARK = Symbol.for("pi.toolRails.userMessagePatch");
 const STYLED_BUILTINS = new Set(["bash", "edit", "grep", "read", "write"]);
 const PREVIEW_LINES = 5;
 const HOME = homedir().replace(/\\/g, "/").replace(/\/$/, "");
@@ -320,16 +313,6 @@ export function decorateTool(tool: ToolDefinition<any, any, any>): ToolDefinitio
   };
 }
 
-function frameTop(width: number, theme: Theme): string {
-  const label = " you ";
-  // borderAccent (primary) contrasts on userMessageBg; borderMuted blends into it under Matugen.
-  const edge = (s: string) => theme.fg("borderAccent", s);
-  return `${edge("╭─")}${theme.fg("accent", theme.bold(label))}${edge("─".repeat(Math.max(0, width - label.length - 3)) + "╮")}`;
-}
-
-function frameBottom(width: number, theme: Theme): string {
-  return theme.fg("borderAccent", `╰${"─".repeat(Math.max(0, width - 2))}╯`);
-}
 
 function releaseAssistantMessage(
   shared: typeof globalThis & Record<symbol, unknown>,
@@ -391,64 +374,6 @@ function installAssistantMarker(theme: Theme): () => void {
   AssistantMessageComponent.prototype.render = patchedRender;
   return () => releaseAssistantMessage(shared, patch, owner);
 }
-function releaseUserFrame(
-  shared: typeof globalThis & Record<symbol, unknown>,
-  patch: UserMessagePatch,
-  owner: symbol,
- ): void {
-  patch.owners.delete(owner);
-  if (patch.owners.size > 0) return;
-  if (UserMessageComponent.prototype.render === patch.patchedRender) {
-    UserMessageComponent.prototype.render = patch.originalRender;
-  }
-  if (shared[USER_PATCH_MARK] === patch) delete shared[USER_PATCH_MARK];
-}
-
-function installUserFrame(theme: Theme): () => void {
-  if (process.env.PI_TOOL_RAILS_DISABLE_USER_FRAME === "1") return () => {};
-  const shared = globalThis as typeof globalThis & Record<symbol, unknown>;
-  const owner = Symbol("pi.toolRails.userFrame");
-  const existing = shared[USER_PATCH_MARK] as Partial<UserMessagePatch> | undefined;
-  if (existing?.originalRender && typeof existing.originalRender === "function") {
-    const patch = existing as UserMessagePatch;
-    patch.theme = theme;
-    patch.owners ??= new Set<symbol>();
-    patch.patchedRender ??= UserMessageComponent.prototype.render;
-    patch.owners.add(owner);
-    return () => releaseUserFrame(shared, patch, owner);
-  }
-
-  const state = { theme, originalRender: UserMessageComponent.prototype.render, owners: new Set<symbol>([owner]) };
-  const patchedRender: UserMessageRender = function (width: number): string[] {
-    if (width < 16) return state.originalRender.call(this, width);
-    const lines = state.originalRender.call(this, width - 4);
-    if (!lines.length) return lines;
-    if (lines[0].startsWith(OSC133_START)) lines[0] = lines[0].slice(OSC133_START.length);
-    const last = lines.length - 1;
-    if (lines[last].startsWith(OSC133_END)) lines[last] = lines[last].slice(OSC133_END.length);
-
-    const framed = [
-      state.theme.bg("userMessageBg", frameTop(width, state.theme)),
-      ...lines.map((line) => {
-        const padding = " ".repeat(Math.max(0, width - 4 - visibleWidth(line)));
-        const edge = (s: string) => state.theme.fg("borderAccent", s);
-        // The native content line resets its own background; restart it for the right side.
-        const left = state.theme.bg("userMessageBg", `${edge("│")} ${line}`);
-        const right = state.theme.bg("userMessageBg", `${padding} ${edge("│")}`);
-        return left + right;
-      }),
-      state.theme.bg("userMessageBg", frameBottom(width, state.theme)),
-    ];
-    framed[0] = OSC133_START + framed[0];
-    framed[framed.length - 1] = OSC133_END + framed[framed.length - 1];
-    return framed;
-  };
-
-  const patch: UserMessagePatch = { ...state, patchedRender };
-  shared[USER_PATCH_MARK] = patch;
-  UserMessageComponent.prototype.render = patchedRender;
-  return () => releaseUserFrame(shared, patch, owner);
-}
 
 function isUnclaimedBuiltin(pi: ExtensionAPI, name: string): boolean {
   const current = pi.getAllTools().find((tool) => tool.name === name);
@@ -457,7 +382,9 @@ function isUnclaimedBuiltin(pi: ExtensionAPI, name: string): boolean {
 
 export default function toolRails(pi: ExtensionAPI): void {
   let cleanupAssistantMarker = () => {};
-  let cleanupUserFrame = () => {};
+  let cleanupThinkingMessage = () => {};
+  let cleanupUserMessage = () => {};
+  installThinkingShimmer(pi);
   pi.on("session_start", (_event, ctx) => {
     if (ctx.mode !== "tui") return;
 
@@ -474,11 +401,15 @@ export default function toolRails(pi: ExtensionAPI): void {
       }
     }
     cleanupAssistantMarker = installAssistantMarker(ctx.ui.theme);
-    cleanupUserFrame = installUserFrame(ctx.ui.theme);
+    cleanupThinkingMessage = installThinkingMessageStyle(() => ctx.ui.theme);
+    cleanupUserMessage = installUserMessageStyle(() => ctx.ui.theme);
   });
   pi.on("session_shutdown", () => {
+    cleanupThinkingMessage();
     cleanupAssistantMarker();
-    cleanupUserFrame();
-    cleanupUserFrame = () => {};
+    cleanupUserMessage();
+    cleanupThinkingMessage = () => {};
+    cleanupAssistantMarker = () => {};
+    cleanupUserMessage = () => {};
   });
 }

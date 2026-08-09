@@ -23,7 +23,7 @@ Ten package directories install from this repository.
 | Extension | Purpose | Source |
 | --- | --- | --- |
 | `adhd-mode` | Session-persistent ADHD response-mode injection | `adhd-mode.ts` |
-| `matugen-chrome` | Theme-aware Cometix footer and working indicator | `matugen-chrome.ts` |
+| `matugen-chrome` | Matugen footer with live context, Git operation state, and sanitized extension statuses | `matugen-chrome.ts` + `matugen-footer-core.mjs` |
 
 ## Configured Third-Party Extensions
 

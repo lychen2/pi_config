@@ -1,22 +1,14 @@
-import { readFile } from "node:fs/promises";
-import { homedir } from "node:os";
-import { join } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-
-const SKILL_PATH = join(homedir(), ".pi/agent/skills/i-have-adhd/SKILL.md");
 const ENTRY_TYPE = "adhd-mode";
 
-let enabled = true;
-let cachedBody: string | null = null;
+// Do not mention internal reasoning here: DeepSeek v4-flash can treat such
+// wording as a deliberation objective and spend its whole output budget on it.
+const SYSTEM_PROMPT = `
+## ADHD Output Mode
+Format only the final reply for an ADHD reader: lead with the result or next action; use short numbered steps when they are actionable; retain necessary details and remove unrelated tangents.
+`;
 
-async function loadSkillBody(): Promise<string> {
-  if (cachedBody) return cachedBody;
-  const raw = await readFile(SKILL_PATH, "utf8");
-  // Strip YAML frontmatter (--- ... ---)
-  const body = raw.replace(/^---[\s\S]*?---\s*/, "").trim();
-  cachedBody = body;
-  return body;
-}
+let enabled = true;
 
 export default function adhdMode(pi: ExtensionAPI) {
   // Restore state from previous session entries on startup
@@ -28,16 +20,23 @@ export default function adhdMode(pi: ExtensionAPI) {
     }
   });
 
-  // Inject ADHD rules into system prompt every turn
-  pi.on("before_agent_start", async (event) => {
+  // Keep the persisted full skill available on disk; inject only the compact
+  // presentation contract into the model context for each turn.
+  pi.on("before_agent_start", async (event, ctx) => {
     if (!enabled) return undefined;
 
-    const body = await loadSkillBody();
+    // v4-flash's reasoning is materially destabilized by any extra ADHD
+    // system instruction (verified with controlled same-model A/B tests).
+    // Scope this workaround to the affected model only.
+    if (
+      ctx.model?.provider === "manager" &&
+      ctx.model.id === "deepseek-v4-flash"
+    ) {
+      return undefined;
+    }
+
     return {
-      systemPrompt:
-        event.systemPrompt +
-        "\n\n" +
-        body,
+      systemPrompt: event.systemPrompt + "\n\n" + SYSTEM_PROMPT,
     };
   });
 

@@ -1,0 +1,104 @@
+export type StopProjectRefreshInterval = () => void;
+
+export type ScheduleProjectRefreshOptions = {
+	force?: boolean;
+};
+
+export type ProjectRefreshScheduler<T> = {
+	schedule: (target: T, options?: ScheduleProjectRefreshOptions) => void;
+	stop: () => void;
+};
+
+export const PROJECT_REFRESH_THROTTLE_MS = 5_000;
+
+export function startProjectRefreshInterval(
+	intervalMs: number,
+	refresh: () => void,
+): StopProjectRefreshInterval {
+	if (intervalMs <= 0) return () => {};
+
+	const timer = setInterval(refresh, intervalMs);
+	timer.unref?.();
+
+	return () => clearInterval(timer);
+}
+
+export function createProjectRefreshScheduler<T>(
+	refresh: (target: T) => Promise<void>,
+	afterRefresh: () => void,
+	throttleMs = PROJECT_REFRESH_THROTTLE_MS,
+): ProjectRefreshScheduler<T> {
+	let refreshInFlight = false;
+	let refreshPending = false;
+	let pendingTarget: T | undefined;
+	let delayedRefresh: ReturnType<typeof setTimeout> | undefined;
+	let lastRefreshStartedAt: number | undefined;
+	let generation = 0;
+
+	const clearDelayedRefresh = () => {
+		if (!delayedRefresh) return;
+		clearTimeout(delayedRefresh);
+		delayedRefresh = undefined;
+	};
+
+	const runRefresh = (target: T) => {
+		clearDelayedRefresh();
+		if (refreshInFlight) {
+			refreshPending = true;
+			pendingTarget = target;
+			return;
+		}
+
+		const currentGeneration = generation;
+		refreshInFlight = true;
+		lastRefreshStartedAt = Date.now();
+		void refresh(target)
+			.catch(() => undefined)
+			.finally(() => {
+				if (currentGeneration !== generation) return;
+				refreshInFlight = false;
+				afterRefresh();
+				if (refreshPending) {
+					refreshPending = false;
+					const nextTarget = pendingTarget ?? target;
+					pendingTarget = undefined;
+					schedule(nextTarget);
+				}
+			});
+	};
+
+	const schedule = (target: T, options: ScheduleProjectRefreshOptions = {}) => {
+		if (options.force || throttleMs <= 0 || lastRefreshStartedAt === undefined) {
+			runRefresh(target);
+			return;
+		}
+
+		const delayMs = Math.max(0, throttleMs - (Date.now() - lastRefreshStartedAt));
+		if (delayMs === 0) {
+			runRefresh(target);
+			return;
+		}
+
+		pendingTarget = target;
+		if (delayedRefresh) return;
+		delayedRefresh = setTimeout(() => {
+			delayedRefresh = undefined;
+			const nextTarget = pendingTarget ?? target;
+			pendingTarget = undefined;
+			runRefresh(nextTarget);
+		}, delayMs);
+		delayedRefresh.unref?.();
+	};
+
+	return {
+		schedule,
+		stop() {
+			generation += 1;
+			clearDelayedRefresh();
+			refreshInFlight = false;
+			refreshPending = false;
+			pendingTarget = undefined;
+			lastRefreshStartedAt = undefined;
+		},
+	};
+}

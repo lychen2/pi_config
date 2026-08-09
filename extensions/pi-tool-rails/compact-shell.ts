@@ -1,20 +1,32 @@
 import {
+  BashExecutionComponent,
   ToolExecutionComponent,
   type ExtensionAPI,
 } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth, visibleWidth, type Component } from "@earendil-works/pi-tui";
-import { shortToolName, toolEmoji } from "./tool-presentations.mjs";
+import { shortToolName, toolIcon } from "./tool-presentations.mjs";
+import { installPrototypePatch } from "./prototype-patch-registry.ts";
+import { compactBashBody, compactToolBody } from "./tool-body-polish.ts";
 
 type ShellMode = "default" | "self";
 type GetRenderShell = (this: ToolExecutionComponent) => ShellMode;
 type ToolRender = (this: ToolExecutionComponent, width: number) => string[];
+type ToolInvalidate = (this: ToolExecutionComponent) => void;
 type ShellPrototype = {
   getRenderShell?: GetRenderShell;
   render: ToolRender;
+  invalidate?: ToolInvalidate;
+};
+type SettledRender = {
+  width: number;
+  result: object;
+  expanded: boolean;
+  showImages: boolean;
+  lines: string[];
 };
 type ToolTheme = {
   bg(color: "toolErrorBg" | "toolPendingBg" | "toolSuccessBg", text: string): string;
-  fg(color: "accent" | "error" | "muted" | "success" | "syntaxFunction" | "text" | "toolOutput" | "toolTitle" | "warning", text: string): string;
+  fg(color: "accent" | "borderAccent" | "dim" | "error" | "muted" | "success" | "syntaxFunction" | "syntaxVariable" | "text" | "toolOutput" | "toolTitle" | "warning", text: string): string;
   getBgAnsi?(color: "toolErrorBg" | "toolPendingBg" | "toolSuccessBg"): string;
   bold(text: string): string;
 };
@@ -23,6 +35,9 @@ type ShellPatch = {
   patchedShell: GetRenderShell;
   originalRender: ToolRender;
   patchedRender: ToolRender;
+  originalInvalidate?: ToolInvalidate;
+  patchedInvalidate?: ToolInvalidate;
+  settledRenders: WeakMap<object, SettledRender>;
   owners: Set<symbol>;
   theme: ToolTheme;
 };
@@ -34,6 +49,7 @@ type ExecutionState = {
   selfRenderContainer?: Component;
   toolName?: string;
   expanded?: boolean;
+  showImages?: boolean;
 };
 
 const ANSI_ESCAPE = /\x1B(?:\][^\x07\x1B]*(?:\x07|\x1B\\)|\[[0-?]*[ -/]*[@-~]|[@-Z\\-_])/g;
@@ -41,7 +57,44 @@ const DIFF_BACKGROUND = /\x1b\[48;(?:2;\d+;\d+;\d+|5;(?:22|52))m/;
 const SHELL_PATCH = Symbol.for("pi.toolRails.labeledShellPatch");
 // Two cells keep the leading emoji from crowding the centered tool text.
 const LABEL_WIDTH = 12;
-const PREFIX_WIDTH = LABEL_WIDTH + 3;
+const BOX_LEFT_RAIL = "┃ ";
+const BOX_RIGHT_RAIL = "│";
+
+function boxStatusLabel(execution: ExecutionState): { label: string; color: "error" | "toolTitle" | "warning" } {
+  const name = shortToolName(execution.toolName ?? "tool").toUpperCase();
+  const icon = toolIcon(execution.toolName ?? "tool");
+  if (execution.isPartial !== false) return { label: `◆ ${icon} ${name} · RUNNING`, color: "warning" };
+  if (execution.result?.isError) return { label: `× ${icon} ${name} · FAILED`, color: "error" };
+  return { label: `✓ ${icon} ${name} · COMPLETE`, color: "toolTitle" };
+}
+
+function fitBorderLabel(label: string, width: number): string {
+  // Reserve ╭─, one trailing ╮, and two spaces around the status label.
+  const available = Math.max(1, width - 5);
+  if (visibleWidth(label) <= available) return label;
+  return `${plain(truncateToWidth(label, Math.max(1, available - 1), ""))}…`;
+}
+
+export function toolBoxTop(execution: ExecutionState, width: number, theme: ToolTheme): string {
+  if (width <= 0) return "";
+  const status = boxStatusLabel(execution);
+  const label = ` ${fitBorderLabel(status.label, width)} `;
+  const remaining = Math.max(0, width - 3 - visibleWidth(label));
+  const line = `${theme.fg("borderAccent", "╭─")}${theme.fg(status.color, theme.bold(label))}${theme.fg("borderAccent", `${"─".repeat(remaining)}╮`)}`;
+  return truncateToWidth(line, width, "");
+}
+
+export function toolBoxBottom(width: number, theme: ToolTheme): string {
+  return theme.fg("borderAccent", `╰${"─".repeat(Math.max(0, width - 2))}╯`);
+}
+
+export function toolBoxLine(line: string, width: number, theme: ToolTheme): string {
+  const left = theme.fg("borderAccent", BOX_LEFT_RAIL);
+  const right = theme.fg("borderAccent", BOX_RIGHT_RAIL);
+  const contentWidth = Math.max(0, width - visibleWidth(BOX_LEFT_RAIL) - visibleWidth(BOX_RIGHT_RAIL));
+  const content = truncateToWidth(line, contentWidth, "");
+  return `${left}${content}${" ".repeat(Math.max(0, contentWidth - visibleWidth(content)))}${right}`;
+}
 function release(
   shared: typeof globalThis & Record<symbol, unknown>,
   prototype: ShellPrototype,
@@ -55,6 +108,10 @@ function release(
   }
   if (prototype.render === patch.patchedRender) {
     prototype.render = patch.originalRender;
+  }
+  if (patch.patchedInvalidate && prototype.invalidate === patch.patchedInvalidate) {
+    if (patch.originalInvalidate) prototype.invalidate = patch.originalInvalidate;
+    else delete prototype.invalidate;
   }
   if (shared[SHELL_PATCH] === patch) delete shared[SHELL_PATCH];
 }
@@ -70,7 +127,7 @@ function fitLabel(text: string, width = LABEL_WIDTH): string {
 }
 
 function labelText(name: string): string {
-  const reserved = visibleWidth(toolEmoji(name)) * 2;
+  const reserved = visibleWidth(toolIcon(name)) * 2;
   return fitLabel(shortToolName(name), Math.max(1, LABEL_WIDTH - reserved));
 }
 
@@ -84,7 +141,7 @@ export function labelPadding(label: string): { left: number; right: number } {
   return { left: Math.floor(total / 2), right: Math.ceil(total / 2) };
 }
 export function labelLayout(name: string, index: number, label: string): { emoji: string; text: string; left: number; right: number } {
-  const emoji = index === 0 ? toolEmoji(name) : "";
+  const emoji = index === 0 ? toolIcon(name) : "";
   const emojiWidth = visibleWidth(emoji);
   const text = fitLabel(label, Math.max(1, LABEL_WIDTH - emojiWidth * 2));
   const padding = labelPadding(text);
@@ -102,9 +159,13 @@ type ContentSelection = {
 
 const STRUCTURED_RESULT_TOOLS = new Set(["push-task"]);
 
+export function isInternalToolDiagnosticLine(line: string): boolean {
+  return /^\s*RTK rewrite:\s*/i.test(plain(line));
+}
+
 function isUsefulContentLine(line: string): boolean {
   const text = plain(line).trim();
-  if (!text || /^(?:\.{3}|…)\s*$/.test(text)) return false;
+  if (!text || isInternalToolDiagnosticLine(line) || /^(?:\.{3}|…)\s*$/.test(text)) return false;
   if (/^\[AFT\s/i.test(text)) return false;
   if (/^(?:Zoom any result|More results available|Use .* to (?:continue|expand)|Tip:)/i.test(text)) return false;
   if (/\b(?:more|earlier) (?:line|lines|row|rows)\b.*\bexpand\b/i.test(text)) return false;
@@ -148,24 +209,11 @@ export function visibleToolContentLines(
 ): string[] {
   if (expanded || lines.length <= 1) return lines;
   if (selection.toolName && STRUCTURED_RESULT_TOOLS.has(selection.toolName)) return lines;
-  const headline = lines[0]!;
-  const result = semanticResultLine(lines.slice(1), selection);
+  const visibleLines = lines.filter(isUsefulContentLine);
+  if (visibleLines.length === 0) return [];
+  const headline = visibleLines[0]!;
+  const result = semanticResultLine(visibleLines.slice(1), selection);
   return result ? [headline, result] : [headline];
-}
-function removeRepeatedToolName(line: string, name: string): string {
-  const visible = plain(line).trimStart();
-  const lowerName = name.toLowerCase();
-  if (visible.toLowerCase() !== lowerName && !visible.toLowerCase().startsWith(`${lowerName} `)) {
-    return line;
-  }
-  const index = line.toLowerCase().indexOf(lowerName);
-  if (index < 0) return line;
-
-  const withoutName = `${line.slice(0, index)}${line.slice(index + name.length)}`;
-  const leftoverGap = withoutName.indexOf(" ", index);
-  return leftoverGap < 0
-    ? withoutName
-    : `${withoutName.slice(0, leftoverGap)}${withoutName.slice(leftoverGap + 1)}`;
 }
 
 export function isStandaloneToolNameLine(line: string, name: string): boolean {
@@ -198,11 +246,6 @@ function tintToolDivider(text: string): string {
   if (!match || matchIndex === undefined || dividerIndex < 0 || dividerIndex >= matchIndex) return text;
   if (plain(text.slice(dividerIndex + 1, matchIndex)).trim() !== "") return text;
   return `${text.slice(0, dividerIndex)}${match[0]}${text.slice(dividerIndex)}`;
-}
-
-function boldLabel(text: string, theme: ToolTheme, color: "error" | "toolTitle" | "warning"): string {
-  // Avoid chalk.bold (often emits \x1b[0m). Use intensity only.
-  return `\x1b[1m${theme.fg(color, text)}\x1b[22m`;
 }
 
 const DELIMITED_SUMMARY_TOOLS = new Set(["aft_inspect"]);
@@ -267,6 +310,52 @@ export function renderWithCapturedSelf(
   }
 }
 
+function isFrameLine(line: string): boolean {
+  const value = plain(line).trim();
+  return /^[╭┌╔].*[╮┐╗]$/.test(value)
+    || /^[╰└╚].*[╯┘╝]$/.test(value)
+    || /^[─═]{3,}$/.test(value);
+}
+
+function styleBashBodyLine(line: string, theme: ToolTheme): string {
+  const command = plain(line).trim().match(/^\$\s+(.+)$/);
+  if (!command) return line;
+  return `${theme.fg("accent", "❯")} ${theme.fg("toolOutput", command[1] ?? "")}`;
+}
+
+function installBashBox(theme: ToolTheme): () => void {
+  return installPrototypePatch(
+    BashExecutionComponent.prototype,
+    "render",
+    "bash-tool-box",
+    ({ predecessor, receiver, args }) => {
+      const width = args[0];
+      const rendered = Reflect.apply(predecessor, receiver, args);
+      if (
+        typeof width !== "number" ||
+        width <= 2 ||
+        !Array.isArray(rendered) ||
+        !rendered.every((line) => typeof line === "string")
+      ) return rendered;
+      const lines = rendered as string[];
+      if (lines.some((line) => line.includes("\x1b_G") || line.includes("\x1b]1337;File="))) return lines;
+      const body = lines.filter((line) => !isFrameLine(line) && !isInternalToolDiagnosticLine(line));
+      const compactedBody = compactBashBody(body, theme);
+      const running = compactedBody.some((line) => plain(line).includes("Running..."));
+      const execution: ExecutionState = {
+        toolName: "bash",
+        isPartial: running,
+        result: { isError: body.some((line) => /(?:^|\s)(?:Error|failed|exit\s+[1-9])/i.test(plain(line))) },
+      };
+      return [
+        toolBoxTop(execution, width, theme),
+        ...(compactedBody.length > 0 ? compactedBody : [""]).map((line) => toolBoxLine(styleBashBodyLine(line, theme), width, theme)),
+        toolBoxBottom(width, theme),
+      ];
+    },
+  );
+}
+
 function installLabeledShell(theme: ToolTheme): () => void {
   const shared = globalThis as typeof globalThis & Record<symbol, unknown>;
   const prototype = ToolExecutionComponent.prototype as unknown as ShellPrototype;
@@ -278,8 +367,13 @@ function installLabeledShell(theme: ToolTheme): () => void {
   ) {
     const patch = existing as ShellPatch;
     patch.theme = theme;
+    patch.settledRenders ??= new WeakMap<object, SettledRender>();
     patch.owners.add(owner);
-    return () => release(shared, prototype, patch, owner);
+    const cleanupBash = installBashBox(theme);
+    return () => {
+      cleanupBash();
+      release(shared, prototype, patch, owner);
+    };
   }
   if (typeof prototype.getRenderShell !== "function" || typeof prototype.render !== "function") {
     return () => {};
@@ -288,6 +382,8 @@ function installLabeledShell(theme: ToolTheme): () => void {
   const state = {
     originalShell: prototype.getRenderShell,
     originalRender: prototype.render,
+    originalInvalidate: prototype.invalidate,
+    settledRenders: new WeakMap<object, SettledRender>(),
     owners: new Set<symbol>([owner]),
     theme,
   };
@@ -296,8 +392,17 @@ function installLabeledShell(theme: ToolTheme): () => void {
     return "self";
   };
   const patchedRender: ToolRender = function (width: number): string[] {
+    if (width <= 3) return state.originalRender.call(this, width);
     const execution = this as unknown as ExecutionState;
-    const innerWidth = Math.max(1, width - PREFIX_WIDTH);
+    const cacheable = execution.isPartial === false && !execution.hideComponent &&
+      !execution.imageComponents?.length && Boolean(execution.result);
+    const cached = cacheable ? state.settledRenders.get(this) : undefined;
+    if (cached && cached.width === width && cached.result === execution.result &&
+      cached.expanded === Boolean(execution.expanded) && cached.showImages === Boolean(execution.showImages)) {
+      return cached.lines;
+    }
+
+    const innerWidth = Math.max(1, width - visibleWidth(BOX_LEFT_RAIL) - visibleWidth(BOX_RIGHT_RAIL));
     const rendered = execution.selfRenderContainer
       ? renderWithCapturedSelf(
           this,
@@ -308,72 +413,62 @@ function installLabeledShell(theme: ToolTheme): () => void {
       : { lines: state.originalRender.call(this, innerWidth) };
     const lines = rendered.lines;
     if (execution.hideComponent || !execution.selfRenderContainer) return lines;
+    if (lines.some((line) => line.includes("\x1b_G") || line.includes("\x1b]1337;File="))) return lines;
 
     const contentLines = rendered.contentLines ?? execution.selfRenderContainer.render(innerWidth);
     if (contentLines.length === 0) return lines;
-    const firstContent = lines.findIndex((line) => plain(line).trim() !== "");
-    if (firstContent < 0) return lines;
-
-    const background = execution.isPartial
-      ? "toolPendingBg"
-      : execution.result?.isError
-        ? "toolErrorBg"
-        : "toolSuccessBg";
-    const labelColor = execution.isPartial
-      ? "warning"
-      : execution.result?.isError
-        ? "error"
-        : "toolTitle";
     const name = execution.toolName ?? "tool";
-    const labels = labelLines(name);
-    const separator = state.theme.fg("text", "│");
-    const prefixFor = (label: string, index: number): string => {
-      const layout = labelLayout(name, index, label);
-      const emojiText = layout.emoji ? state.theme.fg(labelColor, layout.emoji) : "";
-      return ` ${" ".repeat(layout.left)}${emojiText}${boldLabel(layout.text, state.theme, labelColor)}${" ".repeat(layout.right)}${separator} `;
-    };
-
-    const hasStandaloneHeader =
-      isStandaloneToolNameLine(lines[firstContent], name) &&
-      isStandaloneToolNameLine(contentLines[0] ?? "", name);
-    const contentStart = firstContent + (hasStandaloneHeader ? 1 : 0);
-    const fullContentLines = contentLines.slice(hasStandaloneHeader ? 1 : 0);
-    const renderedContentLineCount = fullContentLines.length;
-    const visibleContentLines = visibleToolContentLines(fullContentLines, execution.expanded, {
+    const framedBody = contentLines.filter((line) => !isFrameLine(line));
+    const withoutHeader = framedBody[0] && isStandaloneToolNameLine(framedBody[0], name)
+      ? framedBody.slice(1)
+      : framedBody;
+    const selection = {
       isError: execution.result?.isError,
       toolName: name,
+    };
+    const bodySource = execution.expanded
+      ? withoutHeader
+      : withoutHeader.filter((line) => !isInternalToolDiagnosticLine(line));
+    const bodyLines = compactToolBody(bodySource, {
+      expanded: Boolean(execution.expanded),
+      preserveAll: STRUCTURED_RESULT_TOOLS.has(name),
+      theme: state.theme,
+      formatLine: (content) => styleStructuredLine(content, state.theme, selection),
     });
-    const contentEnd = Math.min(lines.length, contentStart + renderedContentLineCount);
-    const body = Array.from({ length: Math.max(visibleContentLines.length, labels.length) }, (_, index) => {
-      const content = index < visibleContentLines.length
-        ? visibleContentLines[index]
-        : "";
-      return backgroundLine(
-        `${prefixFor(labels[index] ?? "", index)}${styleStructuredLine(content, state.theme, {
-          isError: execution.result?.isError,
-          toolName: name,
-        })}`,
-        width,
-        background,
-        state.theme,
-      );
-    });
-    const blank = backgroundLine("", width, background, state.theme);
-
-    return [
-      ...lines.slice(0, firstContent),
-      blank,
+    const body = (bodyLines.length > 0 ? bodyLines : [""]).map((content) => toolBoxLine(content, width, state.theme));
+    const output = [
+      toolBoxTop(execution, width, state.theme),
       ...body,
-      blank,
-      ...lines.slice(contentEnd),
+      toolBoxBottom(width, state.theme),
     ];
+    if (cacheable && execution.result) {
+      state.settledRenders.set(this, {
+        width,
+        result: execution.result,
+        expanded: Boolean(execution.expanded),
+        showImages: Boolean(execution.showImages),
+        lines: output,
+      });
+    }
+    return output;
   };
+  const patchedInvalidate: ToolInvalidate | undefined = typeof state.originalInvalidate === "function"
+    ? function (this: ToolExecutionComponent): void {
+        state.settledRenders.delete(this);
+        state.originalInvalidate!.call(this);
+      }
+    : undefined;
 
-  const patch: ShellPatch = { ...state, patchedShell, patchedRender };
+  const patch: ShellPatch = { ...state, patchedShell, patchedRender, patchedInvalidate };
   shared[SHELL_PATCH] = patch;
   prototype.getRenderShell = patchedShell;
   prototype.render = patchedRender;
-  return () => release(shared, prototype, patch, owner);
+  if (patchedInvalidate) prototype.invalidate = patchedInvalidate;
+  const cleanupBash = installBashBox(theme);
+  return () => {
+    cleanupBash();
+    release(shared, prototype, patch, owner);
+  };
 }
 
 export default function labeledToolShell(pi: ExtensionAPI): void {

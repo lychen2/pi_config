@@ -5,9 +5,10 @@
     "moduleResolution": "NodeNext",
     "strict": true,
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "skipLibCheck": true,
     "verbatimModuleSyntax": true,
     "types": ["node"]
   },
-  "include": ["index.ts", "compact-shell.ts", "result-bridge.ts", "prompt-frame.ts"]
+  "include": ["index.ts", "compact-shell.ts", "result-bridge.ts", "prompt-frame.ts", "thinking-message.ts", "thinking-shimmer.ts", "user-message.ts", "prototype-patch-registry.ts"]
 }

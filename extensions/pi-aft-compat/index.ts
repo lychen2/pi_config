@@ -116,6 +116,14 @@ export function rewriteProviderEditSchema(payload) {
   return changed ? rewritten : payload;
 }
 
+export function shouldRewriteProviderEditSchema(model) {
+  return !(
+    model?.provider === "manager"
+    && typeof model.id === "string"
+    && model.id.toLowerCase().startsWith("deepseek")
+  );
+}
+
 function semanticSearchAllowed(cwd) {
   return process.env[ALLOW_NO_GIT_SEARCH] === "1" || isGitWorktree(cwd);
 }
@@ -125,7 +133,10 @@ function gitConflictInspectionAllowed(cwd) {
 }
 
 export default function (pi) {
-  pi.on("before_provider_request", async (event) => rewriteProviderEditSchema(event.payload));
+  pi.on("before_provider_request", async (event, ctx) => {
+    if (!shouldRewriteProviderEditSchema(ctx.model)) return;
+    return rewriteProviderEditSchema(event.payload);
+  });
 
   pi.on("before_agent_start", async (event, ctx) => {
     const active = pi.getActiveTools();

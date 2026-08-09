@@ -5,7 +5,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, test } from "node:test";
 
-import aftCompat, { exclusiveEditSchema, rewriteProviderEditSchema } from "../index.ts";
+import aftCompat, {
+  exclusiveEditSchema,
+  rewriteProviderEditSchema,
+  shouldRewriteProviderEditSchema,
+} from "../index.ts";
 import { isGitWorktree } from "../normalize.mjs";
 
 const temporaryDirectories = [];
@@ -58,6 +62,25 @@ test("makes root and nested edit modes mutually exclusive", () => {
 test("leaves payloads without an edit schema unchanged", () => {
   const payload = { tools: [{ type: "function", name: "read", parameters: { type: "object" } }] };
   assert.equal(rewriteProviderEditSchema(payload), payload);
+});
+
+test("skips the incompatible edit-schema rewrite for manager DeepSeek", async () => {
+  assert.equal(shouldRewriteProviderEditSchema({ provider: "manager", id: "deepseek-v4-flash" }), false);
+  assert.equal(shouldRewriteProviderEditSchema({ provider: "manager", id: "gpt-5.6-sol" }), true);
+
+  const handlers = new Map();
+  aftCompat({
+    on(name, handler) {
+      handlers.set(name, handler);
+    },
+  });
+  const payload = { tools: [{ type: "function", name: "edit", parameters: { type: "object" } }] };
+  const handler = handlers.get("before_provider_request");
+  const skipped = await handler({ payload }, { model: { provider: "manager", id: "deepseek-v4-flash" } });
+  assert.equal(skipped, undefined);
+
+  const rewritten = await handler({ payload }, { model: { provider: "manager", id: "gpt-5.6-sol" } });
+  assert.deepEqual(rewritten.tools[0].parameters, exclusiveEditSchema);
 });
 
 test("detects Git and non-Git workspaces", async () => {
