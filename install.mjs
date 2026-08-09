@@ -268,13 +268,6 @@ async function copyPath(source, destination) {
   });
 }
 
-async function copyPathIfMissing(source, destination) {
-  if (await pathExists(destination)) {
-    console.log(`  preserve existing ${destination}`);
-    return;
-  }
-  await copyPath(source, destination);
-}
 
 function externalSkillRoots() {
   return [
@@ -456,12 +449,12 @@ async function restoreFiles() {
   }
 
   for (const file of ["adhd-mode.ts", "matugen-chrome.ts", "matugen-footer-core.mjs"]) {
-    await copyPathIfMissing(
+    await copyPath(
       path.join(repoDir, "extensions", file),
       path.join(agentDir, "extensions", file),
     );
   }
-  await mergeMissingTree(
+  await copyPath(
     path.join(repoDir, "extensions", "matugen-footer"),
     path.join(agentDir, "extensions", "matugen-footer"),
   );
@@ -469,6 +462,50 @@ async function restoreFiles() {
     path.join(repoDir, "config", "aft.jsonc"),
     cortexConfigPath("aft.jsonc"),
   );}
+
+async function mergeModelOverrides() {
+  console.log("  applying public model capability overrides");
+  const overridesPath = path.join(repoDir, "config", "models-overrides.json");
+  const modelsPath = path.join(agentDir, "models.json");
+  const overrides = await readJson(overridesPath);
+  const modelsConfig = await readJson(modelsPath);
+
+  if (!isPlainObject(modelsConfig) || !isPlainObject(modelsConfig.providers)) {
+    console.log(`  skip ${modelsPath}: no provider model configuration`);
+    return;
+  }
+
+  const overrideProviders = isPlainObject(overrides.providers) ? overrides.providers : {};
+  let changed = false;
+  for (const [providerId, providerOverrides] of Object.entries(overrideProviders)) {
+    const providerConfig = modelsConfig.providers[providerId];
+    if (!isPlainObject(providerConfig) || !isPlainObject(providerOverrides)) continue;
+    const configuredModels = providerConfig.models;
+    const modelOverrides = providerOverrides.models;
+    if (!Array.isArray(configuredModels) || !Array.isArray(modelOverrides)) continue;
+
+    const overridesById = new Map(
+      modelOverrides
+        .filter((model) => isPlainObject(model) && typeof model.id === "string")
+        .map((model) => [model.id, model]),
+    );
+    providerConfig.models = configuredModels.map((model) => {
+      if (!isPlainObject(model) || typeof model.id !== "string") return model;
+      const override = overridesById.get(model.id);
+      if (!override) return model;
+      changed = true;
+      return mergeObjects(model, override);
+    });
+  }
+
+  if (!changed) {
+    console.log("  no matching local model entries to update");
+    return;
+  }
+  console.log(`  merge ${overridesPath} -> ${modelsPath}`);
+  if (installerOptions.dryRun) return;
+  await writeFile(modelsPath, `${JSON.stringify(modelsConfig, null, 2)}\n`, "utf8");
+}
 
 async function mergePublicSettings(includeModelDefaults) {
   console.log("\n[3/7] Merging public settings");
@@ -717,6 +754,7 @@ if (installerOptions.dryRun) {
 verifyPi();
 const backupDir = await backupExistingConfig();
 await restoreFiles();
+await mergeModelOverrides();
 await mergePublicSettings(choices.modelDefaults);
 await installLocalPackages();
 await installExternalPackages(choices.external);

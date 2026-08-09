@@ -96,7 +96,7 @@ Windows PowerShell：
 .\install.ps1 -Yes
 ```
 
-安装器会备份现有 Pi 配置，合并缺失的 skills 和 themes，安装仓库中的本地扩展，并按选择安装外部 package、Magic Context 和 RTK。provider 凭据和模型注册表继续使用本机内容。
+安装器会备份现有 Pi 配置，更新仓库管理的独立扩展与本地 package，合并缺失的 skills 和 themes，并安全合并公开的模型能力覆盖（不触碰 provider 凭据、地址或 headers）。provider 凭据和模型注册表的其余本机内容继续保留。
 
 ### 第一次启动
 

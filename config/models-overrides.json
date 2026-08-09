@@ -1,0 +1,19 @@
+{
+  "providers": {
+    "manager": {
+      "models": [
+        {
+          "id": "deepseek-v4-flash",
+          "contextWindow": 800000,
+          "maxTokens": 128000,
+          "compat": {
+            "supportsDeveloperRole": false,
+            "requiresReasoningContentOnAssistantMessages": true,
+            "thinkingFormat": "deepseek",
+            "supportsLongCacheRetention": true
+          }
+        }
+      ]
+    }
+  }
+}

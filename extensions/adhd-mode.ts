@@ -1,11 +1,17 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 const ENTRY_TYPE = "adhd-mode";
+let enabled = true;
 
 // Do not mention internal reasoning here: DeepSeek v4-flash can treat such
 // wording as a deliberation objective and spend its whole output budget on it.
 const SYSTEM_PROMPT = `
 ## ADHD Output Mode
 Format only the final reply for an ADHD reader: lead with the result or next action; use short numbered steps when they are actionable; retain necessary details and remove unrelated tangents.
+`;
+
+const DEEPSEEK_V4_FLASH_PROMPT = `
+## Analytical Tasks
+For analytical, mathematical, and technical questions: read every stated condition carefully, derive the result before answering, check edge cases, and validate the conclusion.
 `;
 
 let enabled = true;
@@ -25,14 +31,16 @@ export default function adhdMode(pi: ExtensionAPI) {
   pi.on("before_agent_start", async (event, ctx) => {
     if (!enabled) return undefined;
 
-    // v4-flash's reasoning is materially destabilized by any extra ADHD
-    // system instruction (verified with controlled same-model A/B tests).
-    // Scope this workaround to the affected model only.
+    // Do not append ADHD presentation rules to v4-flash: controlled tests
+    // showed they distort its reasoning. This narrower task-quality prompt is
+    // scoped to the affected model.
     if (
       ctx.model?.provider === "manager" &&
       ctx.model.id === "deepseek-v4-flash"
     ) {
-      return undefined;
+      return {
+        systemPrompt: event.systemPrompt + "\n\n" + DEEPSEEK_V4_FLASH_PROMPT,
+      };
     }
 
     return {
