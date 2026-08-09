@@ -181,6 +181,20 @@ node install.mjs --yes
 
 配置更新后，在 Pi 中运行 `/reload`；涉及安装器、扩展或仓库配置的变化时，重新启动 Pi 更可靠。
 
+### 清空插件后重装
+
+排查旧插件、旧工具 schema 或 package 缓存残留时，使用：
+
+```bash
+node install.mjs --yes --clean-plugins
+```
+
+安装器会先备份 `~/.pi/agent`，再删除 `extensions/`、`npm/` 和 `settings.json` 中的 `packages`，随后从本仓库和 `config/external-packages.txt` 重装插件。它不会删除 skills、themes、模型配置、provider 凭据、headers 或 sessions。先预览：
+
+```bash
+node install.mjs --yes --clean-plugins --dry-run
+```
+
 ## 安全检查
 
 仓库只保存公开配置。提交前检查工作区和差异：

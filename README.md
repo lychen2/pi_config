@@ -181,6 +181,20 @@ node install.mjs --yes
 
 Run `/reload` inside Pi after configuration changes. Restart Pi when the installer, an extension, or repository configuration changed.
 
+### Clean plugin reinstall
+
+To eliminate stale plugins, tool schemas, and package caches, run:
+
+```bash
+node install.mjs --yes --clean-plugins
+```
+
+The installer first backs up `~/.pi/agent`, then removes `extensions/`, `npm/`, and the `packages` list in `settings.json` before reinstalling plugins from this repository and `config/external-packages.txt`. It does not remove skills, themes, model configuration, provider credentials, headers, or sessions. Preview the cleanup first:
+
+```bash
+node install.mjs --yes --clean-plugins --dry-run
+```
+
 ## Security checks
 
 This repository stores public configuration only. Check the worktree and diff before committing:

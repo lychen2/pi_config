@@ -6,6 +6,7 @@ import {
   cp,
   mkdir,
   readFile,
+  rm,
   readdir,
   writeFile,
 } from "node:fs/promises";
@@ -86,6 +87,7 @@ function parseArgs(argv) {
     magicContext: undefined,
     rtk: undefined,
     modelDefaults: undefined,
+    cleanPlugins: false,
   };
 
   for (const arg of argv) {
@@ -121,6 +123,9 @@ function parseArgs(argv) {
       case "--skip-model-defaults":
         setChoice(options, "modelDefaults", false, "model default");
         break;
+      case "--clean-plugins":
+        options.cleanPlugins = true;
+        break;
       case "--help":
       case "-h":
         printHelp();
@@ -151,7 +156,8 @@ Options:
       --skip-rtk           Skip the RTK binary
       --with-model-defaults  Apply provider/model defaults from public settings
       --skip-model-defaults  Keep the machine's provider/model selection
-  Local extensions/pi-*/package.json packages are always installed.
+      --clean-plugins        Back up, remove all Pi extensions and packages, then reinstall
+   Local extensions/pi-*/package.json packages are always installed.
   -h, --help               Show this help
 
 Recommended install (Magic Context runs its own setup wizard):
@@ -171,6 +177,12 @@ function formatCommand(command, args) {
   return [command, ...args]
     .map((part) => (/^[A-Za-z0-9_./:@=-]+$/.test(part) ? part : JSON.stringify(part)))
     .join(" ");
+}
+
+function installStep(step) {
+  const offset = installerOptions.cleanPlugins && step > 1 ? 1 : 0;
+  const total = installerOptions.cleanPlugins ? 8 : 7;
+  return `[${step + offset}/${total}]`;
 }
 
 function run(command, args, options = {}) {
@@ -400,13 +412,13 @@ async function backupExistingConfig() {
   }
   const hasAgentConfig = await pathExists(agentDir);
   if (!hasAgentConfig && existingCortexConfigPaths.length === 0) {
-    console.log("\n[1/7] No existing Pi configuration to back up.");
+    console.log(`\n${installStep(1)} No existing Pi configuration to back up.`);
     return null;
   }
 
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
   const backupDir = path.join(homeDir, `.pi-backup-${timestamp}`);
-  console.log(`\n[1/7] Backing up existing configuration -> ${backupDir}`);
+  console.log(`\n${installStep(1)} Backing up existing configuration -> ${backupDir}`);
   if (installerOptions.dryRun) {
     return backupDir;
   }
@@ -430,8 +442,31 @@ async function backupExistingConfig() {
   return backupDir;
 }
 
+async function cleanPlugins() {
+  const total = installerOptions.cleanPlugins ? 8 : 7;
+  console.log(`\n[2/${total}] Clearing installed Pi plugins for a clean reinstall`);
+  const extensionsPath = path.join(agentDir, "extensions");
+  const npmPath = path.join(agentDir, "npm");
+  const settingsPath = path.join(agentDir, "settings.json");
+
+  console.log(`  remove ${extensionsPath}`);
+  console.log(`  remove ${npmPath}`);
+  console.log(`  clear packages in ${settingsPath}`);
+  if (installerOptions.dryRun) return;
+
+  await rm(extensionsPath, { recursive: true, force: true });
+  await rm(npmPath, { recursive: true, force: true });
+
+  const settings = await readJson(settingsPath);
+  if (!isPlainObject(settings)) {
+    throw new Error(`Invalid settings object in ${settingsPath}`);
+  }
+  delete settings.packages;
+  await writeFile(settingsPath, `${JSON.stringify(settings, null, 2)}\n`, "utf8");
+}
+
 async function restoreFiles() {
-  console.log("\n[2/7] Merging missing skills, themes, and extension configuration");
+  console.log(`\n${installStep(2)} Merging missing skills, themes, and extension configuration`);
   if (!installerOptions.dryRun) {
     await mkdir(agentDir, { recursive: true });
   }
@@ -508,7 +543,7 @@ async function mergeModelOverrides() {
 }
 
 async function mergePublicSettings(includeModelDefaults) {
-  console.log("\n[3/7] Merging public settings");
+  console.log(`\n${installStep(3)} Merging public settings`);
   const publicSettingsPath = path.join(repoDir, "config", "settings-public.json");
   const settingsPath = path.join(agentDir, "settings.json");
   const publicSettings = await readJson(publicSettingsPath);
@@ -540,7 +575,7 @@ async function mergePublicSettings(includeModelDefaults) {
 
 
 async function installLocalPackages() {
-  console.log("\n[4/7] Installing local Pi packages");
+  console.log(`\n${installStep(4)} Installing local Pi packages`);
   const extensionsDir = path.join(repoDir, "extensions");
   const entries = await readdir(extensionsDir, { withFileTypes: true });
   const packageDirs = [];
@@ -606,7 +641,7 @@ async function reorderRtkAftPackages() {
 }
 
 async function installExternalPackages(enabled) {
-  console.log("\n[5/7] Installing external Pi packages");
+  console.log(`\n${installStep(5)} Installing external Pi packages`);
   if (!enabled) {
     console.log("  skipped");
     return;
@@ -671,7 +706,7 @@ async function configureMagicContextThreshold() {
 }
 
 async function installMagicContext(enabled) {
-  console.log("\n[6/7] Installing Magic Context");
+  console.log(`\n${installStep(6)} Installing Magic Context`);
   if (!enabled) {
     console.log("  skipped");
     return;
@@ -698,7 +733,7 @@ async function installMagicContext(enabled) {
 }
 
 async function installOptionalTools(choices) {
-  console.log("\n[7/7] Installing optional command-line tools");
+  console.log(`\n${installStep(7)} Installing optional command-line tools`);
   let installedAny = false;
 
 
@@ -747,12 +782,19 @@ console.log(`  Magic Context: ${choices.magicContext ? "yes" : "no"}`);
 console.log(`  external packages: ${choices.external ? "yes" : "no"}`);
 console.log(`  RTK binary: ${choices.rtk ? "yes" : "no"}`);
 console.log(`  provider/model defaults: ${choices.modelDefaults ? "apply" : "keep current"}`);
+console.log(`  clean plugins: ${installerOptions.cleanPlugins ? "yes" : "no"}`);
+if (installerOptions.cleanPlugins && !choices.external) {
+  console.warn("  warning: external packages are disabled and will not be restored after plugin cleanup");
+}
 if (installerOptions.dryRun) {
   console.log("  mode: dry run");
 }
 
 verifyPi();
 const backupDir = await backupExistingConfig();
+if (installerOptions.cleanPlugins) {
+  await cleanPlugins();
+}
 await restoreFiles();
 await mergeModelOverrides();
 await mergePublicSettings(choices.modelDefaults);
