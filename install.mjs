@@ -6,6 +6,7 @@ import {
   cp,
   mkdir,
   readFile,
+  readlink,
   rm,
   readdir,
   writeFile,
@@ -34,16 +35,24 @@ const retiredPackageSources = new Set([
   "npm:@monotykamary/pi-tps",
   "npm:pi-agent-browser-native",
   "npm:pi-hashline-edit-pro",
- ]);
+  "npm:pi-markdown-preview",
+  "npm:@cortexkit/aft-pi",
+  "npm:pi-gsd",
+  "npm:@juicesharp/rpiv-todo",
+  "npm:pi-maestro-teammate",
+  "npm:pi-readseek",
+  "npm:pi-web-access",
+]);
 const retiredLocalPackageNames = new Set([
   "pi-agent-browser-compat",
   "pi-goal-verifier",
   "pi-rtk-hashline-compat",
   "pi-semantic-code",
-]);
-
-const lateLocalPackageNames = new Set([
+  "pi-aft-compat",
+  "pi-rtk-aft-capture",
   "pi-rtk-aft-restore",
+  "pi-gsd",
+  "pi-large-beautify",
 ]);
 
 function normalizeChildPath() {
@@ -242,6 +251,24 @@ function isRetiredPackageSource(value) {
   return [...retiredLocalPackageNames].some((name) => source.endsWith(`/extensions/${name}`));
 }
 
+function retiredNpmPackageNames() {
+  return [...retiredPackageSources]
+    .filter((source) => source.startsWith("npm:"))
+    .map((source) => source.slice("npm:".length));
+}
+
+async function removeRetiredNpmPackages() {
+  const npmDir = path.join(agentDir, "npm");
+  const packageJsonPath = path.join(npmDir, "package.json");
+  const packageJson = await readJson(packageJsonPath, null);
+  if (!packageJson || !isPlainObject(packageJson.dependencies)) return;
+
+  const installed = retiredNpmPackageNames().filter((name) => name in packageJson.dependencies);
+  if (!installed.length) return;
+  console.log(`  uninstall retired npm packages: ${installed.join(", ")}`);
+  run(commandName("npm"), ["uninstall", "--ignore-scripts", ...installed], { cwd: npmDir });
+}
+
 
 function mergeObjects(base, overlay) {
   const merged = { ...base };
@@ -402,7 +429,7 @@ async function resolveChoices() {
 }
 
 async function backupExistingConfig() {
-  const cortexConfigPaths = ["aft.jsonc", "magic-context.jsonc"]
+  const cortexConfigPaths = ["magic-context.jsonc"]
     .map((name) => cortexConfigPath(name));
   const existingCortexConfigPaths = [];
   for (const configPath of cortexConfigPaths) {
@@ -493,10 +520,7 @@ async function restoreFiles() {
     path.join(repoDir, "extensions", "matugen-footer"),
     path.join(agentDir, "extensions", "matugen-footer"),
   );
-  await copyPath(
-    path.join(repoDir, "config", "aft.jsonc"),
-    cortexConfigPath("aft.jsonc"),
-  );}
+}
 
 async function mergeModelOverrides() {
   console.log("  applying public model capability overrides");
@@ -574,6 +598,28 @@ async function mergePublicSettings(includeModelDefaults) {
 }
 
 
+async function retireLegacyLargeLauncher() {
+  if (isWindows) return;
+
+  const legacySource = path.join(repoDir, "bin", "pi-large");
+  const destination = path.join(homeDir, ".local", "bin", "pi-large");
+  let linkTarget;
+  try {
+    linkTarget = await readlink(destination);
+  } catch (error) {
+    if (error?.code === "ENOENT" || error?.code === "EINVAL") return;
+    throw error;
+  }
+
+  const resolvedTarget = path.resolve(path.dirname(destination), linkTarget);
+  if (resolvedTarget !== legacySource) return;
+
+  console.log(`  remove retired pi-large launcher ${destination}`);
+  if (!installerOptions.dryRun) {
+    await rm(destination, { force: true });
+  }
+}
+
 async function installLocalPackages() {
   console.log(`\n${installStep(4)} Installing local Pi packages`);
   const extensionsDir = path.join(repoDir, "extensions");
@@ -592,52 +638,16 @@ async function installLocalPackages() {
 
   packageDirs.sort();
   console.log(`  discovered local packages: ${packageDirs.map((packageDir) => path.basename(packageDir)).join(", ") || "none"}`);
-  for (const packageDir of packageDirs.filter((entry) => !lateLocalPackageNames.has(path.basename(entry)))) {
+  for (const packageDir of packageDirs.filter((entry) => !retiredLocalPackageNames.has(path.basename(entry)))) {
+    const packageJson = await readJson(path.join(packageDir, "package.json"), {});
+    if (isPlainObject(packageJson.dependencies) && Object.keys(packageJson.dependencies).length > 0) {
+      run(commandName("npm"), ["install", "--omit=dev", "--omit=peer"], { cwd: packageDir });
+    }
     run(commandName("pi"), ["install", packageDir]);
   }
 
   run(process.execPath, [path.join(repoDir, "scripts", "verify-tool-presentations.mjs")]);
-}
-
-async function installLateLocalPackages() {
-  const packageDir = path.join(repoDir, "extensions", "pi-rtk-aft-restore");
-  if (!(await pathExists(path.join(packageDir, "package.json")))) return;
-  console.log("  installing late local package: pi-rtk-aft-restore");
-  run(commandName("pi"), ["install", packageDir]);
-}
-
-function isNamedPackageSource(value, name) {
-  const source = configuredPackageSource(value)?.replaceAll("\\", "/").replace(/\/+$/, "");
-  return source?.endsWith(`/extensions/${name}`) || source === `npm:${name}`;
-}
-
-async function reorderRtkAftPackages() {
-  if (installerOptions.dryRun) return;
-  const settingsPath = path.join(agentDir, "settings.json");
-  const settings = await readJson(settingsPath);
-  if (!Array.isArray(settings.packages)) return;
-
-  const originalPackages = settings.packages;
-  let packages = [...originalPackages];
-  const capture = packages.find((entry) => isNamedPackageSource(entry, "pi-rtk-aft-capture"));
-  const restore = packages.find((entry) => isNamedPackageSource(entry, "pi-rtk-aft-restore"));
-  const rtk = packages.find((entry) => {
-    const source = configuredPackageSource(entry);
-    return typeof source === "string" && (source === "npm:pi-rtk-optimizer" || source.startsWith("npm:pi-rtk-optimizer@"));
-  });
-  if (capture && restore && rtk) {
-    const withoutRtkAdapters = packages.filter((entry) => entry !== capture && entry !== restore);
-    const rtkIndex = withoutRtkAdapters.indexOf(rtk);
-    withoutRtkAdapters.splice(rtkIndex, 0, capture);
-    withoutRtkAdapters.splice(rtkIndex + 2, 0, restore);
-    packages = withoutRtkAdapters;
-  }
-
-
-  if (JSON.stringify(packages) === JSON.stringify(originalPackages)) return;
-  settings.packages = packages;
-  await writeFile(settingsPath, `${JSON.stringify(settings, null, 2)}\n`, "utf8");
-  if (capture && restore && rtk) console.log("  ordered AFT Bash capture -> RTK -> restore");
+  await retireLegacyLargeLauncher();
 }
 
 async function installExternalPackages(enabled) {
@@ -680,9 +690,9 @@ function magicContextConfigPath() {
   return cortexConfigPath("magic-context.jsonc");
 }
 
-async function configureMagicContextThreshold() {
+async function configureMagicContext() {
   const configPath = magicContextConfigPath();
-  console.log(`  set Magic Context execute threshold to 55% -> ${configPath}`);
+  console.log(`  configure Magic Context threshold and disable its Todo entry -> ${configPath}`);
   if (installerOptions.dryRun) return;
 
   const packageRoot = path.join(agentDir, "npm", "node_modules", "@cortexkit", "pi-magic-context");
@@ -701,6 +711,11 @@ async function configureMagicContextThreshold() {
   }
 
   existing.execute_threshold_percentage = 55;
+  existing.todowrite = {
+    ...(isPlainObject(existing.todowrite) ? existing.todowrite : {}),
+    enabled: false,
+    overlay: false,
+  };
   await mkdir(path.dirname(configPath), { recursive: true });
   await writeFile(configPath, `${stringify(existing, null, 2)}\n`, "utf8");
 }
@@ -729,7 +744,7 @@ async function installMagicContext(enabled) {
 
   // The upstream setup wizard registers the package but does not install it.
   run(commandName("pi"), ["install", "npm:@cortexkit/pi-magic-context"]);
-  await configureMagicContextThreshold();
+  await configureMagicContext();
 }
 
 async function installOptionalTools(choices) {
@@ -798,10 +813,9 @@ if (installerOptions.cleanPlugins) {
 await restoreFiles();
 await mergeModelOverrides();
 await mergePublicSettings(choices.modelDefaults);
+await removeRetiredNpmPackages();
 await installLocalPackages();
 await installExternalPackages(choices.external);
-await installLateLocalPackages();
-await reorderRtkAftPackages();
 await installMagicContext(choices.magicContext);
 await installOptionalTools(choices);
 

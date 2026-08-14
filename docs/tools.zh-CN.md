@@ -1,16 +1,16 @@
 # 工具目录与使用示例
 
-本页按当前 agent-facing `functions.*` 工具面统计 **32 个工具**。示例都可以直接复制到 Pi 的普通请求中；模型会根据目标选择工具，通常不需要用户手写 JSON 参数。
+本页说明默认模式当前可用的主要 agent-facing 工具。示例都可以直接复制到 Pi 的普通请求中；模型会根据目标选择工具，通常不需要用户手写 JSON 参数。
 
 ## 先分清三个数量
 
 | 数字 | 含义 |
 | ---: | --- |
-| 32 | 本页逐项解释的当前 `functions.*` 工具接口。 |
-| 43 | `pi-tool-rails` 的显示 registry，包含兼容、可选和非当前 active 的名称；不是当前工具数量。 |
-| 项目实际工具数 | 会随 `pi list`、`/tools`、`--tools`、`--exclude-tools`、信任状态和已安装 package 变化；用 `/tools list` 或 `pi --help` 核对。 |
+| 默认模式 | Pi 原生工具加上 Readseek、FFF、后台 Shell、冲突处理与并行 teammate。 |
+| 大型模式 | `/large on` 在当前会话加载固定上游 Flow、teammate 与 Cockpit，恢复 GUI、MCP、LSP、browser/web search、FFF、conflict、root `bash_bg`、Goal、Todo、Plan、Loop 与 Maestro skills。 |
+| 项目实际工具数 | 会随 `pi list`、`/tools`、启动参数、信任状态和已安装 package 变化；用 `/tools list` 核对。 |
 
-`multi_tool_use.parallel` 是外层并行调用包装器，不计入下面 32 个 `functions.*` 条目。旧的 `load_tools`、`semantic_code` 以及 AFT 的 `aft_callgraph`、`aft_delete`、`aft_move`、`aft_refactor` 不属于本页当前工具面。`pi-deferred-tools` 也不负责延迟这些工具；它只是项目级开关面板，详见[使用手册](USAGE.zh-CN.md#2-工具默认启用与项目开关)。
+`multi_tool_use.parallel` 是外层并行调用包装器。`pi-deferred-tools` 不负责延迟工具；它只是项目级开关面板，详见[使用手册](USAGE.zh-CN.md#2-工具默认启用与项目开关)。快速简单任务可用 `/tools fast` 切到最小工具集（read/bash/write/edit/grep/fffind/ffgrep/todo/ask_user_question），`/tools reset` 恢复。
 
 ## 文件、搜索与执行（6）
 
@@ -23,13 +23,14 @@
 | `grep` | 在指定路径按正则搜索文本 | `在 src/ 中搜索 handleRequest 的所有引用，排除 test/，只返回文件和行号。` |
 | `preview_export` | 将 Markdown、LaTeX 或本地文件导出为 PDF、HTML 或 PNG | `把 docs/report.md 导出为 PDF，输出到 artifacts/report.pdf，并确认标题和图片都能渲染。` |
 
-## 提问与任务（3）
+## 提问与任务（2）
 
 | 工具 | 用途 | 使用示例 |
 | --- | --- | --- |
 | `ask_user_question` | 在存在真实决策分支时给出 2 到 4 个结构化选项 | `数据库迁移方案有多个互斥选择时，先用结构化问题询问我，并把推荐方案放第一项。` |
-| `todo` | 创建、更新、查询、删除或清空持久任务项 | `把这个任务拆成检查、实现、测试三个 Todo；每次只保留一个 in_progress。` |
-| `todowrite` | 一次性替换当前会话的完整 Todo 列表 | `用 todowrite 建立完整清单：核对配置、更新文档、运行检查；完成一项就立即标记。` |
+| `todo` | 默认模式唯一的 Pi Todo 入口；创建、更新、查询、删除或清空持久任务项，使用 `todo-panel` 与 `Alt+T` 折叠，并在 Magic Context 裁剪后重新注入最新活动任务快照 | `把这个任务拆成检查、实现、测试三个 Todo；每次只保留一个 in_progress。` |
+
+> Magic Context 自带的 `todowrite` 和 overlay 已通过 `~/.config/cortexkit/magic-context.jsonc` 关闭，并由项目 `.pi/tool-selector.json` 再次禁用。Magic Context 的压缩、记忆、搜索和数据库保持启用；默认 `pi-maestro-todo` 的 `context` hook 会在裁剪后补回一份隐藏的活动任务快照。Large Todo 与 Large 兼容链路不在本次改动范围。
 
 ## Web、来源与内容提取（4）
 
@@ -54,42 +55,41 @@
 
 `ctx_memory` 记录稳定事实；`ctx_note` 记录以后处理的事项；当前任务不要用 note 代替 Todo。
 
-## 任务分支（1）
+## 并行 Subagent（4）
 
 | 工具 | 用途 | 使用示例 |
 | --- | --- | --- |
-| `push-task` | 将 subagent 放入 Pi session tree 的新上下文分支，等待用户启动；可选 `role` 和 `model` | `启动一个 role=explore、model=manager/gpt-5.6-luna 的只读 subagent，检查当前改动。` |
+| `teammate` | 并行派发独立 Pi 子进程任务，支持 DAG 与结果聚合 | `同时派发只读审查和测试盘点；concurrency=2，等待两者完成后汇总。` |
+| `teammate-send` | 向运行中的 agent 发送 steer、follow-up 或 abort | `让 reviewer 额外检查迁移兼容性，不要改文件。` |
+| `teammate-list` | 查看可用角色、运行中 agent 或跨窗口目标 | `列出当前运行中的 teammate agent。` |
+| `observe` | 一次性状态、等待或 watch teammate 与 workspace | `等待 reviewer 和 tester 都完成，最多 10 分钟。` |
 
-模型会在符合条件时主动把边界清楚、可独立执行或审查的子任务路由到 `push-task`；简单、强串行或持续依赖主会话上下文的任务不应委派。使用 `/start-task` 启动分支，完成后用 `/finish-task` 将最后一条助手结果带回主分支；不需要执行时用 `/discard-task`。多个任务按顺序执行可使用 `/auto`。
+并行写任务不能修改同一文件集。仓库保留可选 `pi-gsd` 源码；只有手动安装后才提供 `push-task`、`/start-task` 和 `/auto`。
 
-## 后台 shell 任务（4）
+## 后台 shell 任务（1）
 
-这些工具只在 `bash` 已返回后台任务 ID 后使用。
-
-| 工具 | 用途 | 使用示例 |
-| --- | --- | --- |
-| `bash_status` | 快速查看后台 shell 的当前输出和状态，不等待 | `查看任务 ID 为 abc 的后台构建当前输出；只看一次，不要循环轮询。` |
-| `bash_watch` | 等待后台任务退出、匹配指定输出或达到超时 | `等待构建任务退出，最多 10 分钟；如果出现“FAIL”就立即返回相关输出。` |
-| `bash_write` | 向后台 PTY 进程写入文本或按键 | `向正在运行的交互式测试发送 Enter，然后读取下一屏输出。` |
-| `bash_kill` | 终止一个仍在运行的后台任务 | `停止已经确认失控的开发服务器任务，并返回任务 ID。` |
-
-普通短命令优先直接同步执行；只有确实需要并行工作或交互输入时才使用后台任务。
-
-## AFT 代码导航与安全检查（7）
-
-AFT 的 `read`、`write`、`edit` 和 `grep` 仍是文件操作入口；下面是 AFT 的分析、冲突和恢复能力。
+`bash_bg` 自主管理其任务 ID；不要把 `bash_bg` 返回的 ID 传给 `observe`。
 
 | 工具 | 用途 | 使用示例 |
 | --- | --- | --- |
-| `aft_search` | 使用索引、语义或精确查询查找概念、标识符、字符串和文件 | `用 AFT 搜索“watcher invalidation 如何处理”，只读并返回最相关的实现和测试路径。` |
-| `aft_outline` | 查看文件、目录或 URL 的结构、符号和标题层级 | `列出 src/ 里与 auth 相关文件的结构，先给符号范围，不要读取整份大文件。` |
-| `aft_zoom` | 读取指定符号或文档标题的完整内容，可附一层调用图 | `读取 src/service.ts 的 UserStore 符号和一层 calls-out，说明最安全的修改入口。` |
-| `aft_inspect` | 汇总诊断、TODO、指标、死代码、未使用导出、重复和循环 | `检查 src/auth/ 的诊断、死代码和重复；测试前先报告未完成的扫描类别。` |
-| `aft_conflicts` | 一次列出仓库所有 Git merge conflict 区域及上下文 | `检查当前仓库的所有 merge conflict，只读返回文件、行号和冲突双方。` |
-| `aft_import` | 语言感知地添加、移除或整理 import | `整理 src/index.ts 的 TypeScript imports，只做 organize 并运行语法校验。` |
-| `aft_safety` | 创建、恢复、列出或撤销 AFT 命名检查点 | `在编辑 config/ 前创建名为 before-docs 的检查点；验证失败时恢复它。` |
+| `bash_bg` | 通过 `run`/`start` 启动任务，通过 `status`/`wait`/`kill`/`list` 管理任务 | `启动构建；若转入后台，使用返回的任务 ID 调用 bash_bg(action="wait")，不要轮询 observe。` |
 
-AFT `edit` 通过字段存在性判断模式：一次调用只能传一种编辑模式。跨文件安全重命名不要把 AFT 当作 LSP rename；先使用项目的重构工具，再让 AFT 检查 diff。
+普通短命令优先直接同步执行；服务器、watcher 或耗时不确定的命令才使用 `bash_bg`。
+
+## Readseek、FFF 与冲突处理
+
+Pi 原生 `read` 读取普通文件；Readseek 接管 `write`、`edit` 和 `grep`，同时给出锚点读取、摘要、结构化搜索及定义/引用/重命名操作。FFF 只面向工作区：`fffind` 查模糊路径，`ffgrep` 查字面内容。
+
+| 工具 | 用途 | 使用示例 |
+| --- | --- | --- |
+| `readSeek_view` | 用稳定锚点读取局部文件，支持精确编辑前的定位 | `读取 src/service.ts 的 UserStore 附近内容，返回可用于后续精确修改的锚点。` |
+| `readSeek_digest` | 生成文件或目录摘要 | `汇总 src/auth/ 的文件职责和主要符号，只读。` |
+| `readSeek_search` | 正则和结构化代码搜索 | `在 src/ 搜索调用 fetch 的 try/catch 结构，只读返回路径。` |
+| `readSeek_def` / `readSeek_refs` / `readSeek_rename` | 定义、引用和确认式重命名 | `先列出 handleRequest 的全部引用；不要修改。` |
+| `fffind` / `ffgrep` | 模糊文件发现和快速字面内容搜索 | `在当前工作区找名称接近 auth callback 的文件，并搜索 literal “redirect_uri”。` |
+| `conflict` | 读取并解析 Git 冲突；编号是 `list` 返回的短期句柄，解析前重验原始 hunk | `先 list，再复制当前 conflict://N 调用 diff；不要猜固定编号。` |
+
+跨文件重命名前先预览范围，应用后运行项目的编译或相关测试。
 
 ## AST 结构化搜索与改写（2）
 
@@ -103,11 +103,11 @@ AST 改写前先用 `dryRun`，确认捕获范围、文件范围和测试命令�
 ## 常见组合
 
 ```text
-先用 aft_outline 和 aft_zoom 理解 UserStore，再用 aft_inspect 检查诊断；只读返回最安全的修改入口。
+先用 readSeek_def、readSeek_refs 和 readSeek_view 理解 UserStore；只读返回最安全的修改入口。
 ```
 
 ```text
-用 push-task 建立一个 role=review 的只读 subagent，审查当前 diff、最窄测试和剩余风险。
+使用 teammate 并行派发一个只读 review 和一个测试盘点任务；不要让它们修改文件。
 ```
 
 ```text

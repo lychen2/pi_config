@@ -54,14 +54,14 @@ test("uses compact tool text labels with emoji rendered separately", () => {
   assert.deepEqual(labelLines("web_search"), ["web"]);
   assert.deepEqual(labelLines("fetch_content"), ["fetch"]);
   assert.deepEqual(labelLines("undo_last_replace"), ["undo"]);
-  assert.deepEqual(labelLines("todowrite"), ["tasks"]);
+  assert.deepEqual(labelLines("todo"), ["tasks"]);
   assert.deepEqual(labelLines("replace"), ["replace"]);
-  assert.deepEqual(labelLines("aft_inspect"), ["health"]);
-  assert.deepEqual(labelLines("aft_outline"), ["outline"]);
-  assert.deepEqual(labelLines("ast_grep_search"), ["ast find"]);
-  assert.equal(labelLayout("aft_inspect", 0, "health").emoji, "🩺");
-  assert.equal(labelLayout("aft_zoom", 0, "zoom").emoji, "🔬");
-  assert.equal(labelLayout("ast_grep_replace", 0, "ast edit").emoji, "🌳");
+  assert.deepEqual(labelLines("readSeek_digest"), ["digest"]);
+  assert.deepEqual(labelLines("readSeek_def"), ["def"]);
+  assert.deepEqual(labelLines("readSeek_search"), ["search"]);
+  assert.equal(labelLayout("readSeek_digest", 0, "digest").emoji, "🩺");
+  assert.equal(labelLayout("readSeek_view", 0, "view").emoji, "🔬");
+  assert.equal(labelLayout("readSeek_search", 0, "search").emoji, "🌳");
 });
 
 test("exposes Material Symbols Rounded glyphs as an explicit icon fallback", () => {
@@ -75,8 +75,8 @@ test("keeps a single overlong tool word compact", () => {
 });
 
 test("places the emoji immediately before centered text without shifting its center", () => {
-  assert.deepEqual(labelLayout("todowrite", 0, "tasks"), {
-    emoji: "✅",
+  assert.deepEqual(labelLayout("todo", 0, "tasks"), {
+    emoji: "📋",
     text: "tasks",
     left: 1,
     right: 4,
@@ -117,7 +117,7 @@ test("selects semantic results instead of the final rendered line", () => {
     visibleToolContentLines(
       ["inspect symbols", "src/config.ts", "Zoom any result for full source", "[AFT E0 W0 | D0 U0]"],
       false,
-      { toolName: "aft_search" },
+      { toolName: "readSeek_search" },
     ),
     ["inspect symbols", "src/config.ts"],
   );
@@ -228,7 +228,7 @@ test("colors structured status and task identifiers", () => {
     styleStructuredLine(
       "\u001b[37mtodos 0 · diagnostics 0 errors/0 warnings/0 info/0 hints · metrics 2\u001b[0m",
       theme,
-      { toolName: "aft_inspect" },
+      { toolName: "readSeek_digest" },
     ),
     [
       "<success>todos 0</success>",

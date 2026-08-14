@@ -52,7 +52,7 @@ Pi can work with file editing, code inspection, web access, skills, and delegati
 
 ### Make every change inspectable and recoverable
 
-Use `--dry-run` before installation, review Git diffs and test results after code changes, and use AFT's `aft_safety` checkpoints when you need finer-grained file recovery.
+Use `--dry-run` before installation, review Git diffs and test results after code changes, and use `pi-workspace-history` when you need workspace-level recovery.
 
 ## Five-minute setup
 
@@ -137,17 +137,17 @@ Run the focused tests before completion and report any remaining risk.
 
 For code tasks, ask Pi to report changed files, verification commands, and remaining risks. Start with focused tests and expand to the full suite when the change warrants it.
 
-### Use a clean task branch when useful
+### Delegate independent work in parallel
 
-`pi-gsd` lets Pi queue focused work with `push-task`, then run it in a fresh session-tree branch under your control:
+The default profile provides the `teammate` tool, which launches independent Pi subprocesses with multi-task dispatch, DAG dependencies, background completion notifications, and result aggregation.
 
 ```text
-Use push-task for a read-only review of the changed files and tests. Set role to review. Return file names, line numbers, and risks.
+Use teammate to dispatch two independent tasks that do not edit the same files, then summarize both statuses and results.
 ```
 
-Run `/start-task` to enter the branch, `/finish-task` to bring the last result back, `/abort-task` to leave without a result, or `/auto` to process queued tasks sequentially. `role` selects a short task profile, not a permission system. Profiles cover `explore`, `map`, `analyze`, `research`, `synthesize`, `plan`, `roadmap`, `plan-check`, `implement`, `execute`, `debug`, `migrate`, `integrate`, `review`, `audit`, `security`, `performance`, `test`, `verify`, `design`, `docs`, and `release`; aliases such as `scout`, `builder`, `reviewer`, `tester`, and `verifier` are accepted. The selected profile is added only inside the new branch. Put the actual scope, restrictions, and acceptance checks in the prompt. Add `model` when the task suits a cheaper or specialized model.
+The main tools are `teammate`, `teammate-send`, `teammate-list`, and `observe`. The repository still keeps `extensions/pi-gsd` for users who explicitly want the sequential `/start-task`, `/finish-task`, and `/auto` session-tree workflow, but the installer no longer enables it by default.
 
-Use `push-task` proactively only for bounded independent or reviewable work when fresh context, parallel progress, or an independent perspective materially improves the result. Keep trivial, tightly coupled, and continuously context-dependent work in the parent agent. Pass a minimal task brief instead of the full conversation; the parent agent owns integration and final verification.
+Use `teammate` only for bounded independent or reviewable work where fresh context or parallel progress materially helps. Keep trivial, tightly coupled, and continuously context-dependent work in the parent agent. Pass a minimal brief; the parent agent owns integration and final verification.
 
 ## Repository map
 
@@ -163,7 +163,7 @@ Use `push-task` proactively only for bounded independent or reviewable work when
 ## Continue from here
 
 - [Quick-start Wiki](docs/WIKI.zh-CN.md): common commands and workflows after the first installation.
-- [Complete usage guide](docs/USAGE.zh-CN.md): tool selection, AFT, workflow DAGs, task branches, web access, and research scenarios.
+- [Complete usage guide](docs/USAGE.zh-CN.md): tool selection, file/search tools, large-project workflows, task branches, web access, and research scenarios.
 - [Extension catalog](docs/extensions.zh-CN.md): purpose, commands, and configuration for local and third-party extensions.
 - [Skill catalog](docs/skills.zh-CN.md): skills grouped by task with invocation examples.
 - [Tool catalog](docs/tools.zh-CN.md): current tools with usage examples.

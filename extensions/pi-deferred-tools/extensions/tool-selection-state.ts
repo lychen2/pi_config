@@ -17,6 +17,40 @@ export const EMPTY_TOOL_SELECTION: ToolSelectionConfig = {
   disabledTools: [],
 };
 
+/**
+ * Minimal tool surface for fast, simple tasks. Keeps the core file/shell
+ * tools, indexed workspace search, the single Todo entry, and structured
+ * questions; disables web, subagent, memory, preview, conflict, background
+ * shell, and AST tooling. `bash`, `find`, and `ls` are built-ins and stay
+ * active regardless of this preset.
+ */
+export const FAST_TOOL_NAMES: readonly string[] = [
+  "read",
+  "bash",
+  "write",
+  "edit",
+  "grep",
+  "ffind",
+  "ffgrep",
+  "todo",
+  "ask_user_question",
+];
+
+/**
+ * Returns a selection config that disables every extension tool not in
+ * {@link FAST_TOOL_NAMES}. Disabling is by global tool name, so it stays
+ * future-proof against newly registered tools (they are hidden until
+ * explicitly re-enabled).
+ */
+export function fastSelectionConfig(groups: readonly ToolGroupRef[]): ToolSelectionConfig {
+  const keep = new Set(FAST_TOOL_NAMES);
+  const disabledTools = [...new Set(
+    groups.flatMap((group) => group.tools.map((tool) => tool.name))
+      .filter((name) => !keep.has(name)),
+  )].sort();
+  return { disabledExtensions: [], disabledTools };
+}
+
 export function normalizePackageSource(source: string): string {
   if (source.startsWith("npm:")) {
     const packageName = source.slice(4);

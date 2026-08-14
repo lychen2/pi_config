@@ -6,18 +6,22 @@
 
 ## 本仓库 package
 
-安装器会扫描并安装 `extensions/` 下全部带 `pi-*/package.json` 的 package。开发时进入对应目录运行 `npm run typecheck`；带测试的 package 还可运行 `npm test`。
+安装器会扫描 `extensions/` 下带 `pi-*/package.json` 的 package；默认退役清单中的兼容包（目前包括 `pi-gsd`）保留源码但不会自动安装。开发时进入对应目录运行 `npm run typecheck`；带测试的 package 还可运行 `npm test`。
 
 | 扩展 | 解决的问题 | 使用入口 | 配置或开关 |
 | --- | --- | --- | --- |
-| `pi-aft-compat` | 将模型可见的 AFT edit schema 改为互斥分支，并在非 Git 目录关闭 `aft_search` | 自动处理；执行和渲染仍由 AFT 原生 `edit` 完成 | 不注册工具，不修改 AFT 源码 |
 | `pi-brand-header` | 在启动栏显示模型、思考级别、目录、主题、技能和工具数量 | `/logo` 显示或隐藏 | 仅 TUI 生效；窄终端自动折叠 |
-| `pi-deferred-tools` | 项目级两级工具选择器；工具不再延迟，旧包名仅为兼容 | `/tools` 两级 TUI；`/tools list` 查看状态 | 受信任项目 `.pi/tool-selector.json`；`PI_TOOL_SELECTOR_DISABLE=1` 禁用 |
+| `pi-deferred-tools` | 项目级两级工具选择器；工具不再延迟，旧包名仅为兼容 | `/tools` 两级 TUI；`/tools list` 查看状态；`/tools fast` 最小工具预设、`/tools reset` 恢复 | 受信任项目 `.pi/tool-selector.json`；`PI_TOOL_SELECTOR_DISABLE=1` 禁用 |
 | `pi-manager-models` | 从 OpenAI-compatible `/models` 刷新 `manager` 模型目录 | 启动时自动刷新 | `PI_MANAGER_MODELS_PROVIDER`、`PI_MANAGER_MODELS_CONFIG` |
 | `pi-slim-skills` | 压缩模型可见的技能索引，降低提示词体积 | `/slim-skills remove <名称>`、`none`、`reset`、`inject <名称>` | `slim-skills-whitelist.json`；`SLIM_SKILLS_DISABLE=1` 禁用 |
 | `pi-todo-guard` | Todo 仍有未完成项目时，提醒代理继续当前任务 | 自动处理 | `PI_TODO_GUARD_DISABLE=1`；默认兼容 `todo` 工具 |
-| `pi-tool-rails` | 提供稳定的工具标签、结果面板、diff 和输入框样式；保留 AFT 原生 edit 路径/结果渲染，不注册 `find`/`ls` | 自动处理 | `PI_TOOL_RAILS_DISABLE_USER_FRAME=1` 仅关闭用户消息边框 |
-| `pi-gsd` | 本地维护的轻量 session-tree subagent；不携带上游 Superpowers skills、Updater 或重型提示 | 对边界清楚、可独立执行或审查且确有上下文收益的任务，模型用 `push-task` 入队；用户用 `/start-task` 或 `/auto` 启动 | 简单、强串行或持续依赖主会话的任务留在主 agent；`/finish-task` 返回结果；`role` 选择短 profile；`model` 可指定任务模型 |
+| `pi-maestro-todo` | 以 Maestro 风格显示并持久化 Todo，提供状态层级、筛选和任务明细 | 模型调用 `todo`；`/todos` 或 `/maestro-todo` 打开任务中心；`Alt+T` 展开/收起面板 | 兼容旧 `rpiv-todo` 会话快照，不加载 Maestro 的 Goal、skills 或 teammate 运行时 |
+| `pi-maestro-tools` | FFF 文件/字面搜索、后台 Shell 和 Git 冲突解析 | 模型调用 `fffind`、`ffgrep`、`bash_bg`、`conflict` | 默认加载；只搜索工作区，冲突解析会重验原始 hunk |
+| `pi-readseek-compat` | 作为 Readseek、Web Access、默认 teammate 和原生 `read` 的唯一注册入口，修正默认模式公开 schema | 模型调用 `readSeek_*`、联网工具、`teammate`/`observe` 和 `read` | 锁定上游实现版本；只适配 schema、错误边界和已审计的输入兼容性 |
+| `pi-markdown-preview-compat` | 作为 Markdown Preview 的唯一注册入口，验证 PNG 签名并执行一次缓存重试 | `/preview`、`/preview-browser`、`/preview-pdf`，模型调用 `preview_export` | PNG 验证失败会清理 artifact 并返回错误，不再报告虚假成功 |
+| `pi-large-mode` | 在当前会话的默认 package 边界与固定上游 Maestro Flow profile 之间切换 | `/large on|off|status|update` | Large 固定加载 Flow、teammate 与 Cockpit；关闭时恢复原始顺序和 `autoload` |
+| `pi-tool-rails` | 提供稳定的工具标签、结果面板、diff 和输入框样式 | 自动处理 | `PI_TOOL_RAILS_DISABLE_USER_FRAME=1` 仅关闭用户消息边框 |
+| `pi-gsd` | 可选的串行 session-tree subagent；安装器不再默认启用 | 手动安装后用 `push-task`、`/start-task`、`/finish-task`、`/auto` | 默认并行委派使用 `pi-maestro-teammate`；仅在明确需要同一 session tree 工作流时安装 |
 
 
 ### 项目工具选择
@@ -45,27 +49,23 @@
 
 ## 第三方 package
 
-这些 package 来自 [`../config/external-packages.txt`](../config/external-packages.txt)，由安装器在选择 `--with-external` 时安装。版本以本机 `pi list` 为准。
+这些 package 来自 [`../config/external-packages.txt`](../config/external-packages.txt)，由安装器在选择 `--with-external` 时安装。版本以本机 `pi list` 为准。Readseek、Web Access、默认 teammate 和 Markdown Preview 不再作为独立 package 条目安装；它们是上述两个本地兼容入口的锁定 production dependencies。
 
 | Package | 能力 | 常用入口 |
 | --- | --- | --- |
-| `pi-markdown-preview` | Markdown、LaTeX、浏览器和 PDF 预览 | `/preview`、`/preview-browser`、`/preview-pdf` |
 | `@narumitw/pi-plan-mode` | 只读的计划协作模式 | `/plan` |
 | `@juicesharp/rpiv-ask-user-question` | 有选项、可结构化回答的问题组件 | 模型在需要澄清时调用 `ask_user_question` |
-| `@cortexkit/aft-pi` | 原生文件读写、检查点恢复、代码分析与索引搜索；Bash 接管提供 rewrite、压缩和后台任务；本地兼容层只调整模型可见的 `edit` schema | `read`、`write`、`edit`、`grep`、`bash`、`aft_outline`、`aft_zoom`、`aft_safety`；配置 `~/.config/cortexkit/aft.jsonc` |
 | `pi-slopchop` | 终端内代码审阅与注释 | `/slopchop` 或 `/diff` |
 | `pi-workspace-history` | 工作区级撤销与重做 | 在需要回退文件改动时调用其命令；先查看 `/hotkeys` 中实际注册键位 |
-| `@juicesharp/rpiv-todo` | 跨重载与压缩保存的任务列表 | 模型调用 `todo`；状态显示在 overlay |
-| `pi-rtk-optimizer` | RTK 命令改写和通用工具输出压缩；AFT 的 `read` 使用普通行号输出，长输出仍走 RTK 通用截断 | `/rtk verify`；需要安装 `rtk` binary |
+| `pi-rtk-optimizer` | RTK 命令改写和通用工具输出压缩 | `/rtk verify`；需要安装 `rtk` binary |
 | `pi-cache-optimizer` | 稳定提示词和 provider cache，提高缓存命中 | `/cache-optimizer` 查看或调整状态 |
-| `pi-web-access` | 网络搜索、网页/PDF/GitHub 内容抓取和视频理解 | 直接要求模型搜索或抓取网页；项目可用 `/tools` 关闭 |
 | `@victor-software-house/pi-curated-themes` | 额外终端主题资源 | `/settings` 中选择主题 |
 | `git:github.com/BevalZ/pi-provider` | 配置与检查自定义 provider | `/provider add`，再用 `/model` 选择模型 |
 
 ## 组合建议
 
-- **常规编码**：`@cortexkit/aft-pi`、`pi-tool-rails`、`pi-rtk-optimizer`、`pi-cache-optimizer` 与 `pi-todo-guard` 构成默认基础。
-- **需要先确认方案**：`/plan`，通过后回到常规模式执行。
+- **常规编码**：Pi 原生 `bash`、`pi-readseek-compat` 提供的 `read`/Readseek/Web/teammate 工具、`pi-markdown-preview-compat`、`pi-maestro-tools`、`pi-maestro-todo`、`pi-tool-rails`、`pi-rtk-optimizer`、`pi-cache-optimizer` 与 `pi-todo-guard` 构成默认基础。
+- **需要深度项目编排**：在当前 Pi 会话运行 `/large on`；它加载固定版本的完整上游 Flow、teammate 和 Cockpit，包括 GUI、MCP、LSP、browser/web search、FFF、conflict、root `bash_bg`、Advisor、self-evolve、Goal、Todo、Plan、Loop、agents 和 Maestro skills。完成后用 `/large off` 恢复默认 package 边界。
 - **需要联网资料**：直接要求模型搜索网页、抓取 URL 或克隆 GitHub 仓库；相关工具默认可用。
 
 ## 排障

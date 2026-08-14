@@ -9,6 +9,9 @@
   "quietStartup": true,
   "hideThinkingBlock": false,
   "enableSkillCommands": true,
+  "readseek": {
+    "overrideTools": ["grep", "write"]
+  },
   "desktopSkillOverrides": {
     "name:alphafold2": false,
     "name:boltz": false,

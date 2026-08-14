@@ -1,3 +1,7 @@
+// Legacy package name retained for compatibility: tools are NOT deferred here.
+// This extension is a project-scoped tool selector — it writes disable rules to
+// the trusted project's `.pi/tool-selector.json` and applies them to the model's
+// active tool set. See `/tools fast` for the minimal quick-task preset.
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 import {
@@ -8,17 +12,9 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { Key, matchesKey, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 import {
-  aftConfigPath,
-  aftProfileLabel,
-  applyAftProfile,
-  currentAftProfile,
-  loadAftConfig,
-  parseAftProfile,
-  saveAftConfig,
-} from "./aft-profiles.js";
-import {
   EMPTY_TOOL_SELECTION,
   enabledToolCount,
+  fastSelectionConfig,
   isToolDisabled,
   packageSourceId,
   parseToolSelectionConfig,
@@ -148,58 +144,32 @@ function applyGroupSelection(
   pi.setActiveTools([...active]);
 }
 
+/**
+ * Sets the exact desired active-tool set from a config: start from the
+ * current active tools (which include built-ins), add every extension tool as
+ * a candidate, then drop anything the config disables. This re-enables tools
+ * whose disable rule was removed (e.g. by /tools reset), unlike the
+ * disable-only `applyDisabledTools`.
+ */
+function applySelection(
+  pi: ExtensionAPI,
+  groups: ExtensionGroup[],
+  config: ToolSelectionConfig,
+): void {
+  const active = new Set(pi.getActiveTools());
+  for (const group of groups) for (const tool of group.tools) active.add(tool.name);
+  for (const group of groups) {
+    for (const tool of group.tools) {
+      if (isToolDisabled(config, group.id, tool.name)) active.delete(tool.name);
+    }
+  }
+  pi.setActiveTools([...active]);
+}
+
 function notify(ctx: ExtensionCommandContext, message: string, level: "info" | "warning" | "error" = "info"): void {
   if (ctx.hasUI) ctx.ui.notify(message, level);
 }
 
-async function configureAftProfile(args: string, ctx: ExtensionCommandContext): Promise<void> {
-  const argument = normalize(args);
-  const configPath = aftConfigPath();
-
-  let config;
-  try {
-    config = loadAftConfig(configPath);
-  } catch (error) {
-    notify(ctx, error instanceof Error ? error.message : String(error), "error");
-    return;
-  }
-
-  if (argument === "status") {
-    notify(ctx, `AFT profile: ${currentAftProfile(config)} (${configPath})`);
-    return;
-  }
-
-  let profile = parseAftProfile(argument);
-  if (!profile) {
-    if (argument) {
-      notify(ctx, "Usage: /tools aft [balanced|minimal|full|status]", "warning");
-      return;
-    }
-    if (ctx.mode !== "tui") {
-      notify(ctx, "Use /tools aft [balanced|minimal|full|status] outside TUI mode.", "warning");
-      return;
-    }
-
-    const choices = ["balanced", "minimal", "full"] as const;
-    const selected = await ctx.ui.select(
-      "AFT resource profile",
-      choices.map((choice) => aftProfileLabel(choice)),
-    );
-    if (!selected) return;
-    profile = choices.find((choice) => aftProfileLabel(choice) === selected);
-    if (!profile) return;
-  }
-
-  try {
-    saveAftConfig(applyAftProfile(config, profile), configPath);
-    notify(
-      ctx,
-      `AFT ${profile} profile saved. Restart every Pi session to stop existing language servers and apply the new profile.`,
-    );
-  } catch (error) {
-    notify(ctx, error instanceof Error ? error.message : String(error), "error");
-  }
-}
 
 function paddedLine(text: string, width: number): string {
   const safeWidth = Math.max(1, width);
@@ -436,12 +406,6 @@ export default function toolSelector(pi: ExtensionAPI): void {
   };
 
   const openSelector = async (args: string, ctx: ExtensionCommandContext): Promise<void> => {
-    const [command, ...rest] = normalize(args).split(/\s+/);
-    if (command === "aft") {
-      await configureAftProfile(rest.join(" "), ctx);
-      return;
-    }
-
     const path = projectConfigPath(ctx);
     if (!path) {
       notify(ctx, "Project tool selection requires a trusted project. Run /trust, restart Pi, then use /tools.", "warning");
@@ -457,12 +421,31 @@ export default function toolSelector(pi: ExtensionAPI): void {
     }
 
     const groups = discoverExtensionGroups(pi);
-    if (normalize(args) === "list") {
+    const command = normalize(args);
+    if (command === "list") {
       notify(ctx, formatStatus(groups, config, path));
       return;
     }
+    if (command === "fast") {
+      config = fastSelectionConfig(groups);
+      saveConfig(path, config);
+      applySelection(pi, groups, config);
+      notify(
+        ctx,
+        `Fast preset applied (${groups.flatMap((g) => g.tools).length - config.disabledTools.length} tools kept). Use /tools reset to restore.`,
+        "info",
+      );
+      return;
+    }
+    if (command === "reset") {
+      config = { ...EMPTY_TOOL_SELECTION };
+      saveConfig(path, config);
+      applySelection(pi, groups, config);
+      notify(ctx, "Tool selection reset: all extension tools enabled.", "info");
+      return;
+    }
     if (args.trim()) {
-      notify(ctx, "Usage: /tools [list | aft [balanced|minimal|full|status]]", "warning");
+      notify(ctx, "Usage: /tools [list|fast|reset]", "warning");
       return;
     }
     if (ctx.mode !== "tui") {
@@ -503,11 +486,11 @@ export default function toolSelector(pi: ExtensionAPI): void {
   };
 
   pi.registerCommand("tools", {
-    description: "Configure project tools or the global AFT resource profile",
+    description: "Configure project extension tools",
     handler: openSelector,
   });
   pi.registerCommand("deferred-tools", {
-    description: "Open the project tool selector or configure AFT (legacy alias)",
+    description: "Open the project tool selector (legacy alias)",
     handler: openSelector,
   });
 

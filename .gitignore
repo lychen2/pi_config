@@ -30,3 +30,19 @@
 **/dist/
 **/build/
 .DS_Store
+
+# Workflow knowledge-base runtime state (embeddings, caches); specs/ stays tracked
+.workflow/*
+!.workflow/specs/
+
+# Machine-local overrides
+.pi/settings.local.json
+
+# Plan-mode session drafts
+/docs/plans/
+
+# Legacy large-mode launcher (superseded by /large on)
+/bin/pi-large
+
+# Stray root lockfile (no root package.json)
+/package-lock.json

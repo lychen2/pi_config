@@ -1,0 +1,22 @@
+{
+  "name": "pi-large-mode",
+  "version": "0.1.0",
+  "description": "In-session /large profile switching for Pi",
+  "license": "MIT",
+  "type": "module",
+  "keywords": ["pi-package", "pi", "maestro", "profile"],
+  "files": ["index.ts", "core.ts", "README.md", "LICENSE"],
+  "pi": { "extensions": ["./index.ts"] },
+  "scripts": {
+    "test": "node --experimental-strip-types --test tests/*.test.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "^0.84.0",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0"
+  }
+}

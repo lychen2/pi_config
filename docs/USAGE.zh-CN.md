@@ -27,7 +27,7 @@ irm https://raw.githubusercontent.com/lychen2/pi_config/main/install.ps1 | iex
 
 1. 安装或检查 Node.js、Git 和 Pi。
 2. 将仓库放到 `~/.pi_config`，或使用已有 checkout。
-3. 备份现有 `~/.pi/agent`，以及会被更新的 `~/.config/cortexkit/aft.jsonc` 和 `magic-context.jsonc`。
+3. 备份现有 `~/.pi/agent`，以及会被更新的 Magic Context 配置。
 4. 合并缺失的 skills 和 themes，保留本机已有文件；仅在独立扩展不存在时复制它们。
 5. 覆盖仓库维护的公开配置，合并公开 settings，并自动扫描 `extensions/pi-*/package.json` 逐个运行 `pi install`。
 6. 工具扩展默认全部启用；每个项目可用 `/tools` 保存自己的禁用项。
@@ -59,18 +59,20 @@ pi list
 确认 `pi list` 输出包含仓库本地 package 路径（名称可能显示为相对路径）：
 
 ```text
-extensions/pi-aft-compat
 extensions/pi-brand-header
 extensions/pi-deferred-tools
+extensions/pi-large-mode
+extensions/pi-maestro-todo
+extensions/pi-maestro-tools
 extensions/pi-manager-models
-extensions/pi-rtk-aft-capture
-extensions/pi-rtk-aft-restore
+extensions/pi-markdown-preview-compat
+extensions/pi-readseek-compat
 extensions/pi-slim-skills
 extensions/pi-todo-guard
 extensions/pi-tool-rails
 ```
 
-还应看到 `npm:@cortexkit/aft-pi@0.49.0`、本地 `pi-gsd` 和 `npm:pi-web-access`。
+还应看到 `extensions/pi-markdown-preview-compat` 和 `extensions/pi-readseek-compat`；不应再看到独立的 `npm:pi-markdown-preview`、`npm:pi-readseek`、`npm:pi-web-access` 或 `npm:pi-maestro-teammate` 注册入口。
 启动 Pi：
 
 ```bash
@@ -102,9 +104,18 @@ pi
 
 一级列表按扩展显示启用数量：`Space` 整组开关，`Enter` 进入二级工具列表，二级用 `Space` 或 `Enter` 切换单个工具。选择立即生效，并写入受信任项目的 `.pi/tool-selector.json`；没有该文件时默认不禁用任何扩展工具。
 
+两个预设子命令：
+
+```text
+/tools fast    # 只保留最小工具集：read、bash、write、edit、grep、fffind、ffgrep、todo、ask_user_question
+/tools reset   # 恢复全部扩展工具（清空禁用规则）
+```
+
+`fast` 预设面向快速简单任务：按名称禁用 web、subagent、记忆、preview、conflict、后台 shell 与 AST 类工具，保留核心文件/执行工具、索引化工作区搜索、单一 Todo 入口和结构化提问；`bash`、`find`、`ls` 等内置工具不受影响。
+
 ```json
 {
-  "disabledExtensions": ["npm:pi-markdown-preview"],
+  "disabledExtensions": ["local:pi-markdown-preview-compat"],
   "disabledTools": ["web_search"]
 }
 ```
@@ -132,89 +143,45 @@ pi
 完成前运行 packages/api 的相关测试；不要把失败测试标记为完成。
 ```
 
-## 4. AFT 代码导航与文件编辑
+## 4. 文件、搜索与执行
 
-> [!IMPORTANT]
-> AFT 已替代默认的 `read`、`write` 和 `edit`。它不提供 LSP 的诊断、定义/引用、hover 或确认式跨文件 rename。
+默认模式保留 Pi 原生 `read` 和 `bash`。`pi-readseek` 接管 `write`、`edit`、`grep`，并提供锚点读取与代码导航：`readSeek_view`、`readSeek_digest`、`readSeek_search`、`readSeek_def`、`readSeek_refs`、`readSeek_rename`。
 
-> AFT 的用户配置在 `~/.config/cortexkit/aft.jsonc`；本配置启用 AFT Bash 的 rewrite、压缩和后台执行，RTK 继续处理 `read`、`grep` 与其他通用结果。安装器会先备份再覆盖这份公开 AFT 配置。
+`pi-maestro-tools` 补充三个互补能力：`fffind` 做模糊路径发现，`ffgrep` 做项目内字面内容搜索，`bash_bg` 管理长任务的状态、等待和终止；`conflict` 读取并解析 Git 冲突，解析前会重新验证原始 hunk，拒绝覆盖并发改动。
 
-> `read` 使用普通行号输出；超过 80 行的结果仍由 RTK 的通用 smart-truncate 和字符上限控制。
-
-> 对大文件优先要求读取相关符号或范围，不要无边界读取整份文件。
-
-### 能做什么
-
-- `aft_outline`：读取文件的结构、符号与范围。
-- `aft_zoom`：读取指定符号及其邻近上下文。
-- `aft_inspect`：汇总 TODO、诊断、死代码、未使用导出、重复和导入循环。
-- `aft_safety`：为显式指定文件创建检查点、恢复或撤销。
-
-你可以直接这样说：
+对大文件优先要求读取相关符号或范围，不要无边界读取整份文件。跨文件重命名前先预览范围，再运行项目编译或相关测试。
 
 ```text
-请查看 src/service.py 中 UserStore 的结构和调用邻近上下文，说明最安全的修改入口；只读，不修改文件。
+读取 src/service.py 中 UserStore 的定义和全部引用；只读返回最安全的修改入口。
 ```
 
-AFT 的编辑先按文本匹配；匹配的旧内容已变化时会拒绝写入。跨文件重命名仍应先使用项目自己的重构工具或语言服务器，不要把 AFT 视为等价的 LSP rename。
+## 5. 并行 Subagent 任务
 
-## 5. Session-tree subagent 任务
+默认模式由本地 `pi-readseek-compat` 入口加载锁定的 `pi-maestro-teammate` 实现。它通过独立 Pi 子进程真正并行执行任务，支持并发上限、DAG 依赖、后台完成通知、跨任务消息和结果聚合。
 
-`pi-gsd` 将任务放入新的 Pi session-tree 上下文。`push-task` 已注册为默认的 session-tree subagent 入口；对于边界清楚、可独立执行或审查，且新上下文、并行推进或独立视角确实有收益的子任务，模型可以主动使用它。简单任务、强串行任务和持续依赖主会话上下文的任务留在主 agent。它不启动后台 worker，不注入 Superpowers 方法论，也不把任务过程藏在另一个 agent 运行时中。传给子任务最小的自包含简报，不要复制完整对话和无关探索日志。主 agent 负责集成和最终验证。例子：
-
-```text
-启动一个只读 review subagent：检查实现、测试和最近提交，返回文件、行号和风险，不要修改文件。
-```
-
-需要角色和便宜模型时，直接在工具调用中提供：
+单任务使用：
 
 ```json
-{"title":"Explore auth changes","role":"explore","model":"manager/gpt-5.6-luna","prompt":"只读检查 auth 改动、相关测试和风险，返回文件与行号。"}
+{"tasks":[{"name":"review-auth","agent":"reviewer","taskType":"review","prompt":"只读检查 auth 改动、相关测试和风险，返回文件与行号。","maxNestingDepth":0}]}
 ```
 
-推荐角色 profile：
+两个互不依赖的任务放在同一次 `teammate` 调用的 `tasks` 数组中并设置 `concurrency`；有顺序要求时用 `dependsOn` 或 `{taskName}` 引用构建 DAG。运行中用 `teammate-send` 纠偏，用 `teammate-list` 查看 agent，用 `observe` 做一次性状态、等待或 watch。后台任务必须等完成通知或显式 wait 后再消费结果。
 
-| `role` | 参考方向 | 默认边界建议 |
-| --- | --- | --- |
-| `explore` / `scout` | 探索入口、符号、依赖和历史 | 只读，返回路径和证据 |
-| `map` | 绘制模块、导入和数据流地图 | 只读，不做架构改造 |
-| `analyze` | 比较方案、约束和技术取舍 | 只读，明确假设和反例 |
-| `research` / `external-research` | 查文档、上游实现、标准和 API | 返回来源、版本和不确定性 |
-| `synthesize` | 合并多个研究或审查结果 | 不隐藏冲突，返回共识和缺口 |
-| `plan` / `planner` | 拆解任务、依赖和验收条件 | 只规划，不修改实现文件 |
-| `roadmap` | 规划阶段、里程碑和收敛标准 | 不虚构时间和需求 |
-| `plan-check` | 检查计划是否完整、可执行、可验证 | 只报告缺口，不静默改计划 |
-| `implement` / `builder` | 完成边界清楚的功能或修复 | 只改指定范围并验证 |
-| `execute` / `executor` | 原子执行一个已定义任务 | 不扩展范围，缺前提就停止 |
-| `debug` / `debugger` | 复现、验证假设、定位根因和修复 | 先保留复现，再改代码 |
-| `migrate` | API、依赖、配置或数据迁移 | 明确兼容窗口和回滚方式 |
-| `integrate` | 检查跨模块接口和集成行为 | 优先验证和最小修复 |
-| `review` / `reviewer` | 审查正确性、回归和测试缺口 | 只读，发现必须有行号证据 |
-| `audit` / `security` | 安全、架构、维护性或合规审计 | 只读，按风险分级 |
-| `performance` | 找瓶颈、基准和资源问题 | 先测量，再优化和复测 |
-| `test` / `tester` | 补测试、运行测试、找覆盖缺口 | 不削弱断言来通过测试 |
-| `verify` / `verifier` | 做最终构建、诊断、测试和 diff 检查 | 默认只读，报告精确命令 |
-| `design` / `ui-design` | 设计 API、架构、UI 或交互 | 先输出方案，再实现 |
-| `docs` | 更新 README、API 文档和示例 | 检查链接、命令和版本一致性 |
-| `release` | 版本、变更记录、打包和发布前检查 | 未明确授权时不发布 |
+只把边界清楚、可独立执行或审查的工作交给 teammate。并行写任务不能修改同一文件集；主 agent 负责综合结果、集成修改和最终验证。简单、强串行或持续依赖主会话上下文的任务留在主 agent。
 
-这些 profile 提取了 `pi-maestro-flow` Agent 目录里可用于单任务分支的职责语义，但没有复制它依赖 Maestro team bus、共享 artifact、schema 或 MCP 的运行时。`team-supervisor`、`team-worker`、`cross-role-reviewer` 等协调角色不在 `pi-gsd` 中伪装实现。`role` 不是强制枚举，也不赋予权限；真正的范围、禁止事项、输出格式和验收命令必须写进 `prompt`。`model` 是可选模型匹配式，适合让探索、审查、测试、文档和验证等低风险任务使用更便宜的模型。
+仓库仍保留 `extensions/pi-gsd`，需要 `/start-task`、`/finish-task` 和 `/auto` 的同一 session-tree 串行工作流时可手动安装；安装器不再默认启用它。
 
-然后按顺序操作：
+## 6. 大型项目模式与 Skills
+
+默认 `pi` 已提供 teammate 并行委派，但不会加载完整 Maestro Flow。需要 GUI、MCP、LSP、browser/web search、FFF、conflict、root `bash_bg`、Goal、Todo、Plan、Loop、Advisor、self-evolve 和 Maestro skills 时，在当前 Pi 会话输入：
 
 ```text
-/start-task
+/large on
 ```
 
-在新上下文中完成任务；检查结果后：
+`/large on` 会把当前默认 package 边界切换为固定上游 profile：`pi-maestro-flow@0.19.0`、`pi-maestro-teammate@1.12.0` 和 `pi-cockpit@0.14.0`，然后调用 Pi 的公开 `ctx.reload()`。认证、模型、主题、session 和当前会话都不变，不再创建 `~/.pi/agent-large`。
 
-```text
-/finish-task
-```
-
-不需要执行时用 `/discard-task`；需要按队列连续执行时用 `/auto`。折叠视图只显示 queued、running 或 completed 状态、任务标题与真实耗时；使用 `Ctrl+O` 展开任务 prompt 或完整结果。
-
-## 6. Skills、外部 package 和其他能力
+使用 `/large status` 检查状态，使用 `/large off` 恢复切换前受管 package 的原始顺序与 `autoload`，同时保留 Large 期间新增的无关 package。`/large update` 只注入固定版本检查工作流；需要实际应用通过隔离兼容性验证的新版本时使用 `/large update apply`，不会自动跟随 `latest`。
 
 ### Skills
 
@@ -245,7 +212,7 @@ scientific-visualization
 
 ### 联网资料访问
 
-`pi-web-access` 默认提供 `web_search`、`source_check`、`fetch_content` 和 `get_search_content`。用自然语言说明检索目标、时间范围或可信域名；需要具体网页、PDF、GitHub 仓库或视频内容时，提供 URL 并说明要提取的证据。GitHub URL 会克隆为本地目录供后续检查，而不是只抓取渲染后的网页。项目通过 `/tools` 禁用这些工具后，它们才会从模型工具集中移除。完整的 35 个当前工具示例见[工具目录](tools.zh-CN.md)。
+`pi-readseek-compat` 默认加载锁定的 Web Access 实现，提供 `web_search`、`source_check`、`fetch_content` 和 `get_search_content`。用自然语言说明检索目标、时间范围或可信域名；需要具体网页、PDF、GitHub 仓库或视频内容时，提供 URL 并说明要提取的证据。GitHub URL 会克隆为本地目录供后续检查，而不是只抓取渲染后的网页。项目通过 `/tools` 禁用这些工具后，它们才会从模型工具集中移除。完整的 35 个当前工具示例见[工具目录](tools.zh-CN.md)。
 
 ```text
 搜索 2025 年 TypeScript 装饰器规范的变化，只引用 typescriptlang.org 和 GitHub 讨论，并给出来源链接。
@@ -262,9 +229,7 @@ scientific-visualization
 /cache-optimizer
 ```
 
-RTK 压缩 AFT 的 `read`、`grep` 和其他通用工具结果。AFT 自己负责 Bash rewrite、压缩与后台任务；本地桥接会阻止 RTK 二次压缩 AFT Bash，避免丢失失败诊断。
-
-用 `/rtk verify` 检查 RTK binary；AFT 的运行配置位于 `~/.config/cortexkit/aft.jsonc`。
+RTK 压缩通用工具结果；长命令由原生 `bash` 或 `bash_bg` 返回。用 `/rtk verify` 检查 RTK binary。
 
 ### Magic Context
 
@@ -339,6 +304,8 @@ node install.mjs --yes
 ```bash
 pi update --all
 ```
+
+Large profile 使用固定版本，不通过独立 profile 更新。先在 Pi 中运行 `/large update` 检查；只有隔离兼容性验证通过后才运行 `/large update apply`。
 
 检查 package：
 

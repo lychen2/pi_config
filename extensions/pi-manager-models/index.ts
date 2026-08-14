@@ -135,8 +135,12 @@ export default async function managerModels(pi: ExtensionAPI): Promise<void> {
   const initial = await loadProviderConfig(true);
   if (!initial) return;
 
+  // Resolve $ENV / !command key references up front so a statically configured
+  // model catalog can still source its credential from the environment. Plain
+  // text keys pass through unchanged (no behavior change for existing configs).
+  const apiKey = await resolveInitialKey(pi, initial.apiKey);
   let models = (initial.models ?? []).map(completeModel);
-  if (!models.length) models = await discoverModels(initial, await resolveInitialKey(pi, initial.apiKey));
+  if (!models.length) models = await discoverModels(initial, apiKey);
 
   pi.on("before_provider_request", (event, ctx) => {
     if (ctx.model?.provider !== providerId || ctx.model.api !== "openai-responses") return;
@@ -146,7 +150,7 @@ export default async function managerModels(pi: ExtensionAPI): Promise<void> {
   pi.registerProvider(providerId, {
     ...(initial.name ? { name: initial.name } : {}),
     baseUrl: initial.baseUrl,
-    ...(initial.apiKey ? { apiKey: initial.apiKey } : {}),
+    ...(apiKey ? { apiKey } : {}),
     ...(initial.api ? { api: initial.api } : {}),
     ...(initial.headers ? { headers: initial.headers } : {}),
     ...(initial.authHeader !== undefined ? { authHeader: initial.authHeader } : {}),

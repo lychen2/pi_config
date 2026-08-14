@@ -52,7 +52,7 @@ Pi 可以同时使用文件编辑、代码检查、联网、技能和委派能�
 
 ### 每次改变都能检查和恢复
 
-安装前可以用 `--dry-run` 查看计划，安装器会创建备份，代码修改可以通过 Git diff 和测试检查。需要更细粒度的文件恢复时，AFT 提供 `aft_safety` 检查点。
+安装前可以用 `--dry-run` 查看计划，安装器会创建备份，代码修改可以通过 Git diff 和测试检查。需要工作区级恢复时使用 `pi-workspace-history`。
 
 ## 五分钟上手
 
@@ -137,17 +137,17 @@ pi
 
 任务完成后，要求 Pi 给出修改文件、验证命令和剩余风险。代码任务通常从小范围测试开始，再决定是否运行完整测试。
 
-### 需要干净上下文时使用任务分支
+### 并行委派独立任务
 
-`pi-gsd` 让 Pi 通过 `push-task` 放入一个聚焦任务，再由用户控制它进入新的 session-tree 分支：
+默认模式提供真正并行的 `teammate` 工具：它启动独立 Pi 子进程，支持多任务、DAG 依赖、后台完成通知和结果聚合。
 
 ```text
-请使用 push-task 对已修改文件和测试做只读审查，role 使用 review。返回文件、行号和风险。
+请使用 teammate 同时派发两个互不修改同一文件的任务，并汇总各自状态和结果。
 ```
 
-输入 `/start-task` 进入分支，`/finish-task` 把最后结果带回主分支，`/abort-task` 放弃当前分支但不带回结果，`/auto` 按顺序处理队列中的任务。`role` 会选择一段简短的任务 profile，但不是权限系统。profile 覆盖 `explore`、`map`、`analyze`、`research`、`synthesize`、`plan`、`roadmap`、`plan-check`、`implement`、`execute`、`debug`、`migrate`、`integrate`、`review`、`audit`、`security`、`performance`、`test`、`verify`、`design`、`docs` 和 `release`；也接受 `scout`、`builder`、`reviewer`、`tester`、`verifier` 等别名。profile 只会注入新分支，不会增加主会话常驻提示。实际范围、工具限制和验收条件仍要写进 prompt；任务适合更便宜或更专用的模型时再填写 `model`。
+常用工具是 `teammate`、`teammate-send`、`teammate-list` 和 `observe`。仓库仍保留 `extensions/pi-gsd`，需要 `/start-task`、`/finish-task` 和 `/auto` 的串行 session-tree 工作流时可单独安装，但安装器不再默认启用它。
 
-只在子任务边界清楚、可以独立执行或审查，并且新上下文、并行推进或独立视角确实有收益时主动使用 `push-task`。简单任务、强串行任务和持续依赖主会话上下文的任务留在主 agent。传递最小任务简报，不要复制完整对话；主 agent 负责集成和最终验证。
+只在子任务边界清楚、可以独立执行或审查，并且新上下文或并行推进确实有收益时使用 `teammate`；简单任务、强串行任务和持续依赖主会话上下文的工作留在主 agent。传递最小任务简报，主 agent 负责集成和最终验证。
 
 ## 仓库结构
 
@@ -163,7 +163,7 @@ pi
 ## 从哪里继续
 
 - [快速上手 Wiki](docs/WIKI.zh-CN.md)：第一次安装后，按场景了解常用命令和工作流。
-- [完整使用手册](docs/USAGE.zh-CN.md)：查看工具选择、AFT、workflow、任务分支、联网和科研场景。
+- [完整使用手册](docs/USAGE.zh-CN.md)：查看工具选择、文件/搜索工具、大型项目 workflow、任务分支、联网和科研场景。
 - [扩展目录](docs/extensions.zh-CN.md)：查看每个本地或第三方扩展的用途、命令和配置方式。
 - [技能目录](docs/skills.zh-CN.md)：按任务查找技能和调用示例。
 - [工具目录](docs/tools.zh-CN.md)：查看当前可用工具和示例。

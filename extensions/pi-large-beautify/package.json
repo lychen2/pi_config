@@ -1,0 +1,31 @@
+{
+  "name": "pi-large-beautify",
+  "version": "0.1.0",
+  "description": "Large-mode beautification bundle: tool rails, message/input framing, brand header, and Matugen footer, plus the Flow companion surface",
+  "license": "MIT",
+  "type": "module",
+  "keywords": ["pi-package", "pi", "large", "theme", "tui", "beautify"],
+  "files": ["index.ts", "vendor", "themes", "README.md", "LICENSE"],
+  "pi": {
+    "extensions": [
+      "./index.ts",
+      "../pi-maestro-teammate/src/extension/index.ts",
+      "../pi-cockpit/src/extension/index.ts"
+    ],
+    "themes": ["./themes"]
+  },
+  "scripts": {
+    "test": "node --experimental-strip-types --test tests/*.test.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "0.82.0",
+    "@earendil-works/pi-tui": "0.82.0",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0"
+  }
+}

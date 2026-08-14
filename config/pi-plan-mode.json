@@ -10,7 +10,6 @@
     "ctx_expand",
     "ctx_memory",
     "ctx_note",
-    "ctx_reduce",
-    "push-task"
+    "ctx_reduce"
   ]
 }

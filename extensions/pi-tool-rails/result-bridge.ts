@@ -53,8 +53,8 @@ const HASHLINE_READ = /^[A-Za-z0-9_-]{3}│(.*)$/;
 const RESULT_PATCH = Symbol.for("pi.toolRails.resultRendererPatch");
 const REPLACE_LINE_NUMBERS = "toolRailsNewLineNumbers";
 const REPLACE_FINAL_LINE_COUNT = "toolRailsFinalLineCount";
-const COMPACT_RESULTS = new Set(["bash", "bash_status", "bash_watch", "bash_write", "bash_kill", "find", "grep", "ls"]);
-const BACKGROUND_SHELL_TOOLS = new Set(["bash_status", "bash_watch", "bash_write", "bash_kill"]);
+const COMPACT_RESULTS = new Set(["bash", "bash_bg", "bash_status", "bash_watch", "bash_write", "bash_kill", "find", "grep", "fffind", "ffgrep", "ls"]);
+const BACKGROUND_SHELL_TOOLS = new Set(["bash_bg", "bash_status", "bash_watch", "bash_write", "bash_kill"]);
 const PREVIEW_LINES = 5;
 const REPLACE_PREVIEW_ROWS = 10;
 const SPLIT_SEPARATOR = " │ ";
@@ -302,11 +302,12 @@ export function compactResult(
   }
 
   const count = lines.filter((line) => line.trim()).length;
-  const unit = name === "grep"
+  const isSearch = name === "grep" || name === "ffgrep";
+  const unit = isSearch
     ? (count === 1 ? "match" : "matches")
     : (count === 1 ? "result" : "results");
   const segments: SummarySegment[] = [{
-    color: name === "grep" && count > 0 ? "success" : "muted",
+    color: isSearch && count > 0 ? "success" : "muted",
     text: `${count} ${unit}`,
   }];
   if (count > 0) segments.push({ color: "accent", text: keyHint("app.tools.expand", "expand") });

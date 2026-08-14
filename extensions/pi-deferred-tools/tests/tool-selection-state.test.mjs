@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   enabledToolCount,
+  fastSelectionConfig,
   isToolDisabled,
   packageSourceId,
   parseToolSelectionConfig,
@@ -88,4 +89,24 @@ test("rejects malformed selector config", () => {
     () => parseToolSelectionConfig({ disabledExtensions: "npm:example-tools" }),
     /disabledExtensions must be a string array/,
   );
+});
+
+test("fast preset disables every extension tool outside the allowlist", () => {
+  const groups = [
+    { id: "local:pi-readseek-compat", tools: [{ name: "read" }, { name: "edit" }, { name: "readSeek_view" }, { name: "web_search" }] },
+    { id: "local:pi-maestro-tools", tools: [{ name: "ffind" }, { name: "ffgrep" }, { name: "bash_bg" }, { name: "conflict" }] },
+    { id: "local:pi-maestro-todo", tools: [{ name: "todo" }] },
+  ];
+
+  const config = fastSelectionConfig(groups);
+
+  assert.deepEqual(config, {
+    disabledExtensions: [],
+    disabledTools: ["bash_bg", "conflict", "readSeek_view", "web_search"],
+  });
+  // Kept tools are not disabled.
+  assert.equal(isToolDisabled(config, "local:pi-readseek-compat", "read"), false);
+  assert.equal(isToolDisabled(config, "local:pi-readseek-compat", "edit"), false);
+  assert.equal(isToolDisabled(config, "local:pi-maestro-tools", "ffind"), false);
+  assert.equal(isToolDisabled(config, "local:pi-maestro-todo", "todo"), false);
 });
