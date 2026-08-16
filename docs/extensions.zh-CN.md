@@ -58,13 +58,12 @@
 | `pi-slopchop` | 终端内代码审阅与注释 | `/slopchop` 或 `/diff` |
 | `pi-workspace-history` | 工作区级撤销与重做 | 在需要回退文件改动时调用其命令；先查看 `/hotkeys` 中实际注册键位 |
 | `pi-rtk-optimizer` | RTK 命令改写和通用工具输出压缩 | `/rtk verify`；需要安装 `rtk` binary |
-| `pi-cache-optimizer` | 稳定提示词和 provider cache，提高缓存命中 | `/cache-optimizer` 查看或调整状态 |
 | `@victor-software-house/pi-curated-themes` | 额外终端主题资源 | `/settings` 中选择主题 |
 | `git:github.com/BevalZ/pi-provider` | 配置与检查自定义 provider | `/provider add`，再用 `/model` 选择模型 |
 
 ## 组合建议
 
-- **常规编码**：Pi 原生 `bash`、`pi-readseek-compat` 提供的 `read`/Readseek/Web/teammate 工具、`pi-markdown-preview-compat`、`pi-maestro-tools`、`pi-maestro-todo`、`pi-tool-rails`、`pi-rtk-optimizer`、`pi-cache-optimizer` 与 `pi-todo-guard` 构成默认基础。
+- **常规编码**：Pi 原生 `bash`、`pi-readseek-compat` 提供的 `read`/Readseek/Web/teammate 工具、`pi-markdown-preview-compat`、`pi-maestro-tools`、`pi-maestro-todo`、`pi-tool-rails`、`pi-rtk-optimizer` 与 `pi-todo-guard` 构成默认基础。
 - **需要深度项目编排**：在当前 Pi 会话运行 `/large on`；它加载固定版本的完整上游 Flow、teammate 和 Cockpit，包括 GUI、MCP、LSP、browser/web search、FFF、conflict、root `bash_bg`、Advisor、self-evolve、Goal、Todo、Plan、Loop、agents 和 Maestro skills。完成后用 `/large off` 恢复默认 package 边界。
 - **需要联网资料**：直接要求模型搜索网页、抓取 URL 或克隆 GitHub 仓库；相关工具默认可用。
 

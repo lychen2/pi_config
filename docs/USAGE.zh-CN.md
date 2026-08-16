@@ -222,11 +222,10 @@ scientific-visualization
 抓取 https://example.com/report.pdf，提取方法、表格和结论，并标出页码。
 ```
 
-### RTK 和缓存
+### RTK
 
 ```text
 /rtk verify
-/cache-optimizer
 ```
 
 RTK 压缩通用工具结果；长命令由原生 `bash` 或 `bash_bg` 返回。用 `/rtk verify` 检查 RTK binary。

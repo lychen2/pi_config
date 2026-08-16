@@ -11,6 +11,5 @@ npm:@juicesharp/rpiv-ask-user-question
 npm:pi-slopchop
 npm:pi-workspace-history
 npm:pi-rtk-optimizer
-npm:pi-cache-optimizer
 npm:@victor-software-house/pi-curated-themes
 git:github.com/BevalZ/pi-provider

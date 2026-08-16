@@ -38,6 +38,7 @@ const retiredPackageSources = new Set([
   "npm:pi-markdown-preview",
   "npm:@cortexkit/aft-pi",
   "npm:pi-gsd",
+  "npm:pi-cache-optimizer",
   "npm:@juicesharp/rpiv-todo",
   "npm:pi-maestro-teammate",
   "npm:pi-readseek",
