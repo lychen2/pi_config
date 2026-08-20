@@ -17,9 +17,8 @@ const excludedPackages = new Set([
   "npm:@juicesharp/rpiv-ask-user-question",
   "npm:pi-maestro-teammate",
   "npm:@juicesharp/rpiv-todo",
-  "npm:pi-readseek",
-  "../../pi_config/extensions/pi-readseek-compat",
-  "../../pi_config/extensions/pi-maestro-todo",
+  "../../pi_config/extensions/pi-context-bridge",
+  "../../pi_config/extensions/pi-default-workbench",
 ]);
 const sharedResources = [
   "auth.json",

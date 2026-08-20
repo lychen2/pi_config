@@ -96,7 +96,7 @@ Windows PowerShell:
 .\install.ps1 -Yes
 ```
 
-The installer backs up the active Pi configuration, merges missing skills and themes, installs repository-local extensions, and installs external packages, Magic Context, and RTK according to the selected options. Provider credentials and model registries stay machine-local.
+The installer backs up the active Pi configuration, merges missing skills and themes, installs repository-local extensions, and installs external packages and RTK according to the selected options. Provider credentials and model registries stay machine-local.
 
 ### First launch
 

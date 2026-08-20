@@ -122,15 +122,18 @@ test("renders AFT edit counts from structured diff metadata", () => {
     },
   };
   const collapsed = renderAftEditResult(aftResult, { expanded: false }, theme, {}).render(80);
-  assert.deepEqual(collapsed.map((line) => line.trimEnd()), ["+3/-2 · 2 edits [━━━━━━━━]"]);
+  const collapsedLine = collapsed.map((line) => line.replace(/\x1b\[[0-9;]*m/g, "").replace(/\s+/g, " ").trim())[0];
+  assert.equal(collapsedLine, "↳ edited +3 -2 [━━━━━━━━] • to expand");
   const expanded = renderAftEditResult(aftResult, { expanded: true }, theme, {}).render(80);
-  assert.ok(expanded.some((line) => line.includes("Edited (+3/-2, 2 edits).")));
+  const expandedLine = expanded.map((line) => line.replace(/\x1b\[[0-9;]*m/g, "").replace(/\s+/g, " ").trim())[0];
+  assert.equal(expandedLine, "↳ edited +3 -2 [━━━━━━━━] • to expand");
 
   const textOnlyResult = {
     content: [{ type: "text", text: "Edited (+16/-2, 2 edits)." }],
   };
   const textFallback = renderAftEditResult(textOnlyResult, { expanded: false }, theme, {}).render(80);
-  assert.deepEqual(textFallback.map((line) => line.trimEnd()), ["+16/-2 · 2 edits [━━━━━━━━]"]);
+  const fallbackLine = textFallback.map((line) => line.replace(/\x1b\[[0-9;]*m/g, "").replace(/\s+/g, " ").trim())[0];
+  assert.equal(fallbackLine, "↳ edited +16 -2 [━━━━━━━━] • to expand");
 });
 
 test("renders AFT writes with the same collapsed and expanded diff as edits", () => {
@@ -150,8 +153,8 @@ test("renders AFT writes with the same collapsed and expanded diff as edits", ()
   };
   const collapsedEdit = renderAftEditResult(mutationResult, { expanded: false }, theme, {}).render(80);
   const collapsedWrite = renderAftWriteResult(mutationResult, { expanded: false }, theme, {}).render(80);
-  assert.deepEqual(collapsedWrite, collapsedEdit);
-  assert.deepEqual(collapsedWrite.map((line) => line.trimEnd()), ["+2/-1 [━━━━━━━━]"]);
+  const writeLine = collapsedWrite.map((line) => line.replace(/\x1b\[[0-9;]*m/g, "").replace(/\s+/g, " ").trim())[0];
+  assert.equal(writeLine, "↳ wrote +2 -1 [━━━━━━━━] • to expand");
 
   const expandedEdit = renderAftEditBridgeResult(undefined, mutationResult, { expanded: true }, theme, {}).render(80);
   const expandedWrite = renderAftWriteBridgeResult(undefined, mutationResult, { expanded: true }, theme, {}).render(80);
@@ -192,11 +195,11 @@ test("summarizes bash status instead of showing arbitrary trailing output", () =
     details: { exit_code: 0, duration_ms: 1250 },
   };
   const collapsed = compactResult("bash", bashResult, { expanded: false }, theme, {}).render(100);
-  assert.deepEqual(collapsed.map((line) => line.trimEnd()), ["completed · exit 0 · 1.3s · 2 output lines"]);
+  assert.deepEqual(collapsed.map((line) => line.trimEnd()), ["执行完成 · exit 0 · 1.3s · 2 行输出"]);
 
   const expanded = compactResult("bash", bashResult, { expanded: true }, theme, {}).render(100);
   assert.deepEqual(expanded.map((line) => line.trimEnd()), [
-    "completed · exit 0 · 1.3s · 2 output lines",
+    "执行完成 · exit 0 · 1.3s · 2 行输出",
     "first output",
     "final output",
   ]);
@@ -208,7 +211,7 @@ test("summarizes bash status instead of showing arbitrary trailing output", () =
     theme,
     { isError: true },
   ).render(100);
-  assert.deepEqual(failed.map((line) => line.trimEnd()), ["exit 1 · Error: missing config"]);
+  assert.deepEqual(failed.map((line) => line.trimEnd()), ["退出码 1 · Error: missing config"]);
 });
 
 test("renders expanded AFT edits as a de-indented split diff", () => {
@@ -243,7 +246,8 @@ test("renders expanded AFT edits as a de-indented split diff", () => {
     theme,
     {},
   ).render(80);
-  assert.deepEqual(collapsed.map((line) => line.trimEnd()), ["+2/-1 · 2 edits [━━━━━━━━]"]);
+  const collapsedLine = collapsed.map((line) => line.replace(/\x1b\[[0-9;]*m/g, "").replace(/\s+/g, " ").trim())[0];
+  assert.equal(collapsedLine, "↳ edited +2 -1 [━━━━━━━━] • to expand");
 
   const expanded = renderAftEditBridgeResult(
     nativeRenderer,
@@ -305,7 +309,7 @@ test("renders hashline read output with source line numbers", () => {
   assert.ok(lines.every((line) => visibleWidth(line) <= 72));
   assert.equal(readResult.content[0].text, hashlineText, "renderer must preserve LLM-visible anchors");
   const collapsed = renderHashlineReadResult(readResult, { expanded: false }, theme, { args: { offset: 20 } });
-  assert.deepEqual(collapsed.render(72).map((line) => line.trimEnd()), ["2 lines"]);
+  assert.deepEqual(collapsed.render(72).map((line) => line.trimEnd()), ["2 行"]);
 });
 
 test("wraps numbered read lines with an aligned continuation gutter", () => {
@@ -579,4 +583,34 @@ test("syntax highlights expanded AFT write and edit code using the target path",
 
   assert.ok(editLines.some((line) => line.includes("\u001b[")), "expected TypeScript syntax highlighting");
   assert.deepEqual(writeLines, editLines);
+});
+
+test("renders readseek edit results with semantic badge from readSeekValue", () => {
+  const readSeekResult = {
+    content: [{ type: "text", text: "Edited .tmp-demo/rs-demo.ts (1 change, +1 -1 lines)" }],
+    details: {
+      diff: "-const version = \"1.0.0\";\n+const version = \"2.0.0\";",
+      diffData: { stats: { added: 1, removed: 1 } },
+      readSeekValue: {
+        semanticSummary: { classification: "semantic" },
+      },
+    },
+  };
+  const collapsed = renderAftEditResult(readSeekResult, { expanded: false }, theme, {}).render(100);
+  const line = collapsed.map((l) => l.replace(/\x1b\[[0-9;]*m/g, "").replace(/\s+/g, " ").trim())[0];
+  assert.equal(line, "↳ edited +1 -1 [━━━━━━━━] • semantic • to expand");
+});
+
+test("renders readseek write results with stats from diffData", () => {
+  const readSeekWrite = {
+    content: [{ type: "text", text: "Wrote .tmp-demo/new.ts (2 lines)" }],
+    details: {
+      writeState: "created",
+      diff: "+1 a\n+2 b",
+      diffData: { stats: { added: 2, removed: 0 } },
+    },
+  };
+  const collapsed = renderAftWriteResult(readSeekWrite, { expanded: false }, theme, {}).render(100);
+  const line = collapsed.map((l) => l.replace(/\x1b\[[0-9;]*m/g, "").replace(/\s+/g, " ").trim())[0];
+  assert.equal(line, "↳ wrote +2 -0 [━━━━━━━━] • to expand");
 });

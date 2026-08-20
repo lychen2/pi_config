@@ -1,7 +1,12 @@
 #!/bin/sh
 set -eu
 
-REPO_ARCHIVE_URL="${PI_CONFIG_ARCHIVE_URL:-https://github.com/lychen2/pi_config/archive/refs/heads/main.tar.gz}"
+PI_CONFIG_REPO="${PI_CONFIG_REPO:-lychen2/pi_config}"
+# PI_CONFIG_ARCHIVE_URL 可直接指定归档地址（覆盖提交解析）；默认解析并固定最新提交。
+REPO_ARCHIVE_URL="${PI_CONFIG_ARCHIVE_URL:-}"
+# 官方 Pi 引导脚本固定下载地址 + sha256 完整性校验（上游脚本内容变更时更新常量）。
+PI_INSTALL_URL="${PI_INSTALL_URL:-https://pi.dev/install.sh}"
+PI_INSTALL_SHA256="${PI_INSTALL_SHA256:-d3ad02c775a6b2a78974b242dd7742a3612cd8be6b58a977516053d9f9897a41}"
 PI_CONFIG_HOME="${PI_CONFIG_HOME:-$HOME/.pi_config}"
 DRY_RUN=0
 for argument in "$@"; do
@@ -10,6 +15,16 @@ done
 
 say() {
   printf '\n==> %s\n' "$1"
+}
+
+sha256_of() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" | cut -d' ' -f1
+  elif command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$1" | cut -d' ' -f1
+  else
+    return 1
+  fi
 }
 
 have_supported_node() {
@@ -40,7 +55,24 @@ install_pi() {
   }
 
   say "Installing Node.js and Pi with the official Pi installer"
-  curl -fsSL https://pi.dev/install.sh | sh
+  installer_script=$(mktemp "${TMPDIR:-/tmp}/pi-install.XXXXXX")
+  trap 'rm -f "$installer_script"' EXIT HUP INT TERM
+  if ! curl -fsSL --max-time 300 "$PI_INSTALL_URL" -o "$installer_script"; then
+    printf 'Failed to download the Pi installer from %s.\n' "$PI_INSTALL_URL" >&2
+    exit 1
+  fi
+  actual_hash=$(sha256_of "$installer_script") || {
+    printf 'sha256sum or shasum is required to verify the Pi installer.\n' >&2
+    exit 1
+  }
+  if [ "$actual_hash" != "$PI_INSTALL_SHA256" ]; then
+    printf 'Pi installer integrity check failed: expected %s, got %s.\n' "$PI_INSTALL_SHA256" "$actual_hash" >&2
+    printf 'Refusing to run the unverified script. Update PI_INSTALL_SHA256 only after reviewing upstream changes.\n' >&2
+    exit 1
+  fi
+  sh "$installer_script"
+  rm -f "$installer_script"
+  trap - EXIT HUP INT TERM
   refresh_path
 
   have_supported_node || {
@@ -102,6 +134,29 @@ install_git() {
   fi
 }
 
+resolve_archive_url() {
+  if [ -n "${REPO_ARCHIVE_URL:-}" ]; then
+    printf '%s\n' "$REPO_ARCHIVE_URL"
+    return
+  fi
+
+  commit_response=$(curl -fsSL --max-time 30 \
+    -H 'Accept: application/vnd.github+json' \
+    "https://api.github.com/repos/$PI_CONFIG_REPO/commits/main") || {
+    printf 'Failed to resolve the latest pi_config commit.\n' >&2
+    exit 1
+  }
+  latest_commit=$(printf '%s\n' "$commit_response" |
+    tr ',' '\n' |
+    sed -n 's/.*"sha": *"\([0-9a-f]\{40\}\)".*/\1/p' |
+    head -n 1)
+  if [ -z "$latest_commit" ]; then
+    printf 'The pi_config commit response had no sha.\n' >&2
+    exit 1
+  fi
+  printf 'https://github.com/%s/archive/%s.tar.gz\n' "$PI_CONFIG_REPO" "$latest_commit"
+}
+
 find_repository() {
   script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" 2>/dev/null && pwd || pwd)
   if [ -f "$script_dir/install.mjs" ] && [ -d "$script_dir/config" ]; then
@@ -134,10 +189,11 @@ find_repository() {
   }
 
   say "Downloading pi_config to $PI_CONFIG_HOME"
+  archive_url=$(resolve_archive_url)
   mkdir -p "$PI_CONFIG_HOME"
-  if ! curl -fsSL "$REPO_ARCHIVE_URL" | tar -xz -C "$PI_CONFIG_HOME" --strip-components=1; then
+  if ! curl -fsSL --max-time 600 "$archive_url" | tar -xz -C "$PI_CONFIG_HOME" --strip-components=1; then
     rm -rf "$PI_CONFIG_HOME"
-    printf 'Failed to download or extract pi_config.\n' >&2
+    printf 'Failed to download or extract pi_config from %s.\n' "$archive_url" >&2
     exit 1
   fi
   REPO_DIR=$PI_CONFIG_HOME

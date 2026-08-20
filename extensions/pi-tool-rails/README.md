@@ -12,8 +12,8 @@ Quiet TUI styling for Pi:
 - numbered `read` views that show source line numbers in the TUI while preserving hash anchors for the model
 - numbered, side-by-side `replace` diffs with old lines on the left, new lines on the right, multiple change groups, and shared indentation removed from each visible hunk
 - one blank line between tool blocks
-- a persistent framed `prompt` editor and reference-style framed user messages with Markdown re-rendering and a `💬` rail marker
-- a native-compatible `✦ Thought` fold with a tree preview on `Ctrl+T` expansion, plus a theme-colored animated working HUD
+- a persistent framed `prompt` editor (frame + left rail, model/provider/thinking meta) and reference-style framed user messages with Markdown re-rendering and a `▐` rail marker
+- a native-compatible `✦ 思考轨迹` fold with semantic step titles, role-colored markers, bounded detail, and unchanged `Ctrl+T` show/hide behavior, plus a theme-colored animated working HUD
 - cached settled tool rows so the working HUD does not repeatedly re-render completed tool output
 Tool ownership is conservative. The extension presents registered tools but does not claim `find` or `ls`; those remain under Pi or another search owner. Guarded presentation bridges apply the common label column and result formatting at the exported `ToolExecutionComponent` layer. Diff markers and gutters remain aligned while shared code indentation is removed per visible hunk and relative indentation is retained.
 

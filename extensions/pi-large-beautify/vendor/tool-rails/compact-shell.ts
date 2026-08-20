@@ -63,9 +63,9 @@ const BOX_RIGHT_RAIL = "│";
 function boxStatusLabel(execution: ExecutionState): { label: string; color: "error" | "toolTitle" | "warning" } {
   const name = shortToolName(execution.toolName ?? "tool").toUpperCase();
   const icon = toolIcon(execution.toolName ?? "tool");
-  if (execution.isPartial !== false) return { label: `◆ ${icon} ${name} · RUNNING`, color: "warning" };
-  if (execution.result?.isError) return { label: `× ${icon} ${name} · FAILED`, color: "error" };
-  return { label: `✓ ${icon} ${name} · COMPLETE`, color: "toolTitle" };
+  if (execution.isPartial !== false) return { label: `◆ ${icon} ${name} · 执行中`, color: "warning" };
+  if (execution.result?.isError) return { label: `× ${icon} ${name} · 失败`, color: "error" };
+  return { label: `✓ ${icon} ${name} · 完成`, color: "toolTitle" };
 }
 
 function fitBorderLabel(label: string, width: number): string {
@@ -316,6 +316,19 @@ function isFrameLine(line: string): boolean {
     || /^[─═]{3,}$/.test(value);
 }
 
+const STABLE_MUTATION_BODY_TOOLS = new Set([
+  "edit",
+  "readSeek_edit",
+  "readSeek_write",
+  "replace",
+  "write",
+]);
+
+export function stabilizeToolBoxBody(name: string, lines: string[]): string[] {
+  if (!STABLE_MUTATION_BODY_TOOLS.has(name) || lines.length >= 2) return lines;
+  return [...lines, ""];
+}
+
 function styleBashBodyLine(line: string, theme: ToolTheme): string {
   const command = plain(line).trim().match(/^\$\s+(.+)$/);
   if (!command) return line;
@@ -340,7 +353,7 @@ function installBashBox(theme: ToolTheme): () => void {
       if (lines.some((line) => line.includes("\x1b_G") || line.includes("\x1b]1337;File="))) return lines;
       const body = lines.filter((line) => !isFrameLine(line) && !isInternalToolDiagnosticLine(line));
       const compactedBody = compactBashBody(body, theme);
-      const running = compactedBody.some((line) => plain(line).includes("Running..."));
+      const running = compactedBody.some((line) => /(?:Running\.\.\.|运行中)/.test(plain(line)));
       const execution: ExecutionState = {
         toolName: "bash",
         isPartial: running,
@@ -428,12 +441,12 @@ function installLabeledShell(theme: ToolTheme): () => void {
     const bodySource = execution.expanded
       ? withoutHeader
       : withoutHeader.filter((line) => !isInternalToolDiagnosticLine(line));
-    const bodyLines = compactToolBody(bodySource, {
+    const bodyLines = stabilizeToolBoxBody(name, compactToolBody(bodySource, {
       expanded: Boolean(execution.expanded),
       preserveAll: STRUCTURED_RESULT_TOOLS.has(name),
       theme: state.theme,
       formatLine: (content) => styleStructuredLine(content, state.theme, selection),
-    });
+    }));
     const body = (bodyLines.length > 0 ? bodyLines : [""]).map((content) => toolBoxLine(content, width, state.theme));
     const output = [
       toolBoxTop(execution, width, state.theme),

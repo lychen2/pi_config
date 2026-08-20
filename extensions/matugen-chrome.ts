@@ -37,6 +37,8 @@ export default function matugenChrome(pi: ExtensionAPI): void {
   let stopRefreshInterval = () => {};
   let previousCwd: string | undefined;
   let activeContext: ExtensionContext | undefined;
+  let agentActive = false;
+  let pulseController: ((enabled: boolean) => void) | undefined;
 
   const refresh = () => {
     if (lifecycle.isCurrent()) requestRender?.();
@@ -87,6 +89,8 @@ export default function matugenChrome(pi: ExtensionAPI): void {
     stopRefreshInterval();
     stopRefreshInterval = () => {};
     requestRender = undefined;
+    pulseController = undefined;
+    agentActive = false;
     previousCwd = undefined;
     if (ctx && isTuiContext(ctx)) ctx.ui.setFooter(undefined);
     activeContext = undefined;
@@ -111,7 +115,11 @@ export default function matugenChrome(pi: ExtensionAPI): void {
       },
       scheduleProjectRefresh,
       getLiveContext: () => liveContext.get(),
+      setPulseController(fn) {
+        pulseController = fn;
+      },
     });
+    pulseController?.(agentActive);
     stopRefreshInterval = startProjectRefreshInterval(config.projectRefreshIntervalMs, () => {
       if (activeContext) scheduleProjectRefresh(activeContext);
     });
@@ -122,10 +130,14 @@ export default function matugenChrome(pi: ExtensionAPI): void {
   pi.on("session_start", (_event, ctx) => install(ctx));
   pi.on("session_shutdown", (_event, ctx) => cleanup(ctx));
   pi.on("agent_start", (_event, ctx) => {
+    agentActive = true;
+    pulseController?.(true);
     liveContext.clear();
     syncFooter(ctx);
   });
   pi.on("agent_end", (_event, ctx) => {
+    agentActive = false;
+    pulseController?.(false);
     liveContext.clear();
     syncFooter(ctx, true);
   });

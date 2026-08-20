@@ -21,7 +21,7 @@
 
 - **Skill：58 个有效定义。** 仓库跟踪 57 个 `SKILL.md` 定义；本机保留的 `batch-grill-me` 计入当前有效清单。仓库内有两个同名 `mineru` 定义，所以是 58 个定义、57 个唯一名称。
 - **工具数量随 profile 变化。** 默认安装包含并行 `teammate`；当前会话运行 `/large on` 会替换重叠 package 并加载固定版本的完整上游 Maestro Flow、teammate 与 Cockpit，`/large off` 恢复默认边界。用 `/tools list` 查看当前会话的真实工具集。
-- **`pi-deferred-tools`：旧包名，新职责。** Tools are no longer deferred. 扩展工具默认保持 Pi 的正常启用状态；它现在只是受信任项目内的 `/tools` 两级开关面板，配置写入 `.pi/tool-selector.json`。`/deferred-tools` 只是兼容别名。快速简单任务可直接 `/tools fast` 切到最小工具集，`/tools reset` 恢复。
+- **`pi-default-workbench`：Default 功能工作台。** 统一承载工具选择器、浏览器、Todo、FFF/后台 Shell/冲突处理和 Markdown Preview；`/tools` 管理模型可见工具，`/deferred-tools` 保留为兼容别名。
 
 ## Pi 的工作方式
 

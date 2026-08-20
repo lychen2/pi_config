@@ -4,6 +4,7 @@
   "description": "Lightweight session-tree task branches for Pi",
   "license": "MIT",
   "type": "module",
+  "engines": { "node": ">=22.19.0" },
   "keywords": ["pi-package", "pi", "tasks", "session-tree"],
   "files": ["index.ts", "src/index.ts", "src/text-content.ts", "README.md", "LICENSE"],
   "pi": { "extensions": ["./index.ts"] },
@@ -11,11 +12,11 @@
     "test": "tsc -p tsconfig.test.json && node --test tests/*.test.mjs",
     "typecheck": "tsc --noEmit"
   },
-  "peerDependencies": { "@earendil-works/pi-coding-agent": "*" },
+  "peerDependencies": { "@earendil-works/pi-coding-agent": ">=0.82.0 <0.85.0" },
   "devDependencies": {
-    "@earendil-works/pi-coding-agent": "^0.82.0",
-    "@earendil-works/pi-ai": "^0.75.5",
-    "@earendil-works/pi-tui": "^0.82.0",
+    "@earendil-works/pi-coding-agent": "^0.84.0",
+    "@earendil-works/pi-ai": "^0.84.0",
+    "@earendil-works/pi-tui": "^0.84.0",
     "@types/node": "^24.0.0",
     "typebox": "^1.1.38",
     "typescript": "^5.9.0"

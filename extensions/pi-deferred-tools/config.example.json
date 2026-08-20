@@ -1,8 +1,0 @@
-{
-  "disabledExtensions": [
-    "npm:pi-markdown-preview"
-  ],
-  "disabledTools": [
-    "web_search"
-  ]
-}

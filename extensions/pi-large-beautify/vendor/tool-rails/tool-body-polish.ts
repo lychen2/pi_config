@@ -50,10 +50,10 @@ function summarizeHugePayload(lines: readonly string[], theme: ToolBodyTheme, sk
   const command = lines.slice(0, 6).find((line) => /\b(?:cat|tee|write|edit|node|python|bash)\b/i.test(line)) ?? first;
   const path = lines.join("\n").match(/(?:[>~]?\/|\.\/)[^\s'"]+\.(?:ts|tsx|js|json|md|py|sh)/)?.[0];
   const bytes = lines.join("\n").length;
-  const summary = [theme.fg("dim", "▾ collapsed large payload")];
+  const summary = [theme.fg("dim", "▾ 已折叠大段内容")];
   if (command.trim() && command.trim() !== skipCommand.trim()) summary.push(titleLine(command, theme));
   if (path) summary.push(pathLine(path, theme));
-  summary.push(theme.fg("dim", `${lines.length} lines · ~${Math.round(bytes / 1024)}KB · expand to show`));
+  summary.push(theme.fg("dim", `${lines.length} 行 · ~${Math.round(bytes / 1024)}KB · 展开查看`));
   return summary;
 }
 
@@ -73,7 +73,7 @@ export function compactToolBody(
     if (lines.length <= TOOL_EXPANDED_MAX_LINES) return lines.map(formatLine);
     return [
       ...lines.slice(0, TOOL_EXPANDED_MAX_LINES).map(formatLine),
-      theme.fg("dim", `… +${lines.length - TOOL_EXPANDED_MAX_LINES} lines truncated`),
+      theme.fg("dim", `… +${lines.length - TOOL_EXPANDED_MAX_LINES} 行已截断`),
     ];
   }
 
@@ -95,7 +95,7 @@ export function compactToolBody(
       continue;
     }
     if (visibleCount >= TOOL_COLLAPSED_MAX_LINES) {
-      output.push(theme.fg("dim", `… +${Math.max(1, lines.length - visibleCount)} lines · expand`));
+      output.push(theme.fg("dim", `… +${Math.max(1, lines.length - visibleCount)} 行 · 展开`));
       break;
     }
     const clipped = plain.length > TOOL_COLLAPSED_MAX_LINE_CHARS
@@ -113,7 +113,7 @@ export function compactBashBody(lines: readonly string[], theme: ToolBodyTheme):
   const head = lines.slice(0, 3);
   const tail = lines.slice(-BASH_COLLAPSED_TAIL_LINES);
   const omitted = lines.length - head.length - tail.length;
-  return [...head, theme.fg("dim", `… +${omitted} lines`), ...tail];
+  return [...head, theme.fg("dim", `… +${omitted} 行`), ...tail];
 }
 
 export function bodyVisibleWidth(line: string): number {

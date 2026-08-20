@@ -16,6 +16,7 @@ import {
   labelLines,
   labelPadding,
   renderWithCapturedSelf,
+  stabilizeToolBoxBody,
   styleStructuredLine,
   visibleToolContentLines,
 } from "../compact-shell.ts";
@@ -36,7 +37,7 @@ test("renders reference-style tool box chrome without putting emoji on the rail"
   const top = toolBoxTop(execution, 48, theme);
   const middle = toolBoxLine("result", 48, theme);
   const bottom = toolBoxBottom(48, theme);
-  assert.match(top, /^╭─ ✓ 📖 READ · COMPLETE ─+╮$/);
+  assert.match(top, /^╭─ ✓ 📖 读取 · 完成 ─+╮$/);
   assert.equal(visibleWidth(top), 48);
   assert.equal(visibleWidth(toolBoxTop(execution, 77, theme)), 77);
   assert.equal(
@@ -50,15 +51,29 @@ test("renders reference-style tool box chrome without putting emoji on the rail"
   assert.equal(bottom, `╰${"─".repeat(46)}╯`);
 });
 
+test("keeps mutation tool boxes the same height from running to complete", () => {
+  assert.deepEqual(stabilizeToolBoxBody("readSeek_edit", ["edit /tmp/demo.txt (1 edit)"]), [
+    "edit /tmp/demo.txt (1 edit)",
+    "",
+  ]);
+  assert.deepEqual(stabilizeToolBoxBody("readSeek_edit", ["edit /tmp/demo.txt (1 edit)", "↳ edited +1 -1"]), [
+    "edit /tmp/demo.txt (1 edit)",
+    "↳ edited +1 -1",
+  ]);
+  assert.deepEqual(stabilizeToolBoxBody("readSeek_digest", ["digest file"]), ["digest file"]);
+});
+
 test("uses compact tool text labels with emoji rendered separately", () => {
-  assert.deepEqual(labelLines("web_search"), ["web"]);
-  assert.deepEqual(labelLines("fetch_content"), ["fetch"]);
-  assert.deepEqual(labelLines("undo_last_replace"), ["undo"]);
-  assert.deepEqual(labelLines("todo"), ["tasks"]);
-  assert.deepEqual(labelLines("replace"), ["replace"]);
-  assert.deepEqual(labelLines("readSeek_digest"), ["digest"]);
-  assert.deepEqual(labelLines("readSeek_def"), ["def"]);
-  assert.deepEqual(labelLines("readSeek_search"), ["search"]);
+  assert.deepEqual(labelLines("web_search"), ["联网"]);
+  assert.deepEqual(labelLines("agent_browser"), ["浏览器"]);
+  assert.deepEqual(labelLines("browser"), ["浏览器"]);
+  assert.deepEqual(labelLines("fetch_content"), ["获取"]);
+  assert.deepEqual(labelLines("undo_last_replace"), ["撤销"]);
+  assert.deepEqual(labelLines("todo"), ["任务"]);
+  assert.deepEqual(labelLines("replace"), ["替换"]);
+  assert.deepEqual(labelLines("readSeek_digest"), ["摘要"]);
+  assert.deepEqual(labelLines("readSeek_def"), ["定义"]);
+  assert.deepEqual(labelLines("readSeek_search"), ["检索"]);
   assert.equal(labelLayout("readSeek_digest", 0, "digest").emoji, "🩺");
   assert.equal(labelLayout("readSeek_view", 0, "view").emoji, "🔬");
   assert.equal(labelLayout("readSeek_search", 0, "search").emoji, "🌳");
@@ -66,6 +81,8 @@ test("uses compact tool text labels with emoji rendered separately", () => {
 
 test("exposes Material Symbols Rounded glyphs as an explicit icon fallback", () => {
   assert.equal(toolIcon("read"), "📖");
+  assert.equal(toolIcon("agent_browser"), "🌐");
+  assert.equal(toolIcon("browser"), "🌐");
   assert.equal(materialToolIcon("read").codePointAt(0), 0xe873);
   assert.equal(materialToolIcon("unknown").codePointAt(0), 0xe65f);
 });
@@ -75,10 +92,10 @@ test("keeps a single overlong tool word compact", () => {
 });
 
 test("places the emoji immediately before centered text without shifting its center", () => {
-  assert.deepEqual(labelLayout("todo", 0, "tasks"), {
+  assert.deepEqual(labelLayout("todo", 0, "任务"), {
     emoji: "📋",
-    text: "tasks",
-    left: 1,
+    text: "任务",
+    left: 2,
     right: 4,
   });
 });
@@ -89,7 +106,7 @@ test("recognizes the default tool-name-only header", () => {
 });
 
 test("keeps the extra padding cell on the right", () => {
-  assert.deepEqual(labelPadding("REPLACE"), { left: 2, right: 3 });
+  assert.deepEqual(labelPadding("替换"), { left: 4, right: 4 });
 });
 
 test("keeps collapsed structured output to a useful two-line summary", () => {
@@ -144,15 +161,15 @@ test("hides RTK rewrite diagnostics until a tool body is expanded", () => {
 test("uses reference-style body compression instead of a two-line collapse", () => {
   const lines = Array.from({ length: 16 }, (_, index) => `result ${index + 1}`);
   assert.equal(compactToolBody(lines, { theme: identityTheme }).length, 13);
-  assert.match(compactToolBody(lines, { theme: identityTheme }).at(-1), /\+4 lines.*expand/);
+  assert.match(compactToolBody(lines, { theme: identityTheme }).at(-1), /\+4 行.*展开/);
   assert.equal(compactToolBody(lines, { theme: identityTheme, expanded: true }).length, 16);
 });
 
 test("summarizes huge heredoc output while keeping the tool actionable", () => {
   const lines = ["$ cat > src/generated.ts <<'EOF'", ...Array.from({ length: 50 }, (_, index) => `line ${index}`), "EOF"];
   const compacted = compactToolBody(lines, { theme: identityTheme });
-  assert.ok(compacted.some((line) => line.includes("collapsed large payload")));
-  assert.ok(compacted.some((line) => line.includes("lines") && line.includes("expand to show")));
+  assert.ok(compacted.some((line) => line.includes("已折叠大段内容")));
+  assert.ok(compacted.some((line) => line.includes("行") && line.includes("展开查看")));
   assert.ok(compacted.length < lines.length);
 });
 
@@ -160,7 +177,7 @@ test("keeps the head and live tail of a long Bash stream", () => {
   const lines = Array.from({ length: 24 }, (_, index) => `line ${index + 1}`);
   const compacted = compactBashBody(lines, identityTheme);
   assert.deepEqual(compacted.slice(0, 3), ["line 1", "line 2", "line 3"]);
-  assert.match(compacted[3], /\+5 lines/);
+  assert.match(compacted[3], /\+5 行/);
   assert.equal(compacted.at(-1), "line 24");
 });
 

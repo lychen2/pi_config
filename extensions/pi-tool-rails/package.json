@@ -4,6 +4,7 @@
   "description": "Quiet themed tool rendering, message framing, and prompt framing for Pi's TUI",
   "license": "MIT",
   "type": "module",
+  "engines": { "node": ">=22.19.0" },
   "keywords": ["pi-package", "pi", "tools", "theme", "tui"],
   "files": ["index.ts", "compact-shell.ts", "result-bridge.ts", "prompt-frame.ts", "thinking-message.ts", "thinking-shimmer.ts", "tool-body-polish.ts", "tool-presentations.mjs", "tool-presentations.d.mts", "README.md", "LICENSE"],
   "pi": { "extensions": ["./compact-shell.ts", "./index.ts", "./result-bridge.ts", "./prompt-frame.ts"] },
@@ -12,8 +13,8 @@
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "*",
-    "@earendil-works/pi-tui": "*"
+    "@earendil-works/pi-coding-agent": ">=0.82.0 <0.85.0",
+    "@earendil-works/pi-tui": ">=0.82.0 <0.85.0"
   },
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "^0.82.0",

@@ -1,5 +1,5 @@
 import type { ExtensionAPI, ExtensionContext, Theme } from "@earendil-works/pi-coding-agent";
-import type { TUI } from "@earendil-works/pi-tui";
+import { shortToolName } from "./tool-presentations.mjs";
 
 type SpinnerMode = "requesting" | "thinking" | "responding" | "tool-input" | "tool-use";
 type ThemeColor = "accent" | "dim" | "error" | "muted" | "success" | "thinkingHigh" | "thinkingLow" | "thinkingMax" | "thinkingMedium" | "thinkingMinimal" | "thinkingOff" | "thinkingXhigh" | "toolOutput" | "toolTitle" | "warning";
@@ -29,17 +29,18 @@ type StreamEvent = {
 
 const GLYPHS = ["·", "✢", "✳", "✶", "✻", "✽"] as const;
 const SPINNER_FRAMES = [...GLYPHS, ...[...GLYPHS].reverse()];
-const SHIMMER_MS_REQUESTING = 45;
-const SHIMMER_MS_WORKING = 120;
+const SHIMMER_MS_REQUESTING = 80;
+const SHIMMER_MS_WORKING = 80;
 const TOKEN_COUNTER_MS = 40;
-const SHIMMER_BAND = 5;
+const WAVE_LENGTH = 7;
+const WAVE_SPEED = 0.42;
 const STALL_TIMEOUT_MS = 3_000;
 const STALL_TRANSITION_FRAMES = 28;
 const THINKING_GLOW_DELAY_MS = 1_800;
 const THINKING_GLOW_PERIOD_MS = 1_600;
+const PHASE_ROTATION_MS = 4_500;
 const CJK_CHAR = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u;
 const EMOJI_CHAR = /\p{Extended_Pictographic}/u;
-const WORKING_WIDGET_KEY = "pi-tool-rails-working";
 
 export function formatTokenCount(n: number): string {
   const value = Math.max(0, Math.round(n));
@@ -48,7 +49,7 @@ export function formatTokenCount(n: number): string {
     : new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 })
       .format(value)
       .replace("K", "k");
-  return `${number} ${value === 1 ? "token" : "tokens"}`;
+  return `${number} 词元`;
 }
 
 export function animatedDots(frame: number): string {
@@ -111,12 +112,12 @@ function effortInfo(pi: ExtensionAPI): { tag: string; color: ThemeColor } | unde
     const level = (pi.getThinkingLevel() || "").toLowerCase();
     if (!level || level === "off") return undefined;
     const map: Record<string, { tag: string; color: ThemeColor }> = {
-      minimal: { tag: "MINIMAL", color: "thinkingMinimal" },
-      low: { tag: "LOW", color: "thinkingLow" },
-      medium: { tag: "MEDIUM", color: "thinkingMedium" },
-      high: { tag: "HIGH", color: "thinkingHigh" },
-      xhigh: { tag: "XHIGH", color: "thinkingXhigh" },
-      max: { tag: "MAX", color: "thinkingMax" },
+      minimal: { tag: "极简", color: "thinkingMinimal" },
+      low: { tag: "低", color: "thinkingLow" },
+      medium: { tag: "中", color: "thinkingMedium" },
+      high: { tag: "高", color: "thinkingHigh" },
+      xhigh: { tag: "很高", color: "thinkingXhigh" },
+      max: { tag: "最大", color: "thinkingMax" },
     };
     return map[level] ?? { tag: level.toUpperCase(), color: "thinkingXhigh" };
   } catch {
@@ -124,33 +125,254 @@ function effortInfo(pi: ExtensionAPI): { tag: string; color: ThemeColor } | unde
   }
 }
 
-function colorSweep(theme: Theme, text: string, frame: number, reverse: boolean, stalled: boolean): string {
-  const colors: ThemeColor[] = stalled
-    ? ["warning", "error", "warning"]
-    : ["accent", "toolTitle", "thinkingXhigh", "accent"];
-  const total = text.length + SHIMMER_BAND * 2;
-  const rawPosition = frame % total;
-  const position = reverse ? total - 1 - rawPosition : rawPosition;
+export function colorSweep(theme: Theme, text: string, frame: number, _reverse: boolean, stalled: boolean): string {
+  const characters = [...text];
+  if (characters.length === 0) return "";
   let output = "";
-  for (let index = 0; index < text.length; index++) {
-    const distance = Math.abs(index - position);
-    const highlighted = distance < SHIMMER_BAND;
-    const color = highlighted
-      ? colors[(frame + index) % colors.length]!
-      : colors[index % colors.length]!;
-    output += theme.fg(color, text[index]!);
+  for (let index = 0; index < characters.length; index++) {
+    const intensity = (Math.sin(index * (Math.PI * 2 / WAVE_LENGTH) - frame * WAVE_SPEED) + 1) / 2;
+    const color: ThemeColor = stalled
+      ? intensity > 0.82 ? "toolTitle" : intensity > 0.48 ? "accent" : "dim"
+      : intensity > 0.82 ? "toolTitle" : intensity > 0.52 ? "accent" : intensity > 0.24 ? "muted" : "dim";
+    output += theme.fg(color, characters[index]!);
   }
   return output;
 }
 
-function modeLabel(mode: SpinnerMode): string {
-  switch (mode) {
-    case "requesting": return "Preparing";
-    case "thinking": return "Thinking";
-    case "responding": return "Responding";
-    case "tool-input": return "Preparing tool";
-    case "tool-use": return "Using tool";
+export const PHASE_LINES_HUMOR = {
+  requesting: [
+    "正在敲模型家的门",
+    "正在把任务塞进上下文",
+    "正在给问题找个好角度",
+    "正在等灵感排队进场",
+    "正在翻开这次对话的地图",
+    "正在给你的要求打聚光灯",
+    "正在整理出发前的行李",
+    "正在把问题递上思考台",
+    "正在给推理确认目的地",
+    "正在给答案热热身",
+    "正在让上下文互相认识",
+    "正在把线索请到候场区",
+  ],
+  thinking: [
+    "正在摊开线索",
+    "正在给思路排队",
+    "正在拆解这只复杂问题",
+    "正在给逻辑拧紧螺丝",
+    "正在把零散线索串起来",
+    "正在和复杂度讨价还价",
+    "正在把疑点拉到灯下",
+    "正在给关键路径清清场",
+    "正在让推理先试跑一圈",
+    "正在检查结论有没有漏风",
+    "正在把思路里的杂音请出去",
+    "正在给答案寻找近道",
+  ],
+  responding: [
+    "正在把结论捏成句子",
+    "正在给重点排队入场",
+    "正在落笔，墨水已就位",
+    "正在把人话装进答案",
+    "正在给思路打个漂亮的包",
+    "正在把多余弯路折起来",
+    "正在给重点擦亮边角",
+    "正在把结论放到该在的位置",
+    "正在给答案缝上最后一针",
+    "正在把信息摆得顺眼些",
+    "正在把技术黑话翻译成人话",
+    "正在把收尾抚平",
+  ],
+  "tool-input": [
+    "正在和参数对口供",
+    "正在给工具塞小纸条",
+    "正在检查参数有没有穿帮",
+    "正在给调用系好安全带",
+    "正在让字段各就各位",
+    "正在把意图翻译给工具听",
+    "正在给工具准备不迷路的说明",
+    "正在把调用细节逐个扣上",
+    "正在把输入拧到刚刚好",
+    "正在核对工具的出发清单",
+    "正在给参数做最后一次体检",
+    "正在照看好小数点和边界",
+  ],
+  "tool-use": [
+    "工具正在认真办事",
+    "正在等工具回话",
+    "正在接收执行结果",
+    "正在等现场报告送达",
+    "工具已出发，请保持淡定",
+    "正在核对工具带回的线索",
+    "正在给执行现场留盏灯",
+    "正在等结果穿过终端",
+    "正在听工具那边的动静",
+    "正在准备接住返回的数据",
+    "正在等现场消息落地",
+    "正在核验这趟调用的回执",
+  ],
+} as const;
+
+export const PHASE_LINES_MEME = {
+  requesting: [
+    "正在敲AI工位的门喊它上班",
+    "正在往内存塞任务大礼包",
+    "正在挖这个问题的重点瓜",
+    "蹲一个灵感从天而降",
+    "打开本次闯关任务地图",
+    "把你的需求拉满曝光buff",
+    "检查装备防止中途掉链子",
+    "把问题放上审判工作台",
+    "标记好本次答题终点打卡点",
+    "给答案引擎热车打火",
+    "催促上下文群聊开始对接",
+  ],
+  thinking: [
+    "线索摊一地开始地毯式搜索",
+    "疯狂排查容易踩坑的岔路",
+    "拽回跑偏放飞自我的思路",
+    "逻辑螺丝必须拧到最紧",
+    "碎片线索紧急绑定成串",
+    "和难缠问题极限battle",
+    "把隐藏坑点揪出来示众",
+    "清理思路路上各种障碍物",
+    "先跑一遍模拟测试防翻车",
+    "摇一摇答案牢不牢固",
+    "一键屏蔽脑子里无效噪音",
+  ],
+  responding: [
+    "疯狂码字组装最终答案",
+    "抓回到处乱跑的核心要点",
+    "正式开启码字输出模式",
+    "努力从机器语转人类语言",
+    "安排知识点出场先后顺序",
+    "答案快递打包准备出库",
+    "大刀砍掉没用水字数部分",
+    "给重点打上高光特效",
+    "防止答案飘到外太空",
+    "紧急补上答案最后的漏洞",
+    "调整版式提升阅读体验",
+  ],
+  "tool-input": [
+    "正在跟参数疯狂对剧本",
+    "往工具包里塞任务便签",
+    "排查参数会不会当场报错",
+    "给本次调用买好保险",
+    "全体字段各就各位不许乱动",
+    "翻译成人畜无害工具指令",
+    "写一份保姆级行动说明书",
+    "挨个把调用细节锁死",
+    "精细调到参数黄金数值",
+    "清点工具出门必备清单",
+    "全身体检防止参数炸锅",
+  ],
+  "tool-use": [
+    "工具打工人正在全力肝任务",
+    "搓手手等工具打工返图",
+    "已经摆好盘子接返回数据",
+    "外勤工具正在实地探查",
+    "工具已发车请勿中途打断",
+    "仔细翻看工具带回来情报",
+    "远程盯紧工具工作进度条",
+    "数据包正在网线狂飙中",
+    "在线吃瓜监听工具反馈",
+    "张开双手准备接收结果",
+    "扫码核验工具任务小票",
+  ],
+} as const;
+
+export const PHASE_LINES_DREAMY = {
+  requesting: [
+    "轻轻叩响思考小屋的门扉",
+    "将任务温柔放进随身行囊",
+    "慢慢看清问题藏起来的模样",
+    "静静等候灵感悄悄浮上来",
+    "铺开属于这次旅途的地图",
+    "把你的心愿放到灯光之下",
+    "整理好即将出发的随身物品",
+    "将问题轻轻放置思考台面",
+    "确定好本次航行停靠彼岸",
+    "慢慢温热生成答案的引擎",
+    "邀请上下文彼此打个招呼",
+  ],
+  thinking: [
+    "缓缓摊开散落一地的线索",
+    "仔细辨认每一条分叉小路",
+    "让飘散思绪慢慢回归正轨",
+    "一点点加固答案逻辑框架",
+    "把细碎光点连成完整丝线",
+    "耐心和复杂难题慢慢和解",
+    "将藏在暗处疑点带到光亮处",
+    "清理道路上多余的小阻碍",
+    "先完整走过一遍思考旅途",
+    "轻轻晃动检查答案稳不稳",
+    "拂去思绪里细碎嘈杂杂音",
+  ],
+  responding: [
+    "慢慢将思绪编织成温柔文字",
+    "收拢四处飘散的核心要点",
+    "拿起笔，开始书写回复",
+    "转换成好读懂的温柔语言",
+    "为每一个知识点排好队伍",
+    "打包好全部想法准备寄出",
+    "舍弃旅途里面多余弯路",
+    "擦亮最关键的星光要点",
+    "让答案安稳落到现实地面",
+    "补上最后一小块拼图碎片",
+    "把文字摆放成舒服模样",
+  ],
+  "tool-input": [
+    "轻声和工具核对行动清单",
+    "递过去一张手写任务便条",
+    "仔细检查每一项输入信息",
+    "系好工具远行的安全带",
+    "让每个字段找到自己位置",
+    "把想法翻译成工具的语言",
+    "写下一份清晰的导航指引",
+    "一点点完善每一处细节",
+    "微调输入到刚刚好的状态",
+    "清点工具远行所需物资",
+    "做一次出发前最后的检查",
+  ],
+  "tool-use": [
+    "工具正在认真完成它的工作",
+    "安静等候远方传来消息",
+    "做好接收结果的准备",
+    "等待外勤带回远方见闻",
+    "工具已经踏上它的旅程",
+    "细细品读收集回来的线索",
+    "留一盏灯等候它平安归来",
+    "数据正在穿过夜色奔赴这里",
+    "安静聆听远处传来的动静",
+    "准备稳稳接住归来的消息",
+    "确认本次旅程顺利完成",
+  ],
+} as const;
+
+export const PHASE_LINES = {
+  requesting: [...PHASE_LINES_HUMOR.requesting, ...PHASE_LINES_MEME.requesting, ...PHASE_LINES_DREAMY.requesting],
+  thinking: [...PHASE_LINES_HUMOR.thinking, ...PHASE_LINES_MEME.thinking, ...PHASE_LINES_DREAMY.thinking],
+  responding: [...PHASE_LINES_HUMOR.responding, ...PHASE_LINES_MEME.responding, ...PHASE_LINES_DREAMY.responding],
+  "tool-input": [...PHASE_LINES_HUMOR["tool-input"], ...PHASE_LINES_MEME["tool-input"], ...PHASE_LINES_DREAMY["tool-input"]],
+  "tool-use": [...PHASE_LINES_HUMOR["tool-use"], ...PHASE_LINES_MEME["tool-use"], ...PHASE_LINES_DREAMY["tool-use"]],
+} as const;
+
+export function shuffledPhaseOrder(length: number, random: () => number = Math.random): number[] {
+  const order = Array.from({ length: Math.max(0, length) }, (_, index) => index);
+  for (let index = order.length - 1; index > 0; index--) {
+    const swapIndex = Math.floor(random() * (index + 1));
+    [order[index], order[swapIndex]] = [order[swapIndex]!, order[index]!];
   }
+  return order;
+}
+
+function modeLabel(
+  mode: SpinnerMode,
+  activeTools: readonly string[],
+  aside: string,
+): string {
+  if (mode !== "tool-use") return aside;
+  if (activeTools.length > 1) return `正在并行执行 ${activeTools.length} 项工具 · ${aside}`;
+  return activeTools[0] ? `正在执行：${shortToolName(activeTools[0])} · ${aside}` : aside;
 }
 
 function installShimmer(pi: ExtensionAPI): void {
@@ -166,23 +388,41 @@ function installShimmer(pi: ExtensionAPI): void {
   let lastTokenTime = 0;
   let turnActive = false;
   let activeToolCount = 0;
+  const activeTools = new Map<string, string>();
   let stallFrame = 0;
   let displayedTokens = 0;
   let tokensMoving = false;
   let shimmerTimer: ReturnType<typeof setInterval> | null = null;
   let tokenTimer: ReturnType<typeof setInterval> | null = null;
   let shimmerFrame = 0;
+  let phaseStartedAt = Date.now();
+  const phaseOrder: number[] = [];
+  let phaseCycle = -1;
+  let previousPhaseIndex: number | undefined;
   let ctx: ExtensionContext | null = null;
   let sessionGeneration = 0;
-  let widgetTui: TUI | null = null;
-  let widgetMounted = false;
+  let resizeListening = false;
   let widgetText = "";
-  let widgetMountTimer: ReturnType<typeof setTimeout> | null = null;
-  let nativeWorkingHideTimer: ReturnType<typeof setTimeout> | null = null;
-  let todoRebalanceTimer: ReturnType<typeof setTimeout> | null = null;
 
-  function isActiveSession(sessionContext: ExtensionContext, generation: number): boolean {
-    return ctx === sessionContext && sessionGeneration === generation;
+  function currentPhaseLine(): string {
+    const lines = PHASE_LINES[mode];
+    const slot = Math.floor(Math.max(0, Date.now() - phaseStartedAt) / PHASE_ROTATION_MS);
+    const cycle = Math.floor(slot / lines.length);
+    if (cycle !== phaseCycle) {
+      const next = shuffledPhaseOrder(lines.length);
+      if (next.length > 1 && next[0] === previousPhaseIndex) [next[0], next[1]] = [next[1]!, next[0]!];
+      phaseOrder.splice(0, phaseOrder.length, ...next);
+      phaseCycle = cycle;
+    }
+    const index = phaseOrder[slot % lines.length] ?? 0;
+    previousPhaseIndex = index;
+    return lines[index]!;
+  }
+
+  function resetPhaseRotation(): void {
+    phaseStartedAt = Date.now();
+    phaseCycle = -1;
+    phaseOrder.splice(0, phaseOrder.length);
   }
 
   function themeFg(color: ThemeColor, text: string): string {
@@ -227,125 +467,19 @@ function installShimmer(pi: ExtensionAPI): void {
       const dots = animatedDots(shimmerFrame);
       const hudParts = buildStatusParts();
       const hud = hudParts.length > 0 ? themeFg("dim", `( ${hudParts.join(" · ")} )`) : "";
-      const message = colorSweep(sessionContext.ui.theme, `${modeLabel(mode)}${dots}`, shimmerFrame, mode !== "requesting", stallFrame > 0);
-      const glyphColor: ThemeColor = mode === "thinking" ? effortInfo(pi)?.color ?? "thinkingXhigh" : "accent";
-      const glyph = widgetMounted ? `${themeFg(glyphColor, SPINNER_FRAMES[shimmerFrame % SPINNER_FRAMES.length]!)} ` : "";
-      widgetText = glyph + (hud ? `${message} ${hud}` : message);
-      if (widgetMounted) widgetTui?.requestRender();
-      else sessionContext.ui.setWorkingMessage(widgetText);
+      const message = colorSweep(
+        sessionContext.ui.theme,
+        `${modeLabel(mode, [...activeTools.values()], currentPhaseLine())}${dots}`,
+        shimmerFrame,
+        mode !== "requesting",
+        stallFrame > 0,
+      );
+      widgetText = hud ? `${message} ${hud}` : message;
+      // Native Loader owns the animation clock and terminal redraw cycle.
+      sessionContext.ui.setWorkingMessage(widgetText);
     } catch {
       // A teardown can invalidate the context while a UI interval is winding down.
     }
-  }
-
-  function registerWorkingWidget(sessionContext: ExtensionContext, generation: number): void {
-    if (!isActiveSession(sessionContext, generation)) return;
-    try {
-      if (typeof sessionContext.ui.setWidget !== "function") return;
-      sessionContext.ui.setWidget(WORKING_WIDGET_KEY, (tui) => {
-        if (isActiveSession(sessionContext, generation)) widgetTui = tui;
-        return {
-          render: () => isActiveSession(sessionContext, generation) && turnActive && widgetText ? [widgetText] : [],
-          invalidate: () => {},
-          dispose: () => {
-            if (widgetTui === tui) widgetTui = null;
-          },
-        };
-      });
-    } catch {
-      // The host removes extension widgets during UI teardown.
-    }
-  }
-
-  function mountWorkingWidget(sessionContext: ExtensionContext, generation: number): void {
-    if (!isActiveSession(sessionContext, generation)) return;
-    try {
-      if (typeof sessionContext.ui.setWidget !== "function") return;
-      if (widgetMountTimer) clearTimeout(widgetMountTimer);
-      widgetMountTimer = null;
-      widgetMounted = true;
-      if (nativeWorkingHideTimer) clearTimeout(nativeWorkingHideTimer);
-      nativeWorkingHideTimer = null;
-
-      let timer: ReturnType<typeof setTimeout> | null = null;
-      const hideNativeWorking = (): void => {
-        if (timer && nativeWorkingHideTimer === timer) nativeWorkingHideTimer = null;
-        if (widgetMounted && isActiveSession(sessionContext, generation)) {
-          sessionContext.ui.setWorkingVisible(false);
-        }
-      };
-      hideNativeWorking();
-      timer = setTimeout(hideNativeWorking, 0);
-      nativeWorkingHideTimer = timer;
-      timer.unref?.();
-      registerWorkingWidget(sessionContext, generation);
-    } catch {
-      // Do not let a late mount callback access a retired session context.
-    }
-  }
-
-  // Pi's setExtensionWidget re-inserts a re-registered key at the END of the
-  // widget stack (remove + Map.set). pi-maestro-todo registers its
-  // "pi-maestro-todo" widget lazily on the FIRST todo tool execution of a turn —
-  // after our working widget mounted at agent_start — which flips the render
-  // order to working-above-todo. Re-registering on the next macrotask (after
-  // every todo tool handler in the same dispatch has run) pushes our widget back
-  // below the Todo widget for the rest of the turn.
-  function reorderWorkingWidgetBelowTodos(): void {
-    const sessionContext = ctx;
-    const generation = sessionGeneration;
-    if (!sessionContext || !widgetMounted) return;
-    if (todoRebalanceTimer) clearTimeout(todoRebalanceTimer);
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    timer = setTimeout(() => {
-      if (timer && todoRebalanceTimer === timer) todoRebalanceTimer = null;
-      if (isActiveSession(sessionContext, generation) && widgetMounted) {
-        mountWorkingWidget(sessionContext, generation);
-      }
-    }, 0);
-    todoRebalanceTimer = timer;
-    timer.unref?.();
-  }
-
-  function scheduleWorkingWidget(sessionContext: ExtensionContext, generation: number): void {
-    if (!isActiveSession(sessionContext, generation)) return;
-    try {
-      if (typeof sessionContext.ui.setWidget !== "function") return;
-      if (widgetMountTimer) clearTimeout(widgetMountTimer);
-      let timer: ReturnType<typeof setTimeout> | null = null;
-      timer = setTimeout(() => {
-        if (timer && widgetMountTimer === timer) widgetMountTimer = null;
-        if (isActiveSession(sessionContext, generation)) mountWorkingWidget(sessionContext, generation);
-      }, 0);
-      widgetMountTimer = timer;
-      timer.unref?.();
-    } catch {
-      // The new session may already have replaced this context.
-    }
-  }
-
-  function unmountWorkingWidget(): void {
-    if (widgetMountTimer) {
-      clearTimeout(widgetMountTimer);
-      widgetMountTimer = null;
-    }
-    if (nativeWorkingHideTimer) {
-      clearTimeout(nativeWorkingHideTimer);
-      nativeWorkingHideTimer = null;
-    }
-    if (todoRebalanceTimer) {
-      clearTimeout(todoRebalanceTimer);
-      todoRebalanceTimer = null;
-    }
-    if (!widgetMounted) return;
-    try {
-      ctx?.ui.setWidget(WORKING_WIDGET_KEY, undefined);
-      ctx?.ui.setWorkingVisible(true);
-    } catch {
-      // The host may have already discarded the old UI.
-    }
-    widgetMounted = false;
-    widgetTui = null;
   }
 
   function setGlyphs(): void {
@@ -357,7 +491,7 @@ function installShimmer(pi: ExtensionAPI): void {
     try {
       sessionContext.ui.setWorkingIndicator({
         frames: SPINNER_FRAMES.map((glyph) => themeFg(color, glyph)),
-        intervalMs: 120,
+        intervalMs: 80,
       });
     } catch {
       // A session replacement can invalidate its UI between event dispatches.
@@ -417,9 +551,14 @@ function installShimmer(pi: ExtensionAPI): void {
     startTokenCounter();
   }
 
+  function ensureShimmer(): void {
+    if (turnActive && !shimmerTimer) startShimmer();
+  }
+
   function setMode(next: SpinnerMode): void {
     if (mode === next) return;
     mode = next;
+    resetPhaseRotation();
     setGlyphs();
     if (shimmerTimer) startShimmer();
   }
@@ -439,9 +578,8 @@ function installShimmer(pi: ExtensionAPI): void {
   function resetTurn(resetOutput = false): void {
     stopShimmer();
     widgetText = "";
-    if (!widgetMounted) {
-      try { ctx?.ui.setWorkingMessage(); } catch { /* session context retired */ }
-    }
+    try { ctx?.ui.setWorkingMessage(); } catch { /* session context retired */ }
+    phaseStartedAt = Date.now();
     mode = "requesting";
     currentBlockTokenUnits.clear();
     currentEstimatedTokenUnits = 0;
@@ -452,9 +590,8 @@ function installShimmer(pi: ExtensionAPI): void {
       displayedTokens = 0;
       tokensMoving = false;
     }
-    stallFrame = 0;
-    lastTokenTime = 0;
     activeToolCount = 0;
+    activeTools.clear();
     setGlyphs();
   }
 
@@ -467,12 +604,24 @@ function installShimmer(pi: ExtensionAPI): void {
     startShimmer();
   }
 
+  function handleTerminalResize(): void {
+    if (!ctx || !turnActive) return;
+    startShimmer();
+  }
+
+  function setResizeListening(enabled: boolean): void {
+    if (enabled === resizeListening) return;
+    resizeListening = enabled;
+    if (enabled) process.stdout.on("resize", handleTerminalResize);
+    else process.stdout.off("resize", handleTerminalResize);
+  }
+
   function disposeSession(): void {
+    setResizeListening(false);
     sessionGeneration++;
     turnActive = false;
     stopShimmer();
     widgetText = "";
-    unmountWorkingWidget();
     try {
       ctx?.ui.setWorkingMessage();
       ctx?.ui.setWorkingIndicator();
@@ -489,12 +638,12 @@ function installShimmer(pi: ExtensionAPI): void {
     if (sessionContext.mode !== "tui") return;
     ctx = sessionContext;
     sessionGeneration++;
-    scheduleWorkingWidget(sessionContext, sessionGeneration);
+    setResizeListening(true);
   });
 
   pi.on("agent_start", async (_event, sessionContext) => {
     if (sessionContext.mode !== "tui" || !ctx) return;
-    mountWorkingWidget(ctx, sessionGeneration);
+    ctx.ui.setWorkingVisible?.(true);
     if (!agentStart) agentStart = Date.now();
     if (!turnActive) initTurn(true);
   });
@@ -507,6 +656,7 @@ function installShimmer(pi: ExtensionAPI): void {
   pi.on("message_update", async (event, sessionContext) => {
     if (sessionContext.mode !== "tui") return;
     if (!ctx) return;
+    ensureShimmer();
     const evt = event.assistantMessageEvent as StreamEvent;
     const tokenMessage = event.message as AssistantTokenMessage;
     const reported = reportedOutputTokens(tokenMessage);
@@ -579,28 +729,31 @@ function installShimmer(pi: ExtensionAPI): void {
     updateDisplay();
   });
 
-  pi.on("tool_execution_start", async (_event, sessionContext) => {
+  pi.on("tool_execution_start", async (event, sessionContext) => {
     if (sessionContext.mode !== "tui") return;
     if (!ctx) return;
-    activeToolCount++;
+    ensureShimmer();
+    activeTools.set(event.toolCallId, event.toolName);
+    activeToolCount = activeTools.size;
+    setMode("tool-use");
+    if (!shimmerTimer) startShimmer();
   });
 
   pi.on("tool_execution_end", async (event, sessionContext) => {
     if (sessionContext.mode !== "tui") return;
     if (!ctx) return;
-    // pi-maestro-todo registers its widget on todo tool completion; keep our
-    // working widget below it (see reorderWorkingWidgetBelowTodos).
-    if (event.toolName === "todo") reorderWorkingWidgetBelowTodos();
-    activeToolCount = Math.max(0, activeToolCount - 1);
+    ensureShimmer();
+    activeTools.delete(event.toolCallId);
+    activeToolCount = activeTools.size;
     if (activeToolCount === 0 && (mode === "tool-use" || mode === "tool-input") && turnActive) setMode("responding");
   });
 
   pi.on("turn_end", async (_event, sessionContext) => {
     if (sessionContext.mode !== "tui") return;
     if (!ctx) return;
-    turnActive = false;
-    stopShimmer();
+    ensureShimmer();
     activeToolCount = 0;
+    activeTools.clear();
   });
 
   pi.on("agent_end", async (_event, sessionContext) => {
@@ -609,9 +762,12 @@ function installShimmer(pi: ExtensionAPI): void {
     turnActive = false;
     stopShimmer();
     widgetText = "";
-    if (widgetMounted) widgetTui?.requestRender();
-    else {
-      try { sessionContextAtStart.ui.setWorkingMessage(); } catch { /* session context retired */ }
+    try {
+      sessionContextAtStart.ui.setWorkingMessage();
+      sessionContextAtStart.ui.setWorkingIndicator();
+      sessionContextAtStart.ui.setWorkingVisible?.(true);
+    } catch {
+      // The session context can retire during the final repaint.
     }
     agentStart = 0;
   });

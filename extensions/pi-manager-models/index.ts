@@ -26,9 +26,38 @@ type ProviderConfig = {
 type ModelsFile = { providers?: Record<string, ProviderConfig | undefined> };
 type ModelsResponse = { data?: Array<{ id?: unknown }> };
 type JsonRecord = Record<string, unknown>;
+const MODEL_DISCOVERY_TIMEOUT_MS = 10_000;
+
+function safeEndpoint(url: string): string {
+  try {
+    const parsed = new URL(url);
+    parsed.username = "";
+    parsed.password = "";
+    parsed.search = "";
+    parsed.hash = "";
+    return parsed.toString();
+  } catch {
+    return "<invalid endpoint>";
+  }
+}
 
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** Drop static session IDs so pi-ai/the gateway can use per-session affinity. */
+export function sanitizeProviderHeaders(
+  headers?: Record<string, string>,
+): Record<string, string> | undefined {
+  if (!headers) return undefined;
+  const sanitized = Object.fromEntries(
+    Object.entries(headers).filter(([name, value]) => {
+      const normalizedName = name.toLowerCase();
+      return normalizedName !== "x-opencode-session"
+        && !(normalizedName === "x-client-request-id" && value.trim() === "");
+    }),
+  );
+  return Object.keys(sanitized).length > 0 ? sanitized : undefined;
 }
 
 export function patchDeepSeekResponsesReasoningPayload(payload: unknown): unknown | undefined {
@@ -105,30 +134,51 @@ async function resolveInitialKey(pi: ExtensionAPI, value?: string): Promise<stri
   return result.stdout.trim() || undefined;
 }
 
-async function discoverModels(config: ProviderConfig, apiKey?: string, signal?: AbortSignal): Promise<ProviderModelConfig[]> {
+export async function discoverModels(config: ProviderConfig, apiKey?: string, signal?: AbortSignal): Promise<ProviderModelConfig[]> {
   const configured = new Map((config.models ?? []).map((model) => [model.id, model]));
   const endpoint = config.modelsEndpoint?.trim() || "models";
   const url = `${config.baseUrl.replace(/\/$/, "")}/${endpoint.replace(/^\//, "")}`;
-  const response = await fetch(url, {
-    signal,
-    headers: {
-      Accept: "application/json",
-      ...config.headers,
-      ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
-    },
-  });
-  if (!response.ok) throw new Error(`${providerId} model discovery failed: ${response.status} ${await response.text()}`);
+  const timeoutSignal = AbortSignal.timeout(MODEL_DISCOVERY_TIMEOUT_MS);
+  const requestSignal = signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal;
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      signal: requestSignal,
+      headers: {
+        Accept: "application/json",
+        ...sanitizeProviderHeaders(config.headers),
+        ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+      },
+    });
+  } catch (error) {
+    if (timeoutSignal.aborted && !signal?.aborted) {
+      throw new Error(`${providerId} model discovery timed out after ${MODEL_DISCOVERY_TIMEOUT_MS}ms (endpoint ${safeEndpoint(url)})`);
+    }
+    const reason = signal?.aborted ? "aborted" : timeoutSignal.aborted ? "timed out" : "request failed";
+    throw new Error(`${providerId} model discovery failed (${reason}) for endpoint ${safeEndpoint(url)}`);
+  }
+  if (!response.ok) throw new Error(`${providerId} model discovery failed for endpoint ${safeEndpoint(url)}: HTTP ${response.status}`);
 
   const payload = await response.json() as ModelsResponse;
-  if (!Array.isArray(payload.data)) throw new Error(`${providerId} model response has no data array`);
+  if (!Array.isArray(payload.data)) throw new Error(`${providerId} model response has no data array (endpoint ${safeEndpoint(url)})`);
   const seen = new Set<string>();
   const models = payload.data.flatMap((entry) => {
     if (typeof entry.id !== "string" || !entry.id || seen.has(entry.id)) return [];
     seen.add(entry.id);
     return [completeModel(configured.get(entry.id) ?? { id: entry.id })];
   });
-  if (!models.length) throw new Error(`${providerId} returned an empty model list`);
+  if (!models.length) throw new Error(`${providerId} returned an empty model list (endpoint ${safeEndpoint(url)})`);
   return models;
+}
+
+export async function loadModels(config: ProviderConfig, apiKey?: string): Promise<ProviderModelConfig[]> {
+  const configured = (config.models ?? []).map(completeModel);
+  try {
+    return await discoverModels(config, apiKey);
+  } catch (error) {
+    if (!configured.length) throw error;
+    return configured;
+  }
 }
 
 export default async function managerModels(pi: ExtensionAPI): Promise<void> {
@@ -139,20 +189,20 @@ export default async function managerModels(pi: ExtensionAPI): Promise<void> {
   // model catalog can still source its credential from the environment. Plain
   // text keys pass through unchanged (no behavior change for existing configs).
   const apiKey = await resolveInitialKey(pi, initial.apiKey);
-  let models = (initial.models ?? []).map(completeModel);
-  if (!models.length) models = await discoverModels(initial, apiKey);
+  let models = await loadModels(initial, apiKey);
 
   pi.on("before_provider_request", (event, ctx) => {
     if (ctx.model?.provider !== providerId || ctx.model.api !== "openai-responses") return;
     return patchDeepSeekResponsesReasoningPayload(event.payload);
   });
 
+  const providerHeaders = sanitizeProviderHeaders(initial.headers);
   pi.registerProvider(providerId, {
     ...(initial.name ? { name: initial.name } : {}),
     baseUrl: initial.baseUrl,
     ...(apiKey ? { apiKey } : {}),
     ...(initial.api ? { api: initial.api } : {}),
-    ...(initial.headers ? { headers: initial.headers } : {}),
+    ...(providerHeaders ? { headers: providerHeaders } : {}),
     ...(initial.authHeader !== undefined ? { authHeader: initial.authHeader } : {}),
     models,
     async refreshModels({ credential, allowNetwork, signal }) {

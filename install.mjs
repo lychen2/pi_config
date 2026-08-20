@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { constants as fsConstants } from "node:fs";
+import { constants as fsConstants, realpathSync } from "node:fs";
 import {
   access,
   cp,
@@ -16,7 +16,6 @@ import path from "node:path";
 import process from "node:process";
 import readline from "node:readline/promises";
 import { fileURLToPath } from "node:url";
-import { createRequire } from "node:module";
 import { spawnSync } from "node:child_process";
 
 const repoDir = path.dirname(fileURLToPath(import.meta.url));
@@ -33,12 +32,12 @@ const retiredPackageSources = new Set([
   "npm:@tmustier/pi-raw-paste",
   "npm:pi-autoresearch",
   "npm:@monotykamary/pi-tps",
-  "npm:pi-agent-browser-native",
   "npm:pi-hashline-edit-pro",
   "npm:pi-markdown-preview",
   "npm:@cortexkit/aft-pi",
   "npm:pi-gsd",
   "npm:pi-cache-optimizer",
+  "npm:@cortexkit/pi-magic-context",
   "npm:@juicesharp/rpiv-todo",
   "npm:pi-maestro-teammate",
   "npm:pi-readseek",
@@ -46,6 +45,11 @@ const retiredPackageSources = new Set([
 ]);
 const retiredLocalPackageNames = new Set([
   "pi-agent-browser-compat",
+  "pi-deferred-tools",
+  "pi-maestro-browser",
+  "pi-maestro-todo",
+  "pi-maestro-tools",
+  "pi-markdown-preview-compat",
   "pi-goal-verifier",
   "pi-rtk-hashline-compat",
   "pi-semantic-code",
@@ -82,6 +86,8 @@ function normalizeChildPath() {
 
 normalizeChildPath();
 
+let installerOptions = parseArgs([]);
+
 function setChoice(options, key, value, label) {
   if (options[key] !== undefined && options[key] !== value) {
     throw new Error(`Conflicting ${label} options were provided.`);
@@ -94,7 +100,6 @@ function parseArgs(argv) {
     yes: false,
     dryRun: false,
     external: undefined,
-    magicContext: undefined,
     rtk: undefined,
     modelDefaults: undefined,
     cleanPlugins: false,
@@ -108,12 +113,6 @@ function parseArgs(argv) {
         break;
       case "--dry-run":
         options.dryRun = true;
-        break;
-      case "--with-magic-context":
-        setChoice(options, "magicContext", true, "Magic Context");
-        break;
-      case "--skip-magic-context":
-        setChoice(options, "magicContext", false, "Magic Context");
         break;
       case "--with-external":
         setChoice(options, "external", true, "external package");
@@ -158,8 +157,6 @@ Usage:
 Options:
   -y, --yes                Accept recommended defaults without prompting
       --dry-run            Print actions without changing the system
-      --with-magic-context  Run the official Magic Context setup script
-      --skip-magic-context  Skip Magic Context setup
       --with-external      Install packages from config/external-packages.txt
       --skip-external      Skip external Pi packages
       --with-rtk           Install the RTK binary used by pi-rtk-optimizer
@@ -170,7 +167,7 @@ Options:
    Local extensions/pi-*/package.json packages are always installed.
   -h, --help               Show this help
 
-Recommended install (Magic Context runs its own setup wizard):
+Recommended install:
   node install.mjs --yes
 `);
 }
@@ -191,9 +188,11 @@ function formatCommand(command, args) {
 
 function installStep(step) {
   const offset = installerOptions.cleanPlugins && step > 1 ? 1 : 0;
-  const total = installerOptions.cleanPlugins ? 8 : 7;
+  const total = installerOptions.cleanPlugins ? 7 : 6;
   return `[${step + offset}/${total}]`;
 }
+
+const DEFAULT_RUN_TIMEOUT_MS = 20 * 60 * 1000;
 
 function run(command, args, options = {}) {
   console.log(`  $ ${formatCommand(command, args)}`);
@@ -201,14 +200,23 @@ function run(command, args, options = {}) {
     return;
   }
 
+  const timeout = options.timeout ?? DEFAULT_RUN_TIMEOUT_MS;
   const result = spawnSync(command, args, {
     cwd: options.cwd || repoDir,
     env: options.env || process.env,
     stdio: "inherit",
     shell: options.shell ?? commandNeedsShell(command),
+    timeout,
   });
 
   if (result.error) {
+    if (result.error.code === "ETIMEDOUT") {
+      const formattedTimeout = timeout >= 1000 ? `${Math.round(timeout / 1000)}s` : `${timeout}ms`;
+      throw new Error(
+        `Timed out after ${formattedTimeout} running ${formatCommand(command, args)}: ` +
+        `${result.error.message} — check your network or proxy and retry; re-running the installer is safe`,
+      );
+    }
     throw new Error(`Failed to start ${command}: ${result.error.message}`);
   }
   if (result.status !== 0) {
@@ -250,6 +258,35 @@ function isRetiredPackageSource(value) {
   if (retiredPackageSources.has(source)) return true;
   if ([...retiredPackageSources].some((retired) => source.startsWith(`${retired}@`))) return true;
   return [...retiredLocalPackageNames].some((name) => source.endsWith(`/extensions/${name}`));
+}
+
+function isLocalPackageSource(value, packageName) {
+  const source = configuredPackageSource(value)?.replaceAll("\\", "/").replace(/\/+$/, "");
+  return source?.endsWith(`/extensions/${packageName}`) ?? false;
+}
+
+async function normalizeAnchoredStandardOrder() {
+  const settingsPath = path.join(agentDir, "settings.json");
+  const settings = await readJson(settingsPath, {});
+  if (!Array.isArray(settings.packages)) return;
+
+  const anchorIndex = settings.packages.findIndex((entry) =>
+    isLocalPackageSource(entry, "pi-deepseek-anchored-standard")
+  );
+  const workbenchIndex = settings.packages.findIndex((entry) =>
+    isLocalPackageSource(entry, "pi-default-workbench")
+  );
+  if (anchorIndex < 0 || workbenchIndex < 0 || anchorIndex === workbenchIndex + 1) return;
+
+  const [anchor] = settings.packages.splice(anchorIndex, 1);
+  const nextWorkbenchIndex = settings.packages.findIndex((entry) =>
+    isLocalPackageSource(entry, "pi-default-workbench")
+  );
+  settings.packages.splice(nextWorkbenchIndex + 1, 0, anchor);
+  console.log("  ordered pi-deepseek-anchored-standard after pi-default-workbench");
+  if (!installerOptions.dryRun) {
+    await writeFile(settingsPath, `${JSON.stringify(settings, null, 2)}\n`, "utf8");
+  }
 }
 
 function retiredNpmPackageNames() {
@@ -409,9 +446,7 @@ async function promptYesNo(rl, question, defaultValue) {
 async function resolveChoices() {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
   try {
-    const magicContext = installerOptions.magicContext ??
-      (await promptYesNo(rl, "Install Magic Context and disable Pi auto-compaction?", true));
-    const external = installerOptions.external ??
+  const external = installerOptions.external ??
       (await promptYesNo(rl, "Install the external Pi package manifest?", true));
     const rtk = installerOptions.rtk ??
       (await promptYesNo(rl, "Install the RTK binary used by pi-rtk-optimizer?", true));
@@ -423,23 +458,15 @@ async function resolveChoices() {
       ));
 
 
-    return { magicContext, external, rtk, modelDefaults };
+    return { external, rtk, modelDefaults };
   } finally {
     rl.close();
   }
 }
 
 async function backupExistingConfig() {
-  const cortexConfigPaths = ["magic-context.jsonc"]
-    .map((name) => cortexConfigPath(name));
-  const existingCortexConfigPaths = [];
-  for (const configPath of cortexConfigPaths) {
-    if (await pathExists(configPath)) {
-      existingCortexConfigPaths.push(configPath);
-    }
-  }
   const hasAgentConfig = await pathExists(agentDir);
-  if (!hasAgentConfig && existingCortexConfigPaths.length === 0) {
+  if (!hasAgentConfig) {
     console.log(`\n${installStep(1)} No existing Pi configuration to back up.`);
     return null;
   }
@@ -459,19 +486,11 @@ async function backupExistingConfig() {
       errorOnExist: true,
     });
   }
-  for (const configPath of existingCortexConfigPaths) {
-    const backupPath = path.join(backupDir, "cortexkit", path.basename(configPath));
-    await mkdir(path.dirname(backupPath), { recursive: true });
-    await cp(configPath, backupPath, {
-      force: false,
-      errorOnExist: true,
-    });
-  }
   return backupDir;
 }
 
 async function cleanPlugins() {
-  const total = installerOptions.cleanPlugins ? 8 : 7;
+  const total = installerOptions.cleanPlugins ? 7 : 6;
   console.log(`\n[2/${total}] Clearing installed Pi plugins for a clean reinstall`);
   const extensionsPath = path.join(agentDir, "extensions");
   const npmPath = path.join(agentDir, "npm");
@@ -517,6 +536,10 @@ async function restoreFiles() {
       path.join(agentDir, "extensions", file),
     );
   }
+  await copyPath(
+    path.join(repoDir, "extensions", "pi-adhd"),
+    path.join(agentDir, "extensions", "pi-adhd"),
+  );
   await copyPath(
     path.join(repoDir, "extensions", "matugen-footer"),
     path.join(agentDir, "extensions", "matugen-footer"),
@@ -646,7 +669,12 @@ async function installLocalPackages() {
     }
     run(commandName("pi"), ["install", packageDir]);
   }
+  await normalizeAnchoredStandardOrder();
 
+  console.log("  apply Pi Chinese UI localization");
+  run(process.execPath, [path.join(extensionsDir, "pi-zh-localizer", "localize.mjs")]);
+  console.log("  verify Default/Large presentation bundle sync");
+  run(process.execPath, [path.join(repoDir, "scripts", "sync-large-beautify.mjs"), "--check"]);
   run(process.execPath, [path.join(repoDir, "scripts", "verify-tool-presentations.mjs")]);
   await retireLegacyLargeLauncher();
 }
@@ -676,97 +704,17 @@ async function installExternalPackages(enabled) {
 }
 
 
-function cortexConfigHome() {
-  const xdgConfigHome = process.env.XDG_CONFIG_HOME;
-  return xdgConfigHome && path.isAbsolute(xdgConfigHome)
-    ? xdgConfigHome
-    : path.join(homeDir, ".config");
-}
-
-function cortexConfigPath(name) {
-  return path.join(cortexConfigHome(), "cortexkit", name);
-}
-
-function magicContextConfigPath() {
-  return cortexConfigPath("magic-context.jsonc");
-}
-
-async function configureMagicContext() {
-  const configPath = magicContextConfigPath();
-  console.log(`  configure Magic Context threshold and disable its Todo entry -> ${configPath}`);
-  if (installerOptions.dryRun) return;
-
-  const packageRoot = path.join(agentDir, "npm", "node_modules", "@cortexkit", "pi-magic-context");
-  const packageJsonPath = path.join(packageRoot, "package.json");
-  if (!(await pathExists(packageJsonPath))) {
-    throw new Error(`Magic Context package is missing after installation: ${packageRoot}`);
-  }
-
-  const requireFromMagicContext = createRequire(packageJsonPath);
-  const { parse, stringify } = requireFromMagicContext("comment-json");
-  const existing = await pathExists(configPath)
-    ? parse(await readFile(configPath, "utf8"))
-    : {};
-  if (!isPlainObject(existing)) {
-    throw new Error(`Magic Context config at ${configPath} must be a JSONC object`);
-  }
-
-  existing.execute_threshold_percentage = 55;
-  existing.todowrite = {
-    ...(isPlainObject(existing.todowrite) ? existing.todowrite : {}),
-    enabled: false,
-    overlay: false,
-  };
-  await mkdir(path.dirname(configPath), { recursive: true });
-  await writeFile(configPath, `${stringify(existing, null, 2)}\n`, "utf8");
-}
-
-async function installMagicContext(enabled) {
-  console.log(`\n${installStep(6)} Installing Magic Context`);
-  if (!enabled) {
-    console.log("  skipped");
-    return;
-  }
-
-  if (isWindows) {
-    run("powershell.exe", [
-      "-NoProfile",
-      "-ExecutionPolicy",
-      "Bypass",
-      "-Command",
-      "irm https://raw.githubusercontent.com/cortexkit/magic-context/master/scripts/install.ps1 | iex",
-    ]);
-  } else {
-    run("sh", [
-      "-c",
-      "curl -fsSL https://raw.githubusercontent.com/cortexkit/magic-context/master/scripts/install.sh | bash",
-    ]);
-  }
-
-  // The upstream setup wizard registers the package but does not install it.
-  run(commandName("pi"), ["install", "npm:@cortexkit/pi-magic-context"]);
-  await configureMagicContext();
-}
-
 async function installOptionalTools(choices) {
-  console.log(`\n${installStep(7)} Installing optional command-line tools`);
+  console.log(`\n${installStep(6)} Installing optional command-line tools`);
   let installedAny = false;
 
 
   if (choices.rtk) {
     installedAny = true;
     try {
-      if (isWindows) {
-        run(process.execPath, [path.join(repoDir, "scripts", "install-rtk.mjs")]);
-      } else {
-        run(
-          "sh",
-          [
-            "-c",
-            "curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh",
-          ],
-        );
-      }
+      // All platforms use the verified installer: GitHub release checksums.txt,
+      // sha256 verification, atomic extraction, and a --version smoke run.
+      run(process.execPath, [path.join(repoDir, "scripts", "install-rtk.mjs")]);
     } catch (error) {
       console.warn(`  RTK installation skipped: ${error.message}`);
       console.warn("  Pi configuration is complete; install RTK manually after resolving the local script policy.");
@@ -787,45 +735,59 @@ function verifyPi() {
   }
 }
 
-const installerOptions = parseArgs(process.argv.slice(2));
-const choices = await resolveChoices();
+async function main() {
+  installerOptions = parseArgs(process.argv.slice(2));
+  const choices = await resolveChoices();
 
-console.log("pi_config cross-platform installer");
-console.log(`  platform: ${process.platform} ${process.arch}`);
-console.log(`  repository: ${repoDir}`);
-console.log(`  target: ${agentDir}`);
-console.log(`  Magic Context: ${choices.magicContext ? "yes" : "no"}`);
-console.log(`  external packages: ${choices.external ? "yes" : "no"}`);
-console.log(`  RTK binary: ${choices.rtk ? "yes" : "no"}`);
-console.log(`  provider/model defaults: ${choices.modelDefaults ? "apply" : "keep current"}`);
-console.log(`  clean plugins: ${installerOptions.cleanPlugins ? "yes" : "no"}`);
-if (installerOptions.cleanPlugins && !choices.external) {
-  console.warn("  warning: external packages are disabled and will not be restored after plugin cleanup");
-}
-if (installerOptions.dryRun) {
-  console.log("  mode: dry run");
-}
-
-verifyPi();
-const backupDir = await backupExistingConfig();
-if (installerOptions.cleanPlugins) {
-  await cleanPlugins();
-}
-await restoreFiles();
-await mergeModelOverrides();
-await mergePublicSettings(choices.modelDefaults);
-await removeRetiredNpmPackages();
-await installLocalPackages();
-await installExternalPackages(choices.external);
-await installMagicContext(choices.magicContext);
-await installOptionalTools(choices);
-
-if (installerOptions.dryRun) {
-  console.log("\nDry run complete. No changes were made.");
-} else {
-  console.log("\nInstallation complete.");
-  if (backupDir) {
-    console.log(`Backup: ${backupDir}`);
+  console.log("pi_config cross-platform installer");
+  console.log(`  platform: ${process.platform} ${process.arch}`);
+  console.log(`  repository: ${repoDir}`);
+  console.log(`  target: ${agentDir}`);
+  console.log(`  external packages: ${choices.external ? "yes" : "no"}`);
+  console.log(`  RTK binary: ${choices.rtk ? "yes" : "no"}`);
+  console.log(`  provider/model defaults: ${choices.modelDefaults ? "apply" : "keep current"}`);
+  console.log(`  clean plugins: ${installerOptions.cleanPlugins ? "yes" : "no"}`);
+  if (installerOptions.cleanPlugins && !choices.external) {
+    console.warn("  warning: external packages are disabled and will not be restored after plugin cleanup");
   }
-  console.log("Next: run pi, use /provider add to configure a provider, then select it with /model.");
+  if (installerOptions.dryRun) {
+    console.log("  mode: dry run");
+  }
+
+  verifyPi();
+  const backupDir = await backupExistingConfig();
+  if (installerOptions.cleanPlugins) {
+    await cleanPlugins();
+  }
+  await restoreFiles();
+  await mergeModelOverrides();
+  await mergePublicSettings(choices.modelDefaults);
+  await removeRetiredNpmPackages();
+  await installLocalPackages();
+  await installExternalPackages(choices.external);
+  await installOptionalTools(choices);
+
+  if (installerOptions.dryRun) {
+    console.log("\nDry run complete. No changes were made.");
+  } else {
+    console.log("\nInstallation complete.");
+    if (backupDir) {
+      console.log(`Backup: ${backupDir}`);
+    }
+    console.log("Next: run pi, use /provider add to configure a provider, then select it with /model.");
+  }
+}
+
+export { run };
+
+const isMainModule = process.argv[1] &&
+  (() => { try { return realpathSync(process.argv[1]); } catch { return undefined; } })() ===
+  realpathSync(fileURLToPath(import.meta.url));
+if (isMainModule) {
+  try {
+    await main();
+  } catch (error) {
+    console.error(`\nInstallation failed: ${error instanceof Error ? error.message : String(error)}`);
+    process.exitCode = 1;
+  }
 }

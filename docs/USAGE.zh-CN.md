@@ -27,11 +27,11 @@ irm https://raw.githubusercontent.com/lychen2/pi_config/main/install.ps1 | iex
 
 1. 安装或检查 Node.js、Git 和 Pi。
 2. 将仓库放到 `~/.pi_config`，或使用已有 checkout。
-3. 备份现有 `~/.pi/agent`，以及会被更新的 Magic Context 配置。
+3. 备份现有 `~/.pi/agent`。
 4. 合并缺失的 skills 和 themes，保留本机已有文件；仅在独立扩展不存在时复制它们。
 5. 覆盖仓库维护的公开配置，合并公开 settings，并自动扫描 `extensions/pi-*/package.json` 逐个运行 `pi install`。
 6. 工具扩展默认全部启用；每个项目可用 `/tools` 保存自己的禁用项。
-7. 按选择安装 Magic Context 和 RTK。
+7. 按选择安装外部 package 和 RTK。
 
 已有 Pi 和 Node.js 时，在仓库根目录运行：
 
@@ -60,19 +60,17 @@ pi list
 
 ```text
 extensions/pi-brand-header
-extensions/pi-deferred-tools
+extensions/pi-default-workbench
 extensions/pi-large-mode
-extensions/pi-maestro-todo
-extensions/pi-maestro-tools
 extensions/pi-manager-models
-extensions/pi-markdown-preview-compat
-extensions/pi-readseek-compat
+extensions/pi-context-bridge
+extensions/pi-deepseek-anchored-standard
 extensions/pi-slim-skills
 extensions/pi-todo-guard
 extensions/pi-tool-rails
 ```
 
-还应看到 `extensions/pi-markdown-preview-compat` 和 `extensions/pi-readseek-compat`；不应再看到独立的 `npm:pi-markdown-preview`、`npm:pi-readseek`、`npm:pi-web-access` 或 `npm:pi-maestro-teammate` 注册入口。
+还应看到 `extensions/pi-default-workbench` 和 `extensions/pi-context-bridge`；不应再看到独立的 `npm:pi-markdown-preview`、`npm:pi-web-access` 或 `npm:pi-maestro-teammate` 注册入口。
 启动 Pi：
 
 ```bash
@@ -88,9 +86,9 @@ pi
 
 如果修改了安装器、仓库配置或本地扩展，重新启动 Pi 更可靠。
 
-## 2. 工具默认启用与项目开关
+## 2. adaptive、fast 与 full 工具模式
 
-`pi-deferred-tools` 的旧包名容易误导，但 **tools are no longer deferred**：它现在只是项目级工具选择器。扩展工具默认跟随 Pi 的正常启用状态，不会在运行时通过 `load_tools` 动态加载或卸载。需要联网、任务分支或 DAG 时，直接描述任务即可：
+`pi-default-workbench` 默认使用 `adaptive`：首轮暴露 canonical `read/write/edit/grep`、`bash`、FFF、Todo、结构化提问与 `search_tool_bm25`；缺少其他能力时，模型通过 BM25 按组追加注册工具。扩展 package、命令和事件处理器始终保持加载，模式只改变模型可见的工具集合。
 
 ```text
 搜索 2025 年 C++ sender/receiver 规范的变化，只引用 WG21 和 cppreference，并给出来源链接。
@@ -104,18 +102,21 @@ pi
 
 一级列表按扩展显示启用数量：`Space` 整组开关，`Enter` 进入二级工具列表，二级用 `Space` 或 `Enter` 切换单个工具。选择立即生效，并写入受信任项目的 `.pi/tool-selector.json`；没有该文件时默认不禁用任何扩展工具。
 
-两个预设子命令：
+三个模式子命令：
 
 ```text
-/tools fast    # 只保留最小工具集：read、bash、write、edit、grep、fffind、ffgrep、todo、ask_user_question
-/tools reset   # 恢复全部扩展工具（清空禁用规则）
+/tools adaptive # fast core + search_tool_bm25，按需成组追加能力
+/tools fast     # 固定最小集合，不提供 BM25 动态追加
+/tools full     # 全部注册工具，但仍服从显式禁用规则
+/tools reset    # 清空显式禁用规则并进入 full
 ```
 
-`fast` 预设面向快速简单任务：按名称禁用 web、subagent、记忆、preview、conflict、后台 shell 与 AST 类工具，保留核心文件/执行工具、索引化工作区搜索、单一 Todo 入口和结构化提问；`bash`、`find`、`ls` 等内置工具不受影响。
+adaptive/fast 的严格 core 是 `read`、`bash`、`write`、`edit`、`grep`、`fffind`、`ffgrep`、`todo`、`ask_user_question`；原生 `ls/find` 和其他能力工具只在 adaptive 按需激活或 full 中出现。
 
 ```json
 {
-  "disabledExtensions": ["local:pi-markdown-preview-compat"],
+  "toolMode": "adaptive",
+    "disabledExtensions": ["local:pi-default-workbench"],
   "disabledTools": ["web_search"]
 }
 ```
@@ -145,11 +146,7 @@ pi
 
 ## 4. 文件、搜索与执行
 
-默认模式保留 Pi 原生 `read` 和 `bash`。`pi-readseek` 接管 `write`、`edit`、`grep`，并提供锚点读取与代码导航：`readSeek_view`、`readSeek_digest`、`readSeek_search`、`readSeek_def`、`readSeek_refs`、`readSeek_rename`。
-
-`pi-maestro-tools` 补充三个互补能力：`fffind` 做模糊路径发现，`ffgrep` 做项目内字面内容搜索，`bash_bg` 管理长任务的状态、等待和终止；`conflict` 读取并解析 Git 冲突，解析前会重新验证原始 hunk，拒绝覆盖并发改动。
-
-对大文件优先要求读取相关符号或范围，不要无边界读取整份文件。跨文件重命名前先预览范围，再运行项目编译或相关测试。
+默认模式保留 Pi 原生 `read`、`write`、`edit`、`grep` 和 `bash`。`pi-context-bridge` 统一加载 Web Access 与 teammate；`pi-default-workbench` 提供 `fffind`、`ffgrep`、`bash_bg`、`conflict`、`browser`、`todo` 和 Preview；独立的 `execute_command` 扩展负责命令/消息调度。对大文件优先要求读取相关符号或范围，不要无边界读取整份文件。跨文件重命名前先预览范围，再运行项目编译或相关测试。
 
 ```text
 读取 src/service.py 中 UserStore 的定义和全部引用；只读返回最安全的修改入口。
@@ -157,7 +154,7 @@ pi
 
 ## 5. 并行 Subagent 任务
 
-默认模式由本地 `pi-readseek-compat` 入口加载锁定的 `pi-maestro-teammate` 实现。它通过独立 Pi 子进程真正并行执行任务，支持并发上限、DAG 依赖、后台完成通知、跨任务消息和结果聚合。
+默认模式由本地 `pi-context-bridge` 入口加载锁定的 Web Access 与 `pi-maestro-teammate` 实现。它通过独立 Pi 子进程真正并行执行任务，支持并发上限、DAG 依赖、后台完成通知、跨任务消息和结果聚合。
 
 单任务使用：
 
@@ -179,7 +176,7 @@ pi
 /large on
 ```
 
-`/large on` 会把当前默认 package 边界切换为固定上游 profile：`pi-maestro-flow@0.19.0`、`pi-maestro-teammate@1.12.0` 和 `pi-cockpit@0.14.0`，然后调用 Pi 的公开 `ctx.reload()`。认证、模型、主题、session 和当前会话都不变，不再创建 `~/.pi/agent-large`。
+`/large on` 会把当前默认 package 边界切换为固定上游 profile：Flow 版本在首次 `/large on` 时从 npm registry 解析并固定，teammate 与 Cockpit 版本由该 Flow 版本的依赖解析固定；用 `/large status` 查看当前固定的版本。然后调用 Pi 的公开 `ctx.reload()`。认证、模型、主题、session 和当前会话都不变，不再创建 `~/.pi/agent-large`。
 
 使用 `/large status` 检查状态，使用 `/large off` 恢复切换前受管 package 的原始顺序与 `autoload`，同时保留 Large 期间新增的无关 package。`/large update` 只注入固定版本检查工作流；需要实际应用通过隔离兼容性验证的新版本时使用 `/large update apply`，不会自动跟随 `latest`。
 
@@ -212,7 +209,7 @@ scientific-visualization
 
 ### 联网资料访问
 
-`pi-readseek-compat` 默认加载锁定的 Web Access 实现，提供 `web_search`、`source_check`、`fetch_content` 和 `get_search_content`。用自然语言说明检索目标、时间范围或可信域名；需要具体网页、PDF、GitHub 仓库或视频内容时，提供 URL 并说明要提取的证据。GitHub URL 会克隆为本地目录供后续检查，而不是只抓取渲染后的网页。项目通过 `/tools` 禁用这些工具后，它们才会从模型工具集中移除。完整的 35 个当前工具示例见[工具目录](tools.zh-CN.md)。
+`pi-context-bridge` 默认加载锁定的 Web Access 实现，提供 `web_search`、`source_check`、`fetch_content` 和 `get_search_content`。用自然语言说明检索目标、时间范围或可信域名；需要具体网页、PDF、GitHub 仓库或视频内容时，提供 URL 并说明要提取的证据。GitHub URL 会克隆为本地目录供后续检查，而不是只抓取渲染后的网页。项目通过 `/tools` 禁用这些工具后，它们才会从模型工具集中移除。完整的工具示例见[工具目录](tools.zh-CN.md)。
 
 ```text
 搜索 2025 年 TypeScript 装饰器规范的变化，只引用 typescriptlang.org 和 GitHub 讨论，并给出来源链接。
@@ -230,10 +227,9 @@ scientific-visualization
 
 RTK 压缩通用工具结果；长命令由原生 `bash` 或 `bash_bg` 返回。用 `/rtk verify` 检查 RTK binary。
 
-### Magic Context
+### 上下文压缩
 
-安装器会运行 Magic Context 官方安装流程，并把触发阈值设为当前配置的 `55%`。Pi 原生自动压缩在公开设置中关闭，由 Magic Context 负责压缩、历史恢复和长期记忆。
-
+Pi 原生自动压缩已启用。它只使用当前 provider 的请求，不额外调用独立模型；需要减少未缓存输入时，保持系统提示词和会话前缀稳定，并要求工具输出先摘要再继续。
 长工具输出即使最终被压缩，也应先要求模型只保留与任务相关的摘要：
 
 ```text

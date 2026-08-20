@@ -2,11 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  PHASE_LINES,
   animatedDots,
+  colorSweep,
   estimateTextTokens,
   formatTokenCount,
   installThinkingShimmer,
   reportedOutputTokens,
+  shuffledPhaseOrder,
 } from "../thinking-shimmer.ts";
 
 test("keeps animated dot frames at a fixed width", () => {
@@ -14,107 +17,63 @@ test("keeps animated dot frames at a fixed width", () => {
   assert.equal(new Set([animatedDots(0), animatedDots(8), animatedDots(16)].map((value) => value.length)).size, 1);
 });
 
+test("moves a one-way wave through the current theme colors", () => {
+  const theme = { fg: (color, text) => `<${color}>${text}</${color}>` };
+  const text = "正在整理工具执行参数";
+  const first = colorSweep(theme, text, 0, false, false);
+  const next = colorSweep(theme, text, 1, false, false);
+  const reversedFlag = colorSweep(theme, text, 1, true, false);
+
+  assert.match(first, /<toolTitle>/);
+  assert.match(first, /<accent>/);
+  assert.match(first, /<muted>/);
+  assert.match(first, /<dim>/);
+  assert.notEqual(first, next);
+  assert.equal(next, reversedFlag);
+});
+
+test("keeps stalled shimmer inside the Matugen cool palette", () => {
+  const theme = { fg: (color, text) => `<${color}>${text}</${color}>` };
+  const rendered = colorSweep(theme, "流光缓存", 0, false, true);
+
+  assert.doesNotMatch(rendered, /<(?:error|warning)>/);
+  assert.match(rendered, /<(?:toolTitle|accent|dim)>/);
+});
+test("keeps phase lines balanced and shuffles every index", () => {
+  for (const lines of Object.values(PHASE_LINES)) assert.equal(lines.length, 34);
+  const order = shuffledPhaseOrder(34, () => 0.25);
+  assert.deepEqual([...order].sort((left, right) => left - right), Array.from({ length: 34 }, (_, index) => index));
+});
+
 test("keeps token accounting compatible with the reference estimator", () => {
-  assert.equal(formatTokenCount(1), "1 token");
-  assert.equal(formatTokenCount(1000), "1k tokens");
+  assert.equal(formatTokenCount(1), "1 词元");
+  assert.equal(formatTokenCount(1000), "1k 词元");
   assert.equal(estimateTextTokens("中文"), 2);
   assert.equal(reportedOutputTokens({ usage: { output: 12 } }), 12);
   assert.equal(reportedOutputTokens({ usage: { output: 0 } }), null);
   assert.equal(reportedOutputTokens({ usage: { output: 0, input: 3 } }, true), 0);
 });
 
-test("keeps the animated glyph in the todo-adjacent working widget", async () => {
-  const handlers = new Map();
-  const widgets = new Map([["todo", { render: () => ["todo"] }]]);
-  const workingVisibility = [];
-  const ctx = {
+function createHudContext(log) {
+  return {
     mode: "tui",
     ui: {
-      theme: { fg(_color, text) { return text; } },
-      setWorkingMessage() {},
-      setWorkingIndicator() {},
-      setWorkingVisible(value) { workingVisibility.push(value); },
-      setWidget(key, factory) {
-        if (factory === undefined) {
-          widgets.delete(key);
-          return;
-        }
-        widgets.delete(key); // Pi's setExtensionWidget removes, then re-inserts at the END
-        widgets.set(key, factory({ requestRender() {} }));
-      },
+      theme: { fg(color, text) { return `<${color}>${text}</${color}>`; } },
+      setWorkingMessage(value) { log.messages.push(value); },
+      setWorkingIndicator(value) { log.indicators.push(value); },
+      setWorkingVisible(value) { log.visibility.push(value); },
     },
   };
-  const pi = {
-    on(event, handler) { handlers.set(event, handler); },
-    getThinkingLevel() { return "high"; },
-  };
+}
 
-  installThinkingShimmer(pi);
-  await handlers.get("session_start")({}, ctx);
-  await handlers.get("agent_start")({}, ctx);
-  try {
-    const widget = widgets.get("pi-tool-rails-working");
-    assert.match(widget.render()[0], /^[·✢✳✶✻✽] Preparing/);
-    assert.equal([...widgets.keys()].at(-1), "pi-tool-rails-working");
-    assert.equal(workingVisibility.at(-1), false);
-  } finally {
-    await handlers.get("session_shutdown")();
-  }
-});
+function plainMessage(value) {
+  return value.replace(/<\/(?:accent|dim|error|muted|success|thinkingHigh|thinkingLow|thinkingMax|thinkingMedium|thinkingMinimal|thinkingOff|thinkingXhigh|toolOutput|toolTitle|warning)>|<(?:accent|dim|error|muted|success|thinkingHigh|thinkingLow|thinkingMax|thinkingMedium|thinkingMinimal|thinkingOff|thinkingXhigh|toolOutput|toolTitle|warning)>/g, "");
+}
 
-test("re-orders the working widget below a lazily registered todo overlay", async () => {
+test("uses Pi's native animated Loader for changing work phases", async () => {
   const handlers = new Map();
-  const widgets = new Map();
-  const ctx = {
-    mode: "tui",
-    ui: {
-      theme: { fg(_color, text) { return text; } },
-      setWorkingMessage() {},
-      setWorkingIndicator() {},
-      setWorkingVisible() {},
-      setWidget(key, factory) {
-        if (factory === undefined) {
-          widgets.delete(key);
-          return;
-        }
-        widgets.delete(key); // Pi's setExtensionWidget removes, then re-inserts at the END
-        widgets.set(key, factory({ requestRender() {} }));
-      },
-    },
-  };
-  const pi = {
-    on(event, handler) { handlers.set(event, handler); },
-    getThinkingLevel() { return "high"; },
-  };
-
-  installThinkingShimmer(pi);
-  await handlers.get("session_start")({}, ctx);
-  await handlers.get("agent_start")({}, ctx);
-  try {
-    // pi-maestro-todo registers its widget lazily on the first todo tool run of
-    // a turn — AFTER the working widget mounted at agent_start.
-    widgets.set("pi-maestro-todo", { render: () => ["todo"] });
-    assert.equal([...widgets.keys()].at(-1), "pi-maestro-todo");
-    await handlers.get("tool_execution_end")({ toolName: "todo" }, ctx);
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    assert.equal([...widgets.keys()].at(-1), "pi-tool-rails-working");
-  } finally {
-    await handlers.get("session_shutdown")();
-  }
-});
-
-test("starts, switches, and cleans the working HUD through Pi events", async () => {
-  const handlers = new Map();
-  const messages = [];
-  const indicators = [];
-  const ctx = {
-    mode: "tui",
-    ui: {
-      theme: { fg(_color, text) { return text; } },
-      setWorkingMessage(message) { messages.push(message); },
-      setWorkingIndicator(indicator) { indicators.push(indicator); },
-    },
-  };
+  const log = { messages: [], indicators: [], visibility: [] };
+  const ctx = createHudContext(log);
   const pi = {
     on(event, handler) { handlers.set(event, handler); },
     getThinkingLevel() { return "high"; },
@@ -124,88 +83,39 @@ test("starts, switches, and cleans the working HUD through Pi events", async () 
   await handlers.get("session_start")({}, ctx);
   try {
     await handlers.get("agent_start")({}, ctx);
-    assert.ok(messages.some((message) => typeof message === "string" && message.includes("Preparing")));
-    assert.ok(indicators.at(-1)?.frames.length > 0);
+    assert.ok(PHASE_LINES.requesting.some((line) => plainMessage(log.messages.at(-1)).includes(line)));
+    assert.equal(log.visibility.at(-1), true);
+    assert.ok(log.indicators.at(-1).frames.length > 1);
 
     await handlers.get("message_update")({
       assistantMessageEvent: { type: "thinking_start", contentIndex: 0 },
       message: { content: [{ type: "thinking", thinking: "reason" }] },
     }, ctx);
-    assert.ok(messages.at(-1).includes("Thinking"));
-    assert.ok(indicators.at(-1).frames.length > 0);
+    assert.ok(PHASE_LINES.thinking.some((line) => plainMessage(log.messages.at(-1)).includes(line)));
+
+    await handlers.get("message_update")({
+      assistantMessageEvent: { type: "toolcall_start", contentIndex: 0 },
+      message: { content: [{ type: "toolCall", name: "read", arguments: {} }] },
+    }, ctx);
+    assert.ok(PHASE_LINES["tool-input"].some((line) => plainMessage(log.messages.at(-1)).includes(line)));
+    assert.ok(!plainMessage(log.messages.at(-1)).includes("装配参数"));
+
+    await handlers.get("turn_end")({}, ctx);
+    const beforeTurnEndWait = log.messages.length;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    assert.ok(log.messages.length > beforeTurnEndWait);
+    await handlers.get("tool_execution_start")({ toolName: "read", toolCallId: "call-1" }, ctx);
+    assert.ok(plainMessage(log.messages.at(-1)).includes("正在执行：读取"));
+    const beforeResize = log.messages.length;
+    process.stdout.emit("resize");
+    assert.ok(log.messages.length > beforeResize);
+    const toolFrame = log.messages.at(-1);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    assert.notEqual(log.messages.at(-1), toolFrame);
 
     await handlers.get("agent_end")({}, ctx);
-    assert.equal(messages.at(-1), undefined);
-  } finally {
-    await handlers.get("session_shutdown")();
-  }
-  assert.equal(indicators.at(-1), undefined);
-});
-
-
-function createHudContext(log) {
-  return {
-    mode: "tui",
-    ui: {
-      theme: { fg(_color, text) { return text; } },
-      setWorkingMessage(value) { log.messages.push(value); },
-      setWorkingIndicator(value) { log.indicators.push(value); },
-      setWorkingVisible(value) { log.visibility.push(value); },
-      setWidget(_key, factory) {
-        log.widgets.push(factory === undefined ? "remove" : "set");
-        if (factory) factory({ requestRender() { log.renders += 1; } });
-      },
-    },
-  };
-}
-
-test("does not mount a retired session's queued working widget after replacement", async () => {
-  const handlers = new Map();
-  const firstLog = { messages: [], indicators: [], visibility: [], widgets: [], renders: 0 };
-  const secondLog = { messages: [], indicators: [], visibility: [], widgets: [], renders: 0 };
-  const first = createHudContext(firstLog);
-  const second = createHudContext(secondLog);
-  const pi = {
-    on(event, handler) { handlers.set(event, handler); },
-    getThinkingLevel() { return "high"; },
-  };
-
-  installThinkingShimmer(pi);
-  await handlers.get("session_start")({}, first);
-  await handlers.get("session_shutdown")();
-  await handlers.get("session_start")({}, second);
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  try {
-    assert.deepEqual(firstLog.widgets, []);
-    assert.deepEqual(firstLog.visibility, []);
-    assert.deepEqual(secondLog.widgets, ["set"]);
-  } finally {
-    await handlers.get("session_shutdown")();
-  }
-});
-
-test("does not rebalance or hide native work for a retired session", async () => {
-  const handlers = new Map();
-  const firstLog = { messages: [], indicators: [], visibility: [], widgets: [], renders: 0 };
-  const secondLog = { messages: [], indicators: [], visibility: [], widgets: [], renders: 0 };
-  const first = createHudContext(firstLog);
-  const second = createHudContext(secondLog);
-  const pi = {
-    on(event, handler) { handlers.set(event, handler); },
-    getThinkingLevel() { return "high"; },
-  };
-
-  installThinkingShimmer(pi);
-  await handlers.get("session_start")({}, first);
-  await handlers.get("agent_start")({}, first);
-  await handlers.get("tool_execution_end")({ toolName: "todo" }, first);
-  await handlers.get("session_shutdown")();
-  const firstAfterShutdown = structuredClone(firstLog);
-  await handlers.get("session_start")({}, second);
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  try {
-    assert.deepEqual(firstLog, firstAfterShutdown);
-    assert.deepEqual(secondLog.widgets, ["set"]);
+    assert.equal(log.messages.at(-1), undefined);
+    assert.equal(log.indicators.at(-1), undefined);
   } finally {
     await handlers.get("session_shutdown")();
   }

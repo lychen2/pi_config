@@ -12,6 +12,13 @@
             "thinkingFormat": "deepseek",
             "supportsLongCacheRetention": true
           }
+        },
+        {
+          "id": "muse-spark-1.2",
+          "contextWindow": 262144,
+          "compat": {
+            "supportsFinishReason": false
+          }
         }
       ]
     }

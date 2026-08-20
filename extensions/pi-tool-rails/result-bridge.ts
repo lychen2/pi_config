@@ -148,7 +148,7 @@ function preview(
   if (remaining > 0) {
     const hint = theme.fg(
       "muted",
-      `${remaining} more ${remaining === 1 ? "line" : "lines"} · ${keyHint("app.tools.expand", "expand")}`,
+      `${remaining} 行待展开 · ${keyHint("app.tools.expand", "展开")}`,
     );
     text = `${text}\n${hint}`;
   }
@@ -241,13 +241,13 @@ function renderBashSummary(
     : undefined;
 
   if (options.isPartial) {
-    const running = theme.fg("warning", "running");
+    const running = theme.fg("warning", "正在运行");
     if (!options.expanded || bashLines.length === 0) return reusableText(context, running);
     return reusableText(context, `${running}\n${preview(bashLines, options, theme, context)}`);
   }
 
   if (context.isError) {
-    const status = exitCode === undefined ? "command failed" : `exit ${exitCode}`;
+    const status = exitCode === undefined ? "命令执行失败" : `退出码 ${exitCode}`;
     const errorLine = (isBackgroundShell ? normalizedLines : bashLines).find((line) => /(?:error|failed|fatal|exception|denied|not found|invalid)/i.test(line))
       ?? (isBackgroundShell ? normalizedLines : bashLines).find((line) => line.trim());
     const summary = styledSummary(theme, [
@@ -259,8 +259,8 @@ function renderBashSummary(
   }
 
   const status = taskId && exitCode === undefined
-    ? `background task ${taskId} started`
-    : "completed";
+    ? `后台任务 ${taskId} 已启动`
+    : "执行完成";
   const summary = styledSummary(theme, [
     { color: "success", text: status },
     ...(exitCode === undefined ? [] : [{ color: "accent" as const, text: `exit ${exitCode}` }]),
@@ -268,8 +268,8 @@ function renderBashSummary(
     ...(duration === undefined ? [] : [{ color: "syntaxFunction" as const, text: durationLabel(duration) }]),
     ...(bashLines.length === 0
       ? []
-      : [{ color: "toolOutput" as const, text: `${bashLines.length} output ${bashLines.length === 1 ? "line" : "lines"}` }]),
-    ...(details.truncated === true ? [{ color: "error" as const, text: "truncated" }] : []),
+      : [{ color: "toolOutput" as const, text: `${bashLines.length} 行输出` }]),
+    ...(details.truncated === true ? [{ color: "error" as const, text: "输出已截断" }] : []),
   ]);
   if (!options.expanded || bashLines.length === 0) {
     if (isBackgroundShell && normalizedLines.length > 0) {
@@ -295,7 +295,7 @@ export function compactResult(
 
   if (options.isPartial) return reusableText(context, "");
   if (context.isError) {
-    return reusableText(context, preview(lines.length ? lines : ["tool failed"], options, theme, context));
+    return reusableText(context, preview(lines.length ? lines : ["工具执行失败"], options, theme, context));
   }
   if (options.expanded) {
     return reusableText(context, preview(lines.length ? lines : ["(no results)"], options, theme, context));
@@ -303,14 +303,12 @@ export function compactResult(
 
   const count = lines.filter((line) => line.trim()).length;
   const isSearch = name === "grep" || name === "ffgrep";
-  const unit = isSearch
-    ? (count === 1 ? "match" : "matches")
-    : (count === 1 ? "result" : "results");
+  const unit = isSearch ? "处匹配" : "条结果";
   const segments: SummarySegment[] = [{
     color: isSearch && count > 0 ? "success" : "muted",
     text: `${count} ${unit}`,
   }];
-  if (count > 0) segments.push({ color: "accent", text: keyHint("app.tools.expand", "expand") });
+  if (count > 0) segments.push({ color: "accent", text: keyHint("app.tools.expand", "展开") });
   return reusableText(context, styledSummary(theme, segments));
 }
 
@@ -380,7 +378,7 @@ class HashlineReadComponent implements Component {
     if (this.remaining > 0) {
       lines.push(fitCell(this.theme.fg(
         "muted",
-        `${this.remaining} more ${this.remaining === 1 ? "line" : "lines"} · ${keyHint("app.tools.expand", "expand")}`,
+        `${this.remaining} 行待展开 · ${keyHint("app.tools.expand", "展开")}`,
       ), safeWidth));
     }
     return lines.map((line) => truncateToWidth(line, safeWidth, ""));
@@ -402,7 +400,7 @@ export function renderHashlineReadResult(
   const entries = parseHashlineReadOutput(outputLines(result), startLine);
   if (!options.expanded && !context.isError) {
     const count = entries.filter((entry) => entry.kind === "line").length;
-    return reusableText(context, theme.fg("toolDiffAdded", `${count} ${count === 1 ? "line" : "lines"}`));
+    return reusableText(context, theme.fg("toolDiffAdded", `${count} 行`));
   }
   const maxEntries = options.expanded ? entries.length : 10;
   const shown = entries.slice(0, maxEntries);
@@ -448,6 +446,20 @@ export function parseAftEditDiff(diff: string): ReplaceDiffEntry[] {
   for (const rawLine of diff.replace(/\r/g, "").split("\n")) {
     const numbered = rawLine.match(NUMBERED_DIFF);
     if (!numbered) {
+      // Standard unified diff lines (no line numbers): "-old" / "+new".
+      const unified = rawLine.match(/^([ +-])(.*)$/);
+      if (unified && unified[1] !== " " && rawLine.trim()) {
+        const kind = unified[1] === "+" ? "add" : "remove";
+        const content = unified[2];
+        if (kind === "remove") {
+          entries.push({ kind, content, oldLineNumber: undefined });
+          lineDelta--;
+        } else {
+          entries.push({ kind, content, newLineNumber: undefined });
+          lineDelta++;
+        }
+        continue;
+      }
       if (rawLine.trim()) entries.push({ kind: "meta", content: rawLine.trim() });
       continue;
     }
@@ -959,7 +971,7 @@ class ReplaceDiffComponent implements Component {
     if (preview.remaining > 0) {
       lines.push(fitCell(this.theme.fg(
         "muted",
-        `${preview.remaining} more ${preview.remaining === 1 ? "row" : "rows"} · ${keyHint("app.tools.expand", "expand")}`,
+        `${preview.remaining} 行待展开 · ${keyHint("app.tools.expand", "展开")}`,
       ), safeWidth));
     }
     return lines.map((line) => truncateToWidth(line, safeWidth, ""));
@@ -997,7 +1009,7 @@ export function renderReplaceDiffResult(
   const hasChanges = rawEntries.some((entry) => entry.kind === "add" || entry.kind === "remove");
   if (!hasChanges) {
     const lines = outputLines(result);
-    const fallback = lines.length ? lines : [context.isError ? "replace failed" : "replace completed"];
+    const fallback = lines.length ? lines : [context.isError ? "替换失败" : "替换完成"];
     return reusableText(context, preview(fallback, options, theme, context));
   }
   if (!options.expanded && hasChanges) {
@@ -1019,26 +1031,31 @@ export function renderReplaceDiffResult(
 
 class MutationSummaryComponent implements Component {
   private summary: string;
+  private suffix: string;
   private additions: number;
   private removals: number;
   private theme: Theme;
 
-  constructor(summary: string, additions: number, removals: number, theme: Theme) {
+  constructor(summary: string, suffix: string, additions: number, removals: number, theme: Theme) {
     this.summary = summary;
+    this.suffix = suffix;
     this.additions = additions;
     this.removals = removals;
     this.theme = theme;
   }
 
-  update(summary: string, additions: number, removals: number, theme: Theme): void {
+  update(summary: string, suffix: string, additions: number, removals: number, theme: Theme): void {
     this.summary = summary;
+    this.suffix = suffix;
     this.additions = additions;
     this.removals = removals;
     this.theme = theme;
   }
 
   render(width: number): string[] {
-    return [summaryWithChangeRatio(this.summary, this.additions, this.removals, Math.max(0, width), this.theme)];
+    const bar = changeRatioBar(this.additions, this.removals, Math.max(0, width), this.theme);
+    const parts = [this.summary, bar ? ` ${bar}` : "", this.suffix ? ` ${this.suffix}` : ""];
+    return [truncateToWidth(parts.join(""), Math.max(0, width), "")];
   }
 
   invalidate(): void {}
@@ -1046,6 +1063,7 @@ class MutationSummaryComponent implements Component {
 
 function renderMutationSummary(
   summary: string,
+  suffix: string,
   additions: number,
   removals: number,
   theme: Theme,
@@ -1053,10 +1071,10 @@ function renderMutationSummary(
 ): Component {
   const existing = context.lastComponent;
   if (existing instanceof MutationSummaryComponent) {
-    existing.update(summary, additions, removals, theme);
+    existing.update(summary, suffix, additions, removals, theme);
     return existing;
   }
-  return new MutationSummaryComponent(summary, additions, removals, theme);
+  return new MutationSummaryComponent(summary, suffix, additions, removals, theme);
 }
 
 function renderAftMutationResult(
@@ -1074,21 +1092,49 @@ function renderAftMutationResult(
   }
   const lines = outputLines(result);
   const textCounts = lines.join(" ").match(/\(\+(\d+)\/-(\d+)(?:,\s*(\d+)\s+edits?)?\)/i);
+  // readseek edit results use "Edited <path> (N changes, +A -R lines)".
+  const readseekCounts = lines.join(" ").match(/\(\d+\s+(?:change|changes)[^)]*?\+(\d+)\s+-\s*(\d+)/i);
   const diffMetadata = record(details.diff);
+  const rawDiffText = typeof details.diff === "string" ? details.diff : "";
+  const diffCounts = rawDiffText
+    ? {
+        additions: rawDiffText.split("\n").filter((line) => line.startsWith("+") && !line.startsWith("+++")).length,
+        deletions: rawDiffText.split("\n").filter((line) => line.startsWith("-") && !line.startsWith("---")).length,
+      }
+    : undefined;
+  // readseek details carry structured stats and a semantic classification.
+  const readSeekValue = record(details.readSeekValue);
+  const readSeekStats = record(readSeekValue.diffData).stats as RecordLike | undefined ?? {};
+  const semanticSummary = record(readSeekValue.semanticSummary);
+  const readSeekSemantic = typeof semanticSummary.classification === "string"
+    ? semanticSummary.classification
+    : undefined;
   const additions = typeof details.additions === "number"
     ? details.additions
-    : typeof diffMetadata.additions === "number"
-      ? diffMetadata.additions
-      : textCounts
-        ? Number(textCounts[1])
-        : undefined;
+    : typeof readSeekStats.added === "number"
+      ? readSeekStats.added
+      : typeof diffMetadata.additions === "number"
+        ? diffMetadata.additions
+        : readseekCounts
+          ? Number(readseekCounts[1])
+          : textCounts
+            ? Number(textCounts[1])
+            : diffCounts && diffCounts.additions > 0
+              ? diffCounts.additions
+              : undefined;
   const deletions = typeof details.deletions === "number"
     ? details.deletions
-    : typeof diffMetadata.deletions === "number"
-      ? diffMetadata.deletions
-      : textCounts
-        ? Number(textCounts[2])
-        : undefined;
+    : typeof readSeekStats.removed === "number"
+      ? readSeekStats.removed
+      : typeof diffMetadata.deletions === "number"
+        ? diffMetadata.deletions
+        : readseekCounts
+          ? Number(readseekCounts[2])
+          : textCounts
+            ? Number(textCounts[2])
+            : diffCounts
+              ? diffCounts.deletions
+              : undefined;
   const editsApplied = typeof details.editsApplied === "number"
     ? details.editsApplied
     : typeof details.edits_applied === "number"
@@ -1096,21 +1142,40 @@ function renderAftMutationResult(
       : textCounts?.[3]
         ? Number(textCounts[3])
         : undefined;
-  const summary = additions !== undefined && deletions !== undefined
-    ? `${theme.fg("toolDiffAdded", `+${additions}`)}${theme.fg("muted", "/")}${theme.fg("toolDiffRemoved", `-${deletions}`)}${editsApplied === undefined ? "" : theme.fg("muted", ` · ${editsApplied} edits`)}`
-    : theme.fg("muted", "updated");
+  const semanticMode = readSeekSemantic === "semantic"
+    || (typeof details.semanticClassification === "string" && details.semanticClassification === "semantic");
+  const verb = operation === "write" ? "wrote" : "edited";
+  const counts = additions !== undefined && deletions !== undefined
+    ? [
+        theme.fg("toolOutput", `↳ ${verb}`),
+        theme.fg("toolDiffAdded", `+${additions}`),
+        theme.fg("toolDiffRemoved", `-${deletions}`),
+      ].join(" ")
+    : undefined;
+  const suffix = additions !== undefined && deletions !== undefined
+    ? [
+        ...(semanticMode ? [theme.fg("muted", "• semantic")] : []),
+        `• ${keyHint("app.tools.expand", "to expand")}`,
+      ].join(" ")
+    : "";
+  const summary = counts ?? theme.fg("muted", operation === "write" ? "wrote" : "updated");
   if (!options.expanded) {
-    return additions !== undefined && deletions !== undefined
-      ? renderMutationSummary(summary, additions, deletions, theme, context)
+    return counts !== undefined
+      ? renderMutationSummary(counts, suffix, additions!, deletions!, theme, context)
       : reusableText(context, summary);
   }
 
   const diffText = typeof details.diff === "string" ? details.diff : "";
   const entries = diffText ? parseAftEditDiff(diffText) : [];
   const hasChanges = entries.some((entry) => entry.kind === "add" || entry.kind === "remove");
-  return hasChanges
-    ? renderDiffComponent(entries, options, theme, context, sourcePathFromContext(context), true)
-    : reusableText(context, [summary, ...lines].filter(Boolean).join("\n"));
+  if (hasChanges) {
+    return renderDiffComponent(entries, options, theme, context, sourcePathFromContext(context), true);
+  }
+  // No parseable line-numbered diff (e.g. readseek unified text) — show the
+  // single summary line, never a duplicated raw result line.
+  return counts !== undefined
+    ? renderMutationSummary(counts, suffix, additions!, deletions!, theme, context)
+    : reusableText(context, summary);
 }
 
 export function renderAftEditResult(
@@ -1185,8 +1250,9 @@ function installResultBridge(): () => void {
   const patched: GetResultRenderer = function (): ResultRenderer | undefined {
     const nativeRenderer = state.original.call(this);
     const name = (this as unknown as { toolName?: string }).toolName;
-    if (name === "edit" || name === "write") {
-      return (result, options, theme, context) => name === "write"
+    if (name === "edit" || name === "write" || name === "readSeek_edit" || name === "readSeek_write") {
+      const isWrite = name === "write" || name === "readSeek_write";
+      return (result, options, theme, context) => isWrite
         ? renderAftWriteBridgeResult(nativeRenderer, result, options, theme, context)
         : renderAftEditBridgeResult(nativeRenderer, result, options, theme, context);
     }

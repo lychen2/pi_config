@@ -53,19 +53,19 @@ function details(pi: ExtensionAPI, ctx: ExtensionContext, tui: TUI, theme: Theme
   const value = (text: string) => theme.fg("muted", text);
   const model = ctx.model;
   const modelLine = model
-    ? `${label("model")}${value(model.provider)}${theme.fg("dim", " / ")}${theme.fg("accent", model.id)}`
-    : `${label("model")}${theme.fg("dim", "none selected")}`;
+    ? `${label("模型")}${value(model.provider)}${theme.fg("dim", " / ")}${theme.fg("accent", model.id)}`
+    : `${label("模型")}${theme.fg("dim", "未选择")}`;
 
   return [
-    `${theme.bold(theme.fg("accent", "PI AGENT"))}${theme.fg("dim", `  v${VERSION}`)}`,
+    `${theme.bold(theme.fg("accent", "π 智能体"))}${theme.fg("dim", `  v${VERSION}`)}`,
     modelLine,
-    `${label("thinking")}${theme.fg("warning", pi.getThinkingLevel())}`,
-    `${label("path")}${value(displayPath(ctx.cwd))}`,
-    `${label("theme")}${value(theme.name || "default")}`,
-    `${label("skills")}${theme.fg("accent", String(pi.getCommands().filter((command) => command.source === "skill").length))}${theme.fg("dim", " loaded")}`,
-    `${label("tools")}${theme.fg("accent", String(pi.getActiveTools().length))}${theme.fg("dim", " active")}`,
-    `${label("terminal")}${value(`${tui.terminal.columns} x ${tui.terminal.rows}`)}`,
-    `${theme.fg("accent", "/")} ${theme.fg("dim", "commands")}  ${theme.fg("warning", "!")} ${theme.fg("dim", "shell")}  ${theme.fg("dim", keyHint("app.tools.expand", "tools"))}`,
+    `${label("思考")}${theme.fg("warning", pi.getThinkingLevel())}`,
+    `${label("路径")}${value(displayPath(ctx.cwd))}`,
+    `${label("主题")}${value(theme.name || "默认")}`,
+    `${label("技能")}${theme.fg("accent", String(pi.getCommands().filter((command) => command.source === "skill").length))}${theme.fg("dim", " 已加载")}`,
+    `${label("工具")}${theme.fg("accent", String(pi.getActiveTools().length))}${theme.fg("dim", " 已启用")}`,
+    `${label("终端")}${value(`${tui.terminal.columns} x ${tui.terminal.rows}`)}`,
+    `${theme.fg("accent", "/")} ${theme.fg("dim", "命令")}  ${theme.fg("warning", "!")} ${theme.fg("dim", "命令行")}  ${theme.fg("dim", keyHint("app.tools.expand", "工具"))}`,
   ];
 }
 
@@ -109,13 +109,13 @@ export default function brandHeader(pi: ExtensionAPI): void {
   pi.on("thinking_level_select", (_event, ctx) => refresh(ctx));
 
   pi.registerCommand("logo", {
-    description: "Toggle the Pi brand header",
+    description: "切换 Pi 品牌标题栏",
     handler: async (_args, ctx) => {
       if (ctx.mode !== "tui") return;
       enabled = !enabled;
       if (enabled) installHeader(pi, ctx);
       else ctx.ui.setHeader(undefined);
-      ctx.ui.notify(`Pi logo ${enabled ? "shown" : "hidden"}`, "info");
+      ctx.ui.notify(`Pi 标识已${enabled ? "显示" : "隐藏"}`, "info");
     },
   });
 }

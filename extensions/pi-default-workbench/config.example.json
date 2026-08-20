@@ -1,0 +1,9 @@
+{
+  "toolMode": "adaptive",
+  "disabledExtensions": [
+    "npm:pi-markdown-preview"
+  ],
+  "disabledTools": [
+    "web_search"
+  ]
+}

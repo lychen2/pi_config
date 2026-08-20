@@ -6,8 +6,6 @@ param(
     [switch]$DryRun,
     [switch]$WithExternal,
     [switch]$SkipExternal,
-    [switch]$WithMagicContext,
-    [switch]$SkipMagicContext,
     [switch]$WithRtk,
     [switch]$SkipRtk,
     [switch]$WithModelDefaults,
@@ -20,7 +18,6 @@ $ProgressPreference = "SilentlyContinue"
 
 $exclusivePairs = @(
     @($WithExternal, $SkipExternal, "external package"),
-    @($WithMagicContext, $SkipMagicContext, "Magic Context"),
     @($WithRtk, $SkipRtk, "RTK"),
     @($WithModelDefaults, $SkipModelDefaults, "model default")
 )
@@ -45,6 +42,7 @@ $ArchiveUrl = if ($env:PI_CONFIG_ARCHIVE_URL) {
         $latestCommit = Invoke-RestMethod `
             -Uri "https://api.github.com/repos/lychen2/pi_config/commits/main" `
             -Headers $headers `
+            -TimeoutSec 30 `
             -UseBasicParsing
         "https://github.com/lychen2/pi_config/archive/$($latestCommit.sha).zip"
     } catch {
@@ -226,7 +224,7 @@ function Sync-Repository([string]$Destination) {
     New-Item -ItemType Directory -Path $tempRoot | Out-Null
 
     try {
-        Invoke-WebRequest -Uri $ArchiveUrl -OutFile $archive -UseBasicParsing
+        Invoke-WebRequest -Uri $ArchiveUrl -OutFile $archive -TimeoutSec 600 -UseBasicParsing
         Expand-ZipArchive -ArchivePath $archive -DestinationPath $tempRoot
         $source = Get-ChildItem -Path $tempRoot -Directory | Select-Object -First 1
         if (-not $source -or -not (Test-Path (Join-Path $source.FullName "install.mjs"))) {
@@ -294,8 +292,6 @@ if ($Yes) { $installerArgs += "--yes" }
 if ($DryRun) { $installerArgs += "--dry-run" }
 if ($WithExternal) { $installerArgs += "--with-external" }
 if ($SkipExternal) { $installerArgs += "--skip-external" }
-if ($WithMagicContext) { $installerArgs += "--with-magic-context" }
-if ($SkipMagicContext) { $installerArgs += "--skip-magic-context" }
 if ($WithRtk) { $installerArgs += "--with-rtk" }
 if ($SkipRtk) { $installerArgs += "--skip-rtk" }
 if ($WithModelDefaults) { $installerArgs += "--with-model-defaults" }

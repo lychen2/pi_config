@@ -4,7 +4,7 @@ export const FLOW_PACKAGE_NAME = "pi-maestro-flow";
 export const RESOURCE_BLOCK_ALL = "!**/*";
 export const PROFILE_MARKER_FILE = "pi-large-profile.json";
 export const LARGE_THEME = "matugen";
-export const LARGE_PROFILE_VERSION = 3;
+export const LARGE_PROFILE_VERSION = 4;
 export const BEAUTIFY_PACKAGE_NAME = "pi-large-beautify";
 
 export const MODEL_SETTING_KEYS = [

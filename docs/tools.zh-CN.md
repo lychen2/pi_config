@@ -6,11 +6,11 @@
 
 | 数字 | 含义 |
 | ---: | --- |
-| 默认模式 | Pi 原生工具加上 Readseek、FFF、后台 Shell、冲突处理与并行 teammate。 |
+| 默认模式加上 Web Access、FFF、后台 Shell、冲突处理与并行 teammate。 |
 | 大型模式 | `/large on` 在当前会话加载固定上游 Flow、teammate 与 Cockpit，恢复 GUI、MCP、LSP、browser/web search、FFF、conflict、root `bash_bg`、Goal、Todo、Plan、Loop 与 Maestro skills。 |
 | 项目实际工具数 | 会随 `pi list`、`/tools`、启动参数、信任状态和已安装 package 变化；用 `/tools list` 核对。 |
 
-`multi_tool_use.parallel` 是外层并行调用包装器。`pi-deferred-tools` 不负责延迟工具；它只是项目级开关面板，详见[使用手册](USAGE.zh-CN.md#2-工具默认启用与项目开关)。快速简单任务可用 `/tools fast` 切到最小工具集（read/bash/write/edit/grep/fffind/ffgrep/todo/ask_user_question），`/tools reset` 恢复。
+`multi_tool_use.parallel` 是外层并行调用包装器。`pi-default-workbench` 默认使用 `adaptive`：首轮严格保留 read/bash/write/edit/grep/fffind/ffgrep/todo/ask_user_question 和 `search_tool_bm25`，不包含原生 `ls/find`；缺少能力时按 capability group 追加注册工具。`/tools fast` 固定最小集合，`/tools full` 恢复全部未显式禁用的注册工具，`/tools reset` 清空禁用规则后进入 full。
 
 ## 文件、搜索与执行（6）
 
@@ -28,9 +28,7 @@
 | 工具 | 用途 | 使用示例 |
 | --- | --- | --- |
 | `ask_user_question` | 在存在真实决策分支时给出 2 到 4 个结构化选项 | `数据库迁移方案有多个互斥选择时，先用结构化问题询问我，并把推荐方案放第一项。` |
-| `todo` | 默认模式唯一的 Pi Todo 入口；创建、更新、查询、删除或清空持久任务项，使用 `todo-panel` 与 `Alt+T` 折叠，并在 Magic Context 裁剪后重新注入最新活动任务快照 | `把这个任务拆成检查、实现、测试三个 Todo；每次只保留一个 in_progress。` |
-
-> Magic Context 自带的 `todowrite` 和 overlay 已通过 `~/.config/cortexkit/magic-context.jsonc` 关闭，并由项目 `.pi/tool-selector.json` 再次禁用。Magic Context 的压缩、记忆、搜索和数据库保持启用；默认 `pi-maestro-todo` 的 `context` hook 会在裁剪后补回一份隐藏的活动任务快照。Large Todo 与 Large 兼容链路不在本次改动范围。
+| `todo` | 默认模式唯一的 Pi Todo 入口；创建、更新、查询、删除或清空持久任务项，使用 `todo-panel` 与 `Alt+T` 折叠 | `把这个任务拆成检查、实现、测试三个 Todo；每次只保留一个 in_progress。` |
 
 ## Web、来源与内容提取（4）
 
@@ -76,34 +74,23 @@
 
 普通短命令优先直接同步执行；服务器、watcher 或耗时不确定的命令才使用 `bash_bg`。
 
-## Readseek、FFF 与冲突处理
+## FFF、后台 Shell 与冲突处理
 
-Pi 原生 `read` 读取普通文件；Readseek 接管 `write`、`edit` 和 `grep`，同时给出锚点读取、摘要、结构化搜索及定义/引用/重命名操作。FFF 只面向工作区：`fffind` 查模糊路径，`ffgrep` 查字面内容。
+Pi 原生 `read` 读取普通文件和图片，`bash` 负责命令执行；`write`、`edit`、`grep` 保持 Pi 原生实现。`fffind` 只查找当前工作区的模糊路径，`ffgrep` 做字面内容搜索，`bash_bg` 管理长任务，`conflict` 读取并解析 Git 冲突。
 
 | 工具 | 用途 | 使用示例 |
 | --- | --- | --- |
-| `readSeek_view` | 用稳定锚点读取局部文件，支持精确编辑前的定位 | `读取 src/service.ts 的 UserStore 附近内容，返回可用于后续精确修改的锚点。` |
-| `readSeek_digest` | 生成文件或目录摘要 | `汇总 src/auth/ 的文件职责和主要符号，只读。` |
-| `readSeek_search` | 正则和结构化代码搜索 | `在 src/ 搜索调用 fetch 的 try/catch 结构，只读返回路径。` |
-| `readSeek_def` / `readSeek_refs` / `readSeek_rename` | 定义、引用和确认式重命名 | `先列出 handleRequest 的全部引用；不要修改。` |
 | `fffind` / `ffgrep` | 模糊文件发现和快速字面内容搜索 | `在当前工作区找名称接近 auth callback 的文件，并搜索 literal “redirect_uri”。` |
+| `bash_bg` | 管理长时间运行的 Shell 任务 | `启动测试命令；若转入后台，使用 bash_bg(action="wait") 等待。` |
 | `conflict` | 读取并解析 Git 冲突；编号是 `list` 返回的短期句柄，解析前重验原始 hunk | `先 list，再复制当前 conflict://N 调用 diff；不要猜固定编号。` |
 
 跨文件重命名前先预览范围，应用后运行项目的编译或相关测试。
 
-## AST 结构化搜索与改写（2）
-
-| 工具 | 用途 | 使用示例 |
-| --- | --- | --- |
-| `ast_grep_search` | 按 AST 模式查找语法结构，`$VAR` 匹配单节点、`$$$` 匹配多节点 | `用 AST 搜索所有把 fetch(url) 放在 try 之外的 TypeScript 调用；不要按纯文本猜测。` |
-| `ast_grep_replace` | 按 AST 模式预览或执行结构化代码改写 | `先 dry-run：把所有 console.log($MSG) 改成 logger.info($MSG)，只限 src/，确认结果后再应用。` |
-
-AST 改写前先用 `dryRun`，确认捕获范围、文件范围和测试命令；不要把正则替换当成语义等价的代码迁移。
 
 ## 常见组合
 
 ```text
-先用 readSeek_def、readSeek_refs 和 readSeek_view 理解 UserStore；只读返回最安全的修改入口。
+先用 `read`、`grep` 和 `fffind` 理解 UserStore；只读返回最安全的修改入口。
 ```
 
 ```text

@@ -1,16 +1,17 @@
 #!/usr/bin/env node
 
 import { createHash, randomUUID } from "node:crypto";
-import { copyFile, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { chmod, copyFile, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { spawnSync } from "node:child_process";
 
 const repository = "rtk-ai/rtk";
-const assetName = "rtk-x86_64-pc-windows-msvc.zip";
+const windowsAssetName = "rtk-x86_64-pc-windows-msvc.zip";
+const binaryName = process.platform === "win32" ? "rtk.exe" : "rtk";
 const installDir = path.join(os.homedir(), ".local", "bin");
-const destination = path.join(installDir, "rtk.exe");
+const destination = path.join(installDir, binaryName);
 
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
@@ -33,6 +34,7 @@ async function fetchResponse(url) {
       Accept: "application/vnd.github+json",
       "User-Agent": "pi-config-installer",
     },
+    signal: AbortSignal.timeout(120_000),
   });
   if (!response.ok) {
     throw new Error(`Download failed (${response.status} ${response.statusText}): ${url}`);
@@ -65,6 +67,21 @@ function errorOutput(result) {
 }
 
 function extractArchive(archivePath, destinationPath) {
+  if (process.platform !== "win32") {
+    const listing = spawnSync("tar", ["-tzf", archivePath], { encoding: "utf8" });
+    if (listing.error || listing.status !== 0) {
+      throw new Error(`Could not list ${archivePath}: ${errorOutput(listing)}`);
+    }
+    if (/^\/|(^|\/)\.\.(\/|$)/m.test(listing.stdout || "")) {
+      throw new Error(`Refusing to extract ${archivePath}: it contains an absolute or parent path.`);
+    }
+    const tar = spawnSync("tar", ["-xzf", archivePath, "-C", destinationPath], { encoding: "utf8" });
+    if (tar.error || tar.status !== 0) {
+      throw new Error(`Could not extract ${archivePath}: ${errorOutput(tar)}`);
+    }
+    return;
+  }
+
   const tar = spawnSync("tar.exe", ["-xf", archivePath, "-C", destinationPath], {
     encoding: "utf8",
   });
@@ -86,7 +103,7 @@ function extractArchive(archivePath, destinationPath) {
   if (!powerShell.error && powerShell.status === 0) return;
 
   throw new Error(
-    `Could not extract ${assetName}. tar.exe: ${errorOutput(tar)}. PowerShell fallback: ${errorOutput(powerShell)}.`,
+    `Could not extract ${path.basename(archivePath)}. tar.exe: ${errorOutput(tar)}. PowerShell fallback: ${errorOutput(powerShell)}.`,
   );
 }
 
@@ -107,24 +124,28 @@ function userPathFromRegistry() {
 }
 
 function addInstallDirectoryToPath() {
-  const userPath = userPathFromRegistry();
-  const entries = userPath.split(";").map((entry) => entry.trim()).filter(Boolean);
-  const exists = entries.some((entry) => entry.replace(/[\\/]+$/, "").toLowerCase() === installDir.toLowerCase());
-  if (!exists) {
-    const updatedPath = [...entries, installDir].join(";");
-    run("reg.exe", [
-      "add",
-      "HKCU\\Environment",
-      "/v",
-      "Path",
-      "/t",
-      "REG_EXPAND_SZ",
-      "/d",
-      updatedPath,
-      "/f",
-    ]);
+  if (process.platform === "win32") {
+    const userPath = userPathFromRegistry();
+    const entries = userPath.split(";").map((entry) => entry.trim()).filter(Boolean);
+    const exists = entries.some((entry) => entry.replace(/[\\/]+$/, "").toLowerCase() === installDir.toLowerCase());
+    if (!exists) {
+      const updatedPath = [...entries, installDir].join(";");
+      run("reg.exe", [
+        "add",
+        "HKCU\\Environment",
+        "/v",
+        "Path",
+        "/t",
+        "REG_EXPAND_SZ",
+        "/d",
+        updatedPath,
+        "/f",
+      ]);
+    }
   }
 
+  // Session-only update on every platform; POSIX shells resolve ~/.local/bin
+  // from their rc files for future sessions.
   const pathKey = Object.keys(process.env).find((key) => key.toLowerCase() === "path") || "Path";
   const processEntries = (process.env[pathKey] || "").split(path.delimiter);
   if (!processEntries.some((entry) => entry.replace(/[\\/]+$/, "").toLowerCase() === installDir.toLowerCase())) {
@@ -132,10 +153,26 @@ function addInstallDirectoryToPath() {
   }
 }
 
-async function main() {
-  if (process.platform !== "win32") {
-    throw new Error("The RTK binary installer only supports Windows.");
+function platformAssetName() {
+  if (process.platform === "win32") {
+    if (process.arch !== "x64") {
+      throw new Error(`RTK Windows release assets are x64 only (found ${process.arch}).`);
+    }
+    return windowsAssetName;
   }
+  if (process.platform === "darwin") {
+    return `rtk-${process.arch === "arm64" ? "aarch64" : "x86_64"}-apple-darwin.tar.gz`;
+  }
+  if (process.platform === "linux") {
+    // Mirrors the upstream installer: x64 uses the static musl build.
+    if (process.arch === "x64") return "rtk-x86_64-unknown-linux-musl.tar.gz";
+    if (process.arch === "arm64") return "rtk-aarch64-unknown-linux-gnu.tar.gz";
+  }
+  throw new Error(`RTK has no release asset for ${process.platform}/${process.arch}.`);
+}
+
+async function main() {
+  const assetName = platformAssetName();
 
   const requestedVersion = process.env.RTK_VERSION?.trim();
   const version = requestedVersion && !requestedVersion.startsWith("v")
@@ -145,7 +182,7 @@ async function main() {
     ? `https://api.github.com/repos/${repository}/releases/tags/${version}`
     : `https://api.github.com/repos/${repository}/releases/latest`;
 
-  console.log("Resolving the RTK Windows release...");
+  console.log(`Resolving the RTK ${process.platform}/${process.arch} release...`);
   const release = await (await fetchResponse(releaseUrl)).json();
   const archiveAsset = release.assets?.find((asset) => asset.name === assetName);
   const checksumsAsset = release.assets?.find((asset) => asset.name === "checksums.txt");
@@ -178,13 +215,16 @@ async function main() {
     }
 
     extractArchive(archivePath, extractPath);
-    const binary = await findFile(extractPath, "rtk.exe");
+    const binary = await findFile(extractPath, binaryName);
     if (!binary) {
-      throw new Error(`${assetName} does not contain rtk.exe.`);
+      throw new Error(`${assetName} does not contain ${binaryName}.`);
     }
 
     await mkdir(installDir, { recursive: true });
     await copyFile(binary, destination);
+    if (process.platform !== "win32") {
+      await chmod(destination, 0o755);
+    }
     addInstallDirectoryToPath();
     run(destination, ["--version"]);
     console.log(`RTK installed at ${destination}`);

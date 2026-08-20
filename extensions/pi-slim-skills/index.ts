@@ -11,6 +11,16 @@ import type { AutocompleteItem } from "@earendil-works/pi-tui";
 const CONFIG_FILE = join(getAgentDir(), "slim-skills-whitelist.json");
 const DISABLE_ENV = "SLIM_SKILLS_DISABLE";
 const MIN_SKILL_COUNT = 8;
+const SKILL_COMMAND_ARGUMENTS = [
+  { value: "list", description: "查看技能索引状态" },
+  { value: "add", description: "加入自动发现列表" },
+  { value: "remove", description: "移出自动发现列表" },
+  { value: "reset", description: "恢复默认技能设置" },
+  { value: "all", description: "让全部技能自动发现" },
+  { value: "none", description: "仅通过 /skill:名称 使用技能" },
+  { value: "inject", description: "将技能内容注入提示词" },
+  { value: "uninject", description: "停止注入技能内容" },
+] as const;
 
 type SkillLike = {
   name: string;
@@ -238,13 +248,13 @@ export default function slimSkills(pi: ExtensionAPI): void {
   };
 
   pi.registerCommand("slim-skills", {
-    description: "Manage the compressed model-visible skill index",
+    description: "管理压缩后的模型可见技能索引",
     getArgumentCompletions(prefix: string): AutocompleteItem[] | null {
       const [command = "", ...rest] = prefix.split(/\s+/);
       if (!rest.length) {
-        const items = ["list", "add", "remove", "reset", "all", "none", "inject", "uninject"]
-          .filter((choice) => choice.startsWith(command))
-          .map((choice) => ({ value: choice, label: choice }));
+        const items = SKILL_COMMAND_ARGUMENTS
+          .filter(({ value }) => value.startsWith(command))
+          .map(({ value, description }) => ({ value, label: value, description }));
         return items.length ? items : null;
       }
       if (command !== "add" && command !== "remove" && command !== "inject" && command !== "uninject") return null;

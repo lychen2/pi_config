@@ -1,13 +1,11 @@
 # External pi packages recorded from ~/.pi/agent/settings.json
-# Magic Context is installed separately by install.mjs via the upstream setup script.
-# Uncomment or remove packages as needed before installing.
 npm:@pi-lab/notify
 # pi-markdown-preview@0.14.0 is a locked dependency of
-# extensions/pi-markdown-preview-compat, its sole registration entry.
+# extensions/pi-default-workbench, its sole registration entry.
 npm:@narumitw/pi-plan-mode
 npm:@juicesharp/rpiv-ask-user-question
-# Readseek 0.9.13, Web Access 0.22.0, and teammate 1.11.0 are locked dependencies
-# of extensions/pi-readseek-compat, which is their sole default-mode registration entry.
+# Web Access 0.22.0 and teammate 1.11.0 are locked dependencies of
+# extensions/pi-context-bridge, their sole default-mode registration entry.
 npm:pi-slopchop
 npm:pi-workspace-history
 npm:pi-rtk-optimizer

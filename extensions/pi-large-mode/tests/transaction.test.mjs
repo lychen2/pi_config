@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { lstat, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { lstat, mkdir, mkdtemp, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, delimiter } from "node:path";
 
 const repoRoot = "/home/zonazcy/pi_config";
 const controllerFile = join(repoRoot, "extensions/pi-large-mode/index.ts");
@@ -125,7 +125,7 @@ async function createFlowCache(root, agentDir, maestroDir) {
   const marker = {
     kind: "pi-large-flow",
     flowSource,
-    profileVersion: 3,
+    profileVersion: 4,
     createdAt: new Date().toISOString(),
   };
   await writeJson(join(inactiveNpm, "pi-large-profile.json"), marker);
@@ -200,6 +200,8 @@ test("switches complete npm and Maestro roots and recovers interrupted reloads",
     let reloadShouldFail = false;
     let reloadCount = 0;
     const notifications = [];
+    let releaseFirstReload;
+    const firstReloadGate = new Promise((resolve) => { releaseFirstReload = resolve; });
     const context = {
       cwd: projectDir,
       ui: {
@@ -210,6 +212,7 @@ test("switches complete npm and Maestro roots and recovers interrupted reloads",
       },
       async reload() {
         reloadCount += 1;
+        if (reloadCount === 1) await firstReloadGate;
         if (reloadShouldFail) throw new Error("synthetic reload failure");
       },
     };
@@ -217,8 +220,17 @@ test("switches complete npm and Maestro roots and recovers interrupted reloads",
       await handler(args, context);
       return await readJson(statePath);
     };
+    const firstOn = handler("on", context);
+    while (!notifications.some((entry) => String(entry.message).includes("启用 Large 已开始"))) {
+      await new Promise((resolve) => setTimeout(resolve, 1));
+    }
+    await handler("on", context);
+    assert.equal(notifications.some((entry) => String(entry.message).includes("正在进行中")), true);
+    releaseFirstReload();
+    await firstOn;
+    let state = await readJson(statePath);
 
-    let state = await run("on");
+    state = await run("on");
     assert.equal(state.mode, "active");
     assert.equal(state.phase, "stable");
     assert.equal(state.reloadPending, false);
@@ -271,6 +283,156 @@ test("switches complete npm and Maestro roots and recovers interrupted reloads",
     else process.env.PI_CODING_AGENT_DIR = previousAgentDir;
     if (previousMaestroHome === undefined) delete process.env.MAESTRO_HOME;
     else process.env.MAESTRO_HOME = previousMaestroHome;
+    await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  }
+});
+
+test("falls back to a rename swap when mv lacks --exchange", async () => {
+  if (process.platform === "win32") return;
+  const root = await mkdtemp(join(tmpdir(), "pi-large-fallback-test-"));
+  const agentDir = join(root, "agent");
+  const projectDir = join(root, "project");
+  const maestroDir = join(root, "maestro");
+  const binDir = join(root, "bin");
+  const mvLog = join(root, "mv.log");
+  const statePath = join(root, ".pi-large-mode", "state.json");
+
+  const previousAgentDir = process.env.PI_CODING_AGENT_DIR;
+  const previousMaestroHome = process.env.MAESTRO_HOME;
+  const previousPath = process.env.PATH;
+
+  try {
+    await mkdir(agentDir, { recursive: true });
+    await mkdir(join(projectDir, ".pi"), { recursive: true });
+    await mkdir(join(maestroDir, "sentinel"), { recursive: true });
+    await mkdir(binDir, { recursive: true });
+    await writeFile(
+      join(binDir, "mv"),
+      `#!/bin/sh\necho "$@" >> '${mvLog}'\necho "mv: illegal option" >&2\nexit 1\n`,
+      { mode: 0o755 },
+    );
+    await writeFile(join(agentDir, "settings.json"), `${JSON.stringify({ packages: [] }, null, 2)}\n`);
+    await writeFile(join(projectDir, ".pi", "settings.json"), `${JSON.stringify({}, null, 2)}\n`);
+    await writeFile(join(maestroDir, "sentinel", "keep.txt"), "keep\n");
+    await createFlowCache(root, agentDir, maestroDir);
+
+    process.env.PI_CODING_AGENT_DIR = agentDir;
+    process.env.MAESTRO_HOME = maestroDir;
+    process.env.PATH = `${binDir}${delimiter}${process.env.PATH}`;
+    const { default: register } = await import(`${controllerFile}?fallback-test=${Date.now()}`);
+    let handler;
+    register({
+      registerCommand(name, definition) {
+        assert.equal(name, "large");
+        handler = definition.handler;
+      },
+    });
+    const context = {
+      cwd: projectDir,
+      ui: { notify() {}, setWidget() {} },
+      async reload() {},
+    };
+
+    await handler("on", context);
+    let state = await readJson(statePath);
+    assert.equal(state.mode, "active");
+    assert.equal(state.phase, "stable");
+    assert.equal(await exists(join(agentDir, "npm", "node_modules", "pi-maestro-flow", "package.json")), true);
+
+    await handler("off", context);
+    state = await readJson(statePath);
+    assert.equal(state.mode, "default");
+    assert.equal(state.phase, "stable");
+    assert.equal(await exists(join(agentDir, "npm")), false);
+    assert.deepEqual(await readdir(maestroDir), ["sentinel"]);
+
+    const calls = (await readFile(mvLog, "utf8")).trim().split("\n").filter(Boolean);
+    assert.ok(calls.length > 0, "the --exchange capability probe never ran");
+    for (const call of calls) {
+      assert.equal(call.includes("--exchange"), false, `unexpected mv invocation: ${call}`);
+      assert.equal(call.includes("--help"), true, `unexpected mv invocation: ${call}`);
+    }
+  } finally {
+    if (previousAgentDir === undefined) delete process.env.PI_CODING_AGENT_DIR;
+    else process.env.PI_CODING_AGENT_DIR = previousAgentDir;
+    if (previousMaestroHome === undefined) delete process.env.MAESTRO_HOME;
+    else process.env.MAESTRO_HOME = previousMaestroHome;
+    if (previousPath === undefined) delete process.env.PATH;
+    else process.env.PATH = previousPath;
+    await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  }
+});
+
+test("resumes a rename swap interrupted between its second and third rename", async () => {
+  if (process.platform === "win32") return;
+  const root = await mkdtemp(join(tmpdir(), "pi-large-fallback-resume-test-"));
+  const agentDir = join(root, "agent");
+  const projectDir = join(root, "project");
+  const maestroDir = join(root, "maestro");
+  const binDir = join(root, "bin");
+  const inactiveNpm = join(root, ".pi-large-mode", "inactive", "agent", "npm");
+  const temp = `${inactiveNpm}.exchange-tmp-${process.pid}`;
+  const statePath = join(root, ".pi-large-mode", "state.json");
+
+  const previousAgentDir = process.env.PI_CODING_AGENT_DIR;
+  const previousMaestroHome = process.env.MAESTRO_HOME;
+  const previousPath = process.env.PATH;
+
+  try {
+    await mkdir(agentDir, { recursive: true });
+    await mkdir(join(projectDir, ".pi"), { recursive: true });
+    await mkdir(join(maestroDir, "sentinel"), { recursive: true });
+    await mkdir(binDir, { recursive: true });
+    await writeFile(join(binDir, "mv"), "#!/bin/sh\necho \"$@\" >&2\nexit 1\n", { mode: 0o755 });
+    await writeFile(join(agentDir, "settings.json"), `${JSON.stringify({ packages: [] }, null, 2)}\n`);
+    await writeFile(join(projectDir, ".pi", "settings.json"), `${JSON.stringify({}, null, 2)}\n`);
+    await writeFile(join(maestroDir, "sentinel", "keep.txt"), "keep\n");
+    await createFlowCache(root, agentDir, maestroDir);
+
+    process.env.PI_CODING_AGENT_DIR = agentDir;
+    process.env.MAESTRO_HOME = maestroDir;
+    process.env.PATH = `${binDir}${delimiter}${process.env.PATH}`;
+    const { default: register } = await import(`${controllerFile}?resume-test=${Date.now()}`);
+    let handler;
+    register({
+      registerCommand(name, definition) {
+        assert.equal(name, "large");
+        handler = definition.handler;
+      },
+    });
+    const context = {
+      cwd: projectDir,
+      ui: { notify() {}, setWidget() {} },
+      async reload() {},
+    };
+
+    await handler("on", context);
+    assert.equal((await readJson(statePath)).mode, "active");
+
+    // Simulate a deactivating swap that crashed after the second rename:
+    // flow npm moved to the temp name, the default npm already sits at
+    // agentDir/npm, and the inactive npm slot is missing.
+    await writeJson(statePath, { ...(await readJson(statePath)), phase: "deactivating" });
+    await rename(join(agentDir, "npm"), temp);
+    await rename(inactiveNpm, join(agentDir, "npm"));
+    assert.equal(await exists(join(temp, "pi-large-profile.json")), true);
+    assert.equal(await exists(inactiveNpm), false);
+
+    await handler("off", context);
+    const state = await readJson(statePath);
+    assert.equal(state.mode, "default");
+    assert.equal(state.phase, "stable");
+    assert.equal(await exists(join(agentDir, "npm")), false);
+    assert.equal(await exists(join(inactiveNpm, "pi-large-profile.json")), true);
+    assert.equal(await exists(temp), false);
+    assert.deepEqual(await readdir(maestroDir), ["sentinel"]);
+  } finally {
+    if (previousAgentDir === undefined) delete process.env.PI_CODING_AGENT_DIR;
+    else process.env.PI_CODING_AGENT_DIR = previousAgentDir;
+    if (previousMaestroHome === undefined) delete process.env.MAESTRO_HOME;
+    else process.env.MAESTRO_HOME = previousMaestroHome;
+    if (previousPath === undefined) delete process.env.PATH;
+    else process.env.PATH = previousPath;
     await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });

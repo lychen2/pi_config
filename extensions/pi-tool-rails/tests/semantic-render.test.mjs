@@ -40,7 +40,7 @@ test("renders goal and concrete target in one line, then the useful result", () 
   );
 
   assert.deepEqual(lines(call), ["confirm the current auth flow → src/auth.ts"]);
-  assert.deepEqual(lines(result), ["2 lines"]);
+  assert.deepEqual(lines(result), ["2 行"]);
 });
 
 test("uses compact fallback goals and target text", () => {
@@ -54,8 +54,8 @@ test("uses compact fallback goals and target text", () => {
     { args, isError: false },
   );
 
-  assert.deepEqual(lines(call), ["run command → npm test"]);
-  assert.deepEqual(lines(result), ["done"]);
+  assert.deepEqual(lines(call), ["正在执行命令 → npm test"]);
+  assert.deepEqual(lines(result), ["已完成"]);
 });
 
 test("colors non-empty grep summaries as success", () => {
@@ -78,8 +78,8 @@ test("colors non-empty grep summaries as success", () => {
     { args, isError: false },
   );
 
-  assert.deepEqual(lines(matches), ["<success>2 matches</success>"]);
-  assert.deepEqual(lines(empty), ["<toolOutput>0 matches</toolOutput>"]);
+  assert.deepEqual(lines(matches), ["<success>2 处匹配</success>"]);
+  assert.deepEqual(lines(empty), ["<toolOutput>0 处匹配</toolOutput>"]);
 });
 
 test("adds reasoning to the schema and strips it before execution", async () => {

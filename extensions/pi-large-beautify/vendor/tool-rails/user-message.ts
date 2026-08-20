@@ -1,167 +1,207 @@
-import { UserMessageComponent, type Theme, type ThemeColor } from "@earendil-works/pi-coding-agent";
-import { Markdown, type MarkdownTheme, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
+import { type Theme, type ThemeColor, UserMessageComponent } from "@earendil-works/pi-coding-agent";
+import {
+  Markdown,
+  type MarkdownTheme,
+  truncateToWidth,
+  visibleWidth,
+} from "@earendil-works/pi-tui";
 import { installPrototypePatch } from "./prototype-patch-registry.ts";
 
-const OSC_ZONE_START = "\x1b]133;A\x07";
-const OSC_ZONE_END = "\x1b]133;B\x07\x1b]133;C\x07";
+const OSC133_ZONE_START = "\x1b]133;A\x07";
+const OSC133_ZONE_END = "\x1b]133;B\x07";
+const OSC133_ZONE_FINAL = "\x1b]133;C\x07";
+
 const USER_PATCH_ADAPTER = "user-message-render";
 const USER_INVALIDATE_ADAPTER = "user-message-invalidate";
-const USER_EMOJI = "💬";
-const USER_MATERIAL = String.fromCodePoint(0xe0b7);
 const USER_RAIL = "▐";
 
-type RecordLike = Record<string, unknown>;
-type UserMessageInstance = {
+type Cleanup = () => void;
+
+type PatchableUserMessagePrototype = {
   children?: unknown[];
 };
 
-type UserMessageCache = {
-  text: string;
-  width: number;
+type UserMessageRenderCache = {
+  hasMarkdownText: boolean;
+  text?: string;
+  width?: number;
   theme?: Theme;
-  renderedLines: string[];
+  renderedLines?: string[];
 };
 
-const cache = new WeakMap<object, UserMessageCache>();
+const userMessageRenderCache = new WeakMap<object, UserMessageRenderCache>();
 
-function isRecord(value: unknown): value is RecordLike {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+function isObject(value: unknown): value is object {
+  return (typeof value === "object" && value !== null) || typeof value === "function";
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function findMarkdownText(value: unknown): string | undefined {
   if (!isRecord(value)) return undefined;
   if (typeof value.text === "string") return value.text;
-  if (!Array.isArray(value.children)) return undefined;
-  for (const child of value.children) {
+
+  const children = value.children;
+  if (!Array.isArray(children)) return undefined;
+
+  for (const child of children) {
     const text = findMarkdownText(child);
     if (text !== undefined) return text;
   }
+
   return undefined;
 }
 
-function markdownText(instance: object): string | undefined {
-  const existing = cache.get(instance);
-  if (existing) return existing.text;
+function getCachedMarkdownText(instance: object): string | undefined {
+  const cached = userMessageRenderCache.get(instance);
+  if (cached?.hasMarkdownText) return cached.text;
+
   const text = findMarkdownText(instance);
+  if (text !== undefined) {
+    userMessageRenderCache.set(instance, { ...cached, hasMarkdownText: true, text });
+  }
   return text;
 }
 
-function themeFg(theme: Theme | undefined, color: string, text: string): string {
+function themeFg(theme: Theme | undefined, color: ThemeColor, text: string): string {
   if (!theme) return text;
   try {
-    return theme.fg(color as ThemeColor, text);
+    return theme.fg(color, text);
   } catch {
     return text;
   }
 }
 
-function themeBg(theme: Theme | undefined, color: string, text: string): string {
-  if (!theme) return text;
-  try {
-    return theme.bg(color as never, text);
-  } catch {
-    return text;
-  }
-}
-
-function markdownTheme(theme: Theme | undefined): MarkdownTheme {
-  const fg = (color: string, text: string) => themeFg(theme, color, text);
+function makeMarkdownTheme(theme: Theme | undefined): MarkdownTheme {
   return {
-    heading: (text) => fg("mdHeading", text),
-    link: (text) => fg("mdLink", text),
-    linkUrl: (text) => fg("mdLinkUrl", text),
-    code: (text) => fg("mdCode", text),
-    codeBlock: (text) => fg("mdCodeBlock", text),
-    codeBlockBorder: (text) => fg("mdCodeBlockBorder", text),
-    quote: (text) => fg("mdQuote", text),
-    quoteBorder: (text) => fg("mdQuoteBorder", text),
-    hr: (text) => fg("mdHr", text),
-    listBullet: (text) => fg("mdListBullet", text),
-    bold: (text) => theme?.bold(text) ?? text,
-    italic: (text) => theme?.italic(text) ?? text,
-    underline: (text) => theme?.underline(text) ?? text,
-    strikethrough: (text) => theme?.strikethrough(text) ?? text,
+    heading: (text) => themeFg(theme, "mdHeading", text),
+    link: (text) => themeFg(theme, "mdLink", text),
+    linkUrl: (text) => themeFg(theme, "mdLinkUrl", text),
+    code: (text) => themeFg(theme, "mdCode", text),
+    codeBlock: (text) => themeFg(theme, "mdCodeBlock", text),
+    codeBlockBorder: (text) => themeFg(theme, "mdCodeBlockBorder", text),
+    quote: (text) => themeFg(theme, "mdQuote", text),
+    quoteBorder: (text) => themeFg(theme, "mdQuoteBorder", text),
+    hr: (text) => themeFg(theme, "mdHr", text),
+    listBullet: (text) => themeFg(theme, "mdListBullet", text),
+    bold: (text) => (theme ? theme.bold(text) : text),
+    italic: (text) => (theme ? theme.italic(text) : text),
+    underline: (text) => (theme ? theme.underline(text) : text),
+    strikethrough: (text) => (theme ? theme.strikethrough(text) : text),
   };
-}
-
-function icon(): string {
-  const style = (process.env.PI_TOOL_RAILS_ICON_STYLE || "emoji").trim().toLowerCase();
-  return style === "material" ? USER_MATERIAL : style === "text" ? ">" : USER_EMOJI;
-}
-
-function stripZone(line: string): string {
-  return line.startsWith(OSC_ZONE_START) ? line.slice(OSC_ZONE_START.length) : line;
 }
 
 function rail(theme: Theme | undefined): string {
   return `${themeFg(theme, "borderAccent", USER_RAIL)} `;
 }
 
-function fillLine(line: string, width: number, theme: Theme | undefined): string {
-  const leftRail = rail(theme);
-  const contentWidth = Math.max(0, width - visibleWidth(leftRail));
-  const content = truncateToWidth(line, contentWidth, "");
-  const padding = " ".repeat(Math.max(0, contentWidth - visibleWidth(content)));
-  return themeBg(theme, "userMessageBg", `${leftRail}${content}${padding}`);
-}
-
-function topLine(width: number, theme: Theme | undefined): string {
-  const label = ` ${icon()} `;
-  const left = Math.max(0, Math.floor((width - visibleWidth(label)) / 2));
-  const right = Math.max(0, width - left - visibleWidth(label));
-  return themeBg(
-    theme,
-    "userMessageBg",
-    `${themeFg(theme, "borderAccent", "─".repeat(left))}${themeFg(theme, "accent", label)}${themeFg(theme, "borderAccent", "─".repeat(right))}`,
+function frameBorder(width: number, theme: Theme | undefined): string {
+  return truncateToWidth(
+    themeFg(theme, "borderAccent", "─".repeat(Math.max(0, width))),
+    Math.max(0, width),
+    "",
   );
 }
 
-function bottomLine(width: number, theme: Theme | undefined): string {
-  return themeBg(theme, "userMessageBg", themeFg(theme, "borderAccent", "─".repeat(Math.max(0, width))));
+function fillLine(content: string, width: number): string {
+  const truncated = truncateToWidth(content, Math.max(0, width), "");
+  const pad = " ".repeat(Math.max(0, width - visibleWidth(truncated)));
+  return `${truncated}${pad}`;
 }
 
-function renderUserMessage(instance: UserMessageInstance, width: number, theme: Theme | undefined): string[] | undefined {
-  const text = markdownText(instance as object);
-  if (text === undefined) return undefined;
-  const cached = cache.get(instance as object);
-  if (cached?.text === text && cached.width === width && cached.theme === theme) return cached.renderedLines;
-  if (width < 16) return undefined;
+function renderBoxLine(line: string, width: number, theme: Theme | undefined): string {
+  if (width <= 0) return "";
+  const railWidth = visibleWidth(rail(theme));
+  const contentWidth = Math.max(0, width - railWidth);
+  const content = fillLine(line, contentWidth);
+  return truncateToWidth(`${rail(theme)}${content}`, width, "");
+}
 
-  const body = new Markdown(text, 0, 0, markdownTheme(theme), {
+function renderUserMessage(
+  instance: PatchableUserMessagePrototype,
+  width: number,
+  theme: Theme | undefined,
+): string[] | undefined {
+  if (!isRecord(instance)) return undefined;
+
+  const text = getCachedMarkdownText(instance);
+  if (text === undefined) return undefined;
+  if (width <= 0) return [""];
+
+  const cached = userMessageRenderCache.get(instance);
+  if (
+    cached?.hasMarkdownText &&
+    cached.width === width &&
+    cached.theme === theme &&
+    cached.renderedLines
+  ) {
+    return cached.renderedLines;
+  }
+
+  const railWidth = visibleWidth(rail(theme));
+  const contentWidth = Math.max(1, width - railWidth);
+  const renderer = new Markdown(text, 0, 0, makeMarkdownTheme(theme), {
     color: (content) => themeFg(theme, "userMessageText", content),
-  }).render(Math.max(1, width - visibleWidth(rail(theme))));
+  });
+  const body = renderer.render(contentWidth);
+  const contentLines = body.length > 0 ? body : [""];
   const lines = [
-    topLine(width, theme),
-    fillLine("", width, theme),
-    ...((body.length > 0 ? body : [""]).map((line) => fillLine(stripZone(line), width, theme))),
-    fillLine("", width, theme),
-    bottomLine(width, theme),
+    frameBorder(width, theme),
+    renderBoxLine("", width, theme),
+    ...contentLines.map((line) => renderBoxLine(line, width, theme)),
+    renderBoxLine("", width, theme),
+    frameBorder(width, theme),
   ];
-  cache.set(instance as object, { text, width, theme, renderedLines: lines });
+
+  userMessageRenderCache.set(instance, {
+    hasMarkdownText: true,
+    text,
+    width,
+    theme,
+    renderedLines: lines,
+  });
   return lines;
 }
 
-function withZones(lines: string[]): string[] {
-  if (lines.length === 0) return lines;
-  const marked = [...lines];
-  marked[0] = `${OSC_ZONE_START}${marked[0]}`;
-  marked[marked.length - 1] = `${OSC_ZONE_END}${marked[marked.length - 1]}`;
-  return marked;
+function withPromptZoneMarkers(lines: string[]): string[] {
+  const markedLines = [...lines];
+  markedLines[0] = OSC133_ZONE_START + markedLines[0];
+  markedLines[markedLines.length - 1] =
+    OSC133_ZONE_END + OSC133_ZONE_FINAL + markedLines[markedLines.length - 1];
+  return markedLines;
 }
 
-export function installUserMessageStyle(getTheme: () => Theme | undefined): () => void {
+export function installUserMessageStyle(getTheme: () => Theme | undefined): Cleanup {
   const prototype = UserMessageComponent.prototype;
-  const cleanupInvalidate = installPrototypePatch(prototype, "invalidate", USER_INVALIDATE_ADAPTER, ({ predecessor, receiver, args }) => {
-    cache.delete(receiver as object);
-    return Reflect.apply(predecessor, receiver, args);
-  });
-  const cleanupRender = installPrototypePatch(prototype, "render", USER_PATCH_ADAPTER, ({ predecessor, receiver, args }) => {
-    const width = args[0];
-    if (typeof width !== "number") return Reflect.apply(predecessor, receiver, args);
-    const rendered = renderUserMessage(receiver as UserMessageInstance, width, getTheme());
-    return rendered ? withZones(rendered) : Reflect.apply(predecessor, receiver, args);
-  });
+  const cleanupInvalidate = installPrototypePatch(
+    prototype,
+    "invalidate",
+    USER_INVALIDATE_ADAPTER,
+    ({ predecessor, receiver, args }) => {
+      if (isObject(receiver)) userMessageRenderCache.delete(receiver);
+      return Reflect.apply(predecessor, receiver, args);
+    },
+  );
+  const cleanupRender = installPrototypePatch(
+    prototype,
+    "render",
+    USER_PATCH_ADAPTER,
+    ({ predecessor, receiver, args }) => {
+      const width = args[0];
+      if (typeof width !== "number") return Reflect.apply(predecessor, receiver, args);
+
+      const lines = renderUserMessage(receiver as PatchableUserMessagePrototype, width, getTheme());
+      if (!lines) return Reflect.apply(predecessor, receiver, args);
+      if (lines.length === 0) return lines;
+      return withPromptZoneMarkers(lines);
+    },
+  );
+  let cleaned = false;
   return () => {
+    if (cleaned) return;
+    cleaned = true;
     cleanupRender();
     cleanupInvalidate();
   };
@@ -170,4 +210,3 @@ export function installUserMessageStyle(getTheme: () => Theme | undefined): () =
 export function sanitizeUserMessageForTest(text: string, width: number): string[] {
   return renderUserMessage({ children: [{ text }] }, width, undefined) ?? [];
 }
-

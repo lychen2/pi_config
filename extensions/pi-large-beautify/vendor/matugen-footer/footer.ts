@@ -174,6 +174,7 @@ export function installFooter(
 		scheduleProjectRefresh: (ctx: ExtensionContext) => void;
 		setExtensionStatusesGetter?: (fn: (() => ReadonlyMap<string, string>) | undefined) => void;
 		getLiveContext?: () => LiveContextOverride | undefined;
+		setPulseController?: (controller: ((enabled: boolean) => void) | undefined) => void;
 	},
 ): void {
 	ctx.ui.setFooter((tui, theme, footerData) => {
@@ -184,9 +185,8 @@ export function installFooter(
 			tui.requestRender();
 		});
 
-		// Soft macaron pulse — only when phase-tinted segments exist; slower tick.
-		// Still animates gauges/separators; avoids 8fps full footer redraws when idle
-		// with no gradient content (ascii / text-only).
+		// Soft macaron pulse — only while the agent is active and phase-tinted
+		// segments exist; idle sessions hold no 4fps timer.
 		const wantsPulse = () => {
 			const cfg = getConfig();
 			if (cfg.icons.mode === "ascii") return false;
@@ -194,12 +194,25 @@ export function installFooter(
 			return false;
 		};
 		let pulseTimer: ReturnType<typeof setInterval> | undefined;
-		if (wantsPulse()) {
-			pulseTimer = setInterval(() => {
-				tui.requestRender();
-			}, 250) as ReturnType<typeof setInterval> & { unref?: () => void };
-			(pulseTimer as { unref?: () => void }).unref?.();
-		}
+		const syncPulseTimer = (enabled: boolean): void => {
+			const shouldRun = enabled && wantsPulse();
+			if (!shouldRun) {
+				if (pulseTimer) {
+					clearInterval(pulseTimer);
+					pulseTimer = undefined;
+				}
+				return;
+			}
+			if (!pulseTimer) {
+				pulseTimer = setInterval(() => {
+					tui.requestRender();
+				}, 250) as ReturnType<typeof setInterval> & { unref?: () => void };
+				(pulseTimer as { unref?: () => void }).unref?.();
+			}
+		};
+		// Starts disabled: the session event layer enables it on agent_start
+		// and disables it on agent_end.
+		hooks.setPulseController?.(syncPulseTimer);
 
 		return {
 			dispose: () => {
@@ -207,6 +220,7 @@ export function installFooter(
 				unsubscribeBranch();
 				hooks.setRequestRender(undefined);
 				hooks.setExtensionStatusesGetter?.(undefined);
+				hooks.setPulseController?.(undefined);
 			},
 			invalidate() {},
 			render(width: number): string[] {

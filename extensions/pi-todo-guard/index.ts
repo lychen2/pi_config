@@ -6,7 +6,9 @@ type TodoTask = { id: number; subject: string; status: TodoStatus };
 const TOOL_ENV = "PI_TODO_GUARD_TOOL";
 const DISABLE_ENV = "PI_TODO_GUARD_DISABLE";
 const MAX_TASKS = 20;
+const MAX_FOLLOW_UPS = 3;
 const MAX_SUBJECT_LENGTH = 240;
+const FOLLOW_UP_ENTRY_TYPE = "pi-todo-guard-follow-up";
 
 function openTasks(value: unknown): TodoTask[] | undefined {
   if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
@@ -44,6 +46,12 @@ function lastRunFailed(ctx: ExtensionContext): boolean {
   return false;
 }
 
+function followUpCount(ctx: ExtensionContext): number {
+  return ctx.sessionManager.getBranch().filter(
+    (entry) => entry.type === "custom" && entry.customType === FOLLOW_UP_ENTRY_TYPE,
+  ).length;
+}
+
 function reminder(tasks: TodoTask[]): string {
   const visible = tasks.slice(0, MAX_TASKS);
   const lines = visible.map((task) => `- #${task.id} [${task.status}]: ${task.subject}`);
@@ -68,10 +76,15 @@ export default function todoGuard(pi: ExtensionAPI): void {
     if (queued || !ctx.isIdle() || ctx.hasPendingMessages() || lastRunFailed(ctx)) return;
     const tasks = getOpenTodos(ctx, toolName);
     if (!tasks.length) return;
+    if (followUpCount(ctx) >= MAX_FOLLOW_UPS) {
+      if (ctx.hasUI) ctx.ui.notify(`Todo guard stopped after ${MAX_FOLLOW_UPS} follow-up turns.`, "warning");
+      return;
+    }
 
     queued = true;
     try {
       pi.sendUserMessage(reminder(tasks), { deliverAs: "followUp" });
+      pi.appendEntry(FOLLOW_UP_ENTRY_TYPE, { timestamp: Date.now() });
     } catch (error) {
       queued = false;
       const message = error instanceof Error ? error.message : String(error);

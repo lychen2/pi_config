@@ -119,21 +119,21 @@ function reusableText(context: { lastComponent?: unknown }, content: string): Te
 
 function fallbackGoal(name: string): string {
   switch (name) {
-    case "bash": return "run command";
-    case "read": return "inspect file";
-    case "write": return "write file";
-    case "edit": return "update file";
-    case "grep": return "find matching lines";
-    case "find": return "find files";
-    case "ls": return "list directory";
-    default: return "run tool";
+    case "bash": return "正在执行命令";
+    case "read": return "正在读取文件";
+    case "write": return "正在写入文件";
+    case "edit": return "正在更新文件";
+    case "grep": return "正在搜索文本";
+    case "find": return "正在查找文件";
+    case "ls": return "正在列出目录";
+    default: return "正在调用工具";
   }
 }
 
 function targetText(name: string, args: RecordLike): string {
   if (name === "bash") return brief(args.command);
-  if (name === "grep") return `/${brief(args.pattern)}/ in ${path(args.path ?? ".")}`;
-  if (name === "find") return `${brief(args.pattern)} in ${path(args.path ?? ".")}`;
+  if (name === "grep") return `/${brief(args.pattern)}/，位置 ${path(args.path ?? ".")}`;
+  if (name === "find") return `${brief(args.pattern)}，位置 ${path(args.path ?? ".")}`;
   if (name === "ls") return path(args.path ?? ".");
   const target = sourcePath(args);
   if (name === "read") {
@@ -154,6 +154,25 @@ function semanticCall(
   context: RenderContext,
 ): Component | undefined {
   const args = record(input);
+  // edit/write: "edit <path> (N edits)" call line, matching the settled box.
+  if (name === "edit" || name === "write") {
+    const suffix = name === "edit"
+      ? (Array.isArray(args.edits)
+          ? theme.fg("muted", ` (${args.edits.length} ${args.edits.length === 1 ? "edit" : "edits"})`)
+          : "")
+      : (typeof args.content === "string"
+          ? (() => {
+              const count = args.content.length === 0
+                ? 0
+                : (args.content.match(/\n/g)?.length ?? 0) + (args.content.endsWith("\n") ? 0 : 1);
+              return theme.fg("muted", ` (${count} 行)`);
+            })()
+          : "");
+    return reusableText(
+      context,
+      `${theme.fg("toolTitle", theme.bold(name))} ${theme.fg("accent", targetText(name, args))}${suffix}`,
+    );
+  }
   const { reasoning } = stripReasoning(input);
   const goal = typeof reasoning === "string" && reasoning.trim() ? brief(reasoning) : fallbackGoal(name);
   const arrow = theme.fg("muted", " → ");
@@ -194,7 +213,7 @@ function hierarchyPreview(
 
   const remaining = lines.length - shown.length;
   if (remaining > 0) {
-    const hint = `${remaining} more ${remaining === 1 ? "line" : "lines"} · ${keyHint("app.tools.expand", "expand")}`;
+    const hint = `${remaining} 行待展开 · ${keyHint("app.tools.expand", "展开")}`;
     const line = `${theme.fg("muted", "  ")}${theme.fg("muted", hint)}`;
     text = `${text}\n${line}`;
   }
@@ -210,18 +229,18 @@ function resultSummary(
 ): string {
   const lines = outputLines(result);
   if (context.isError) {
-    const message = lines.find((line) => line.trim())?.trim() || "failed";
+    const message = lines.find((line) => line.trim())?.trim() || "失败";
     return theme.fg("error", message);
   }
   if (name === "read") {
     const count = lines.filter((line) => line.trim() && !/^\[Showing lines /.test(line)).length;
-    return theme.fg("toolOutput", `${count} ${count === 1 ? "line" : "lines"}`);
+    return theme.fg("toolOutput", `${count} 行`);
   }
   if (name === "write") {
     const count = typeof args.content === "string" && args.content.length > 0
       ? (args.content.match(/\n/g)?.length ?? 0) + (args.content.endsWith("\n") ? 0 : 1)
       : 0;
-    return theme.fg("toolOutput", `${count} ${count === 1 ? "line" : "lines"} written`);
+    return theme.fg("toolOutput", `${count} 行已写入`);
   }
   if (name === "edit") {
     const diffValue = record(record(result).details).diff;
@@ -236,20 +255,20 @@ function resultSummary(
         return theme.fg("toolOutput", `+${diff.additions}/-${diff.deletions}`);
       }
     }
-    return theme.fg("toolOutput", "updated");
+    return theme.fg("toolOutput", "已更新");
   }
-  if (name === "bash") return theme.fg("toolOutput", "done");
+  if (name === "bash") return theme.fg("toolOutput", "已完成");
   if (name === "grep") {
     const count = lines.filter((line) => line.trim()).length;
     const color = count > 0 ? "success" : "toolOutput";
-    return theme.fg(color, `${count} ${count === 1 ? "match" : "matches"}`);
+    return theme.fg(color, `${count} 处匹配`);
   }
   if (name === "find" || name === "ls") {
     const count = lines.filter((line) => line.trim()).length;
-    const noun = name === "find" ? (count === 1 ? "file" : "files") : (count === 1 ? "entry" : "entries");
+    const noun = name === "find" ? "个文件" : "项";
     return theme.fg("toolOutput", `${count} ${noun}`);
   }
-  return theme.fg("toolOutput", lines.length ? "done" : "completed");
+  return theme.fg("toolOutput", lines.length ? "已完成" : "操作完成");
 }
 
 function semanticResult(
@@ -278,7 +297,7 @@ function fallbackResult(
   if (options.isPartial) return reusableText(context, "");
   const lines = outputLines(result);
   if (!lines.length) {
-    return reusableText(context, context.isError ? theme.fg("error", "↳ failed") : "");
+    return reusableText(context, context.isError ? theme.fg("error", "↳ 失败") : "");
   }
   return reusableText(context, hierarchyPreview(lines, options, theme, context));
 }

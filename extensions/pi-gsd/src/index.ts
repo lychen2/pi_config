@@ -296,7 +296,7 @@ export function toolPushTask(pi: PushTaskAPI): ToolDefinition {
 export function cmdStartTask(pi: TaskCommandAPI): CommandOptions {
   return {
     description:
-      "Navigate to a fresh context and inject the active task prompt",
+      "进入新上下文并注入当前任务提示",
     getArgumentCompletions: (argumentPrefix: string) => {
       if (!modelRegistry) return null;
       return getModelCompletions(argumentPrefix, modelRegistry);
@@ -311,7 +311,7 @@ export function cmdStartTask(pi: TaskCommandAPI): CommandOptions {
 
 export function cmdDiscardTask(pi: TaskCommandAPI): CommandOptions {
   return {
-    description: "Discard the active task without executing it",
+    description: "丢弃当前任务，不执行",
     handler: async (_args: string, ctx: ExtensionCommandContext) => {
       await ctx.waitForIdle();
       await discardTask(pi, ctx);
@@ -321,7 +321,7 @@ export function cmdDiscardTask(pi: TaskCommandAPI): CommandOptions {
 
 export function cmdFinishTask(pi: TaskCommandAPI): CommandOptions {
   return {
-    description: "Finish the current task and return to the task start point",
+    description: "完成当前任务并返回任务起点",
     handler: async (_args: string, ctx: ExtensionCommandContext) => {
       await ctx.waitForIdle();
       await finishTask(pi, ctx);
@@ -331,7 +331,7 @@ export function cmdFinishTask(pi: TaskCommandAPI): CommandOptions {
 
 export function cmdAbortTask(pi: TaskCommandAPI): CommandOptions {
   return {
-    description: "Abort the current task without finishing",
+    description: "中止当前任务，不标记完成",
     handler: async (_args: string, ctx: ExtensionCommandContext) => {
       await ctx.waitForIdle();
       await abortTask(pi, ctx);
@@ -362,7 +362,7 @@ export function cmdAuto(pi: AutoCommandAPI): CommandOptions {
   });
 
   return {
-    description: "Automatically run pushed task branches",
+    description: "自动运行已推送的任务分支",
     handler: async (_args: string, ctx: ExtensionCommandContext) => {
       if (running) {
         ctx.ui.notify("Auto is already running.", "warning");

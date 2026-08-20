@@ -1,6 +1,6 @@
 # pi-manager-models
 
-Refreshes an OpenAI-compatible provider's model catalog from its `/models` endpoint while preserving model overrides from Pi's `models.json`.
+The extension fetches the live catalog during startup and on provider refresh. Configured models are used as metadata overrides for matching IDs and as an offline fallback if discovery fails; unknown live IDs receive conservative defaults.
 
 The extension defaults to provider `manager` in Pi's official agent-directory `models.json`. If the file or provider is absent, it safely does nothing.
 
@@ -12,7 +12,7 @@ pi install npm:pi-manager-models
 
 ## Configuration
 
-Configure a provider in `models.json` with at least `baseUrl`. Optional seed models let Pi start without a network request. Discovered IDs inherit matching seed metadata; unknown IDs receive conservative defaults.
+Configure a provider in `models.json` with at least `baseUrl`. Optional seed models provide metadata overrides and an offline startup fallback. Discovered IDs inherit matching seed metadata; unknown IDs receive conservative defaults.
 
 Environment overrides:
 

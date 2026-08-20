@@ -6,7 +6,7 @@ import { sanitizeUserMessageForTest } from "../user-message.ts";
 
 test("renders user Markdown in a bounded reference-style frame", () => {
   const lines = sanitizeUserMessageForTest("# Inspect\n\n`src/index.ts`", 48);
-  assert.ok(lines[0].includes("💬"));
+  assert.match(lines[0], /^─+$/);
   assert.ok(lines[1].startsWith("▐ "));
   assert.ok(!lines.some((line) => line.includes("you")));
   assert.ok(lines.some((line) => line.includes("Inspect")));

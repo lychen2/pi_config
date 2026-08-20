@@ -1,4 +1,5 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import piAdhdFeatures from "./pi-adhd/src/index.ts";
 const ENTRY_TYPE = "adhd-mode";
 let enabled = true;
 
@@ -15,6 +16,9 @@ For analytical, mathematical, and technical questions: read every stated conditi
 `;
 
 export default function adhdMode(pi: ExtensionAPI) {
+  // Sticky notes, side-chat, and reminders live under the existing ADHD entrypoint.
+  piAdhdFeatures(pi);
+
   // Restore state from previous session entries on startup
   pi.on("session_start", async (_event, ctx) => {
     for (const entry of ctx.sessionManager.getEntries()) {
@@ -48,12 +52,12 @@ export default function adhdMode(pi: ExtensionAPI) {
 
   // Toggle command
   pi.registerCommand("adhd", {
-    description: "Toggle ADHD output mode (auto-injected)",
+    description: "切换 ADHD 输出模式（自动注入）",
     handler: async (_args, ctx) => {
       enabled = !enabled;
       pi.appendEntry(ENTRY_TYPE, { enabled });
       ctx.ui.notify(
-        enabled ? "ADHD mode enabled" : "ADHD mode disabled",
+        enabled ? "已启用 ADHD 模式" : "已关闭 ADHD 模式",
         "info",
       );
     },

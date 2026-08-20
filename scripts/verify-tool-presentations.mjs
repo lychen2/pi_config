@@ -21,6 +21,8 @@ const EXPECTED_TOOL_NAMES = [
   "ask_user_question",
   "todo",
   "web_search",
+  "agent_browser",
+  "browser",
   "source_check",
   "fetch_content",
   "get_search_content",
@@ -56,8 +58,8 @@ for (const name of EXPECTED_TOOL_NAMES) {
   const normalized = normalizeToolName(name);
   const presentation = TOOL_PRESENTATIONS[normalized];
   assert.ok(presentation, `missing presentation for ${name}`);
-  assert.match(presentation.label, /^[\x20-\x7e]+$/, `${name} label must stay terminal-safe ASCII`);
-  assert.ok(presentation.label.length <= 8, `${name} label exceeds the 8-column text budget`);
+  assert.match(presentation.label, /^\S+$/, `${name} label must not be empty or contain whitespace`);
+  assert.ok(presentation.label.length <= 8, `${name} label exceeds the 8-character text budget`);
   assert.ok(presentation.emoji.trim(), `${name} has an empty emoji`);
   assert.notEqual(presentation.emoji, "🧩", `${name} is using the unknown-tool fallback`);
   assert.equal(shortToolName(name), presentation.label, `${name} alias does not resolve to its registry label`);

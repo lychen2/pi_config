@@ -1,0 +1,1044 @@
+{
+ "cli\\args.js": [
+  [
+   "${chalk.bold(\"Options:\")}\n  --provider <name>              Provider name (default: google)\n  --model <pattern>              Model pattern or ID (supports \"provider/id\" and optional \":<thinking>\")\n  --api-key <key>                API key (defaults to env vars)\n  --system-prompt <text>         System prompt (default: coding assistant prompt)\n  --append-system-prompt <text>  Append text or file contents to the system prompt (can be used multiple times)\n  --mode <mode>                  Output mode: text (default), json, or rpc\n  --print, -p                    Non-interactive mode: process prompt and exit\n  --continue, -c                 Continue previous session\n  --resume, -r                   Select a session to resume\n  --session <path|id>            Use specific session file or partial UUID\n  --session-id <id>              Use exact project session ID, creating it if missing\n  --fork <path|id>               Fork specific session file or partial UUID into a new session\n  --session-dir <dir>            Directory for session storage and lookup\n  --no-session                   Don't save session (ephemeral)\n  --name, -n <name>              Set session display name\n  --models <patterns>            Comma-separated model patterns for Ctrl+P cycling\n                                 Supports globs (anthropic/*, *sonnet*) and fuzzy matching\n  --no-tools, -nt                Disable all tools by default (built-in and extension)\n  --no-builtin-tools, -nbt       Disable built-in tools by default but keep extension/custom tools enabled\n  --tools, -t <tools>            Comma-separated allowlist of tool names to enable\n                                 Applies to built-in, extension, and custom tools\n  --exclude-tools, -xt <tools>   Comma-separated denylist of tool names to disable\n                                 Applies to built-in, extension, and custom tools\n  --thinking <level>             Set thinking level: off, minimal, low, medium, high, xhigh, max\n  --extension, -e <path>         Load an extension file (can be used multiple times)\n  --no-extensions, -ne           Disable extension discovery (explicit -e paths still work)\n  --skill <path>                 Load a skill file or directory (can be used multiple times)\n  --no-skills, -ns               Disable skills discovery and loading\n  --prompt-template <path>       Load a prompt template file or directory (can be used multiple times)\n  --no-prompt-templates, -np     Disable prompt template discovery and loading\n  --theme <path>                 Load a theme file or directory (can be used multiple times)\n  --no-themes                    Disable theme discovery and loading\n  --no-context-files, -nc        Disable AGENTS.md and CLAUDE.md discovery and loading\n  --export <file>                Export session file to HTML and exit\n  --list-models [search]         List available models (with optional fuzzy search)\n  --verbose                      Force verbose startup (overrides quietStartup setting)\n  --approve, -a                  Trust project-local files for this run\n  --no-approve, -na              Ignore project-local files for this run\n  --offline                      Disable startup network operations (same as PI_OFFLINE=1)\n  --help, -h                     Show this help\n  --version, -v                  Show version number\n",
+   "${chalk.bold(\"选项:\")}\n  --provider <name>              提供商名称（默认：google）\n  --model <pattern>              模型模式或 ID（支持 \"provider/id\" 与可选 \":<思考级别>\"）\n  --api-key <key>                API 密钥（默认读取环境变量）\n  --system-prompt <text>         系统提示词（默认：编码助手提示词）\n  --append-system-prompt <text>  将文本或文件内容追加到系统提示词（可多次使用）\n  --mode <mode>                  输出模式：text（默认）、json 或 rpc\n  --print, -p                    非交互模式：处理提示后退出\n  --continue, -c                 继续上一个会话\n  --resume, -r                   选择一个会话以恢复\n  --session <path|id>            使用指定会话文件或部分 UUID\n  --session-id <id>              使用精确的项目会话 ID，不存在则创建\n  --fork <path|id>               将指定会话文件或部分 UUID 分叉为新会话\n  --session-dir <dir>            会话存储与查找目录\n  --no-session                   不保存会话（临时）\n  --name, -n <name>              设置会话显示名称\n  --models <patterns>            逗号分隔的模型模式，用于 Ctrl+P 循环切换\n                                 支持通配符（anthropic/*、*sonnet*）和模糊匹配\n  --no-tools, -nt                默认禁用所有工具（内置与扩展）\n  --no-builtin-tools, -nbt       默认禁用内置工具，但保留扩展/自定义工具\n  --tools, -t <tools>            逗号分隔的工具名允许列表\n                                 适用于内置、扩展和自定义工具\n  --exclude-tools, -xt <tools>   逗号分隔的工具名拒绝列表\n                                 适用于内置、扩展和自定义工具\n  --thinking <level>             设置思考级别：off、minimal、low、medium、high、xhigh、max\n  --extension, -e <path>         加载扩展文件（可多次使用）\n  --no-extensions, -ne           禁用扩展发现（显式 -e 路径仍有效）\n  --skill <path>                 加载技能文件或目录（可多次使用）\n  --no-skills, -ns               禁用技能发现与加载\n  --prompt-template <path>       加载提示模板文件或目录（可多次使用）\n  --no-prompt-templates, -np     禁用提示模板发现与加载\n  --theme <path>                 加载主题文件或目录（可多次使用）\n  --no-themes                    禁用主题发现与加载\n  --no-context-files, -nc        禁用 AGENTS.md 与 CLAUDE.md 的发现与加载\n  --export <file>                将会话文件导出为 HTML 并退出\n  --list-models [search]         列出可用模型（可选模糊搜索）\n  --verbose                      强制详细启动输出（覆盖 quietStartup 设置）\n  --approve, -a                  本次运行信任项目本地文件\n  --no-approve, -na              本次运行忽略项目本地文件\n  --offline                      禁用启动时网络操作（同 PI_OFFLINE=1）\n  --help, -h                     显示此帮助\n  --version, -v                  显示版本号\n"
+  ],
+  [
+   "  ${APP_NAME} list                      List installed extensions from settings\n  ${APP_NAME} config [-l]               Open TUI to enable/disable package resources (Tab switches scope)\n  ${APP_NAME} auth <command>            Print credentials for external clients\n  ${APP_NAME} <command> --help          Show help for install/remove/uninstall/update/list/config/auth\n",
+   "  ${APP_NAME} list                      列出设置中已安装的扩展\n  ${APP_NAME} config [-l]               打开 TUI 启用/禁用包资源（Tab 切换范围）\n  ${APP_NAME} auth <command>            打印供外部客户端使用的凭据\n  ${APP_NAME} <command> --help          显示 install/remove/uninstall/update/list/config/auth 的帮助\n"
+  ],
+  [
+   "${chalk.bold(\"Commands:\")}\n  ${APP_NAME} install <source> [-l]     Install extension source and add to settings\n  ${APP_NAME} remove <source> [-l]      Remove extension source from settings\n",
+   "${chalk.bold(\"命令:\")}\n  ${APP_NAME} install <source> [-l]     安装扩展源并添加到设置\n  ${APP_NAME} remove <source> [-l]      从设置中移除扩展源\n"
+  ],
+  [
+   "Extensions can register additional flags (e.g., --plan from plan-mode extension).${extensionFlagsText}\n",
+   "扩展可注册额外标志（例如 plan-mode 扩展的 --plan）。${extensionFlagsText}\n"
+  ],
+  [
+   "    console.log(`${chalk.bold(APP_NAME)} - AI coding assistant with read, bash, edit, write tools\n",
+   "    console.log(`${chalk.bold(APP_NAME)} - 具备读取、bash、编辑、写入工具的 AI 编码助手\n"
+  ],
+  [
+   "${chalk.bold(\"Examples:\")}\n  # Print a provider API key for an external client\n",
+   "${chalk.bold(\"示例:\")}\n  # 为外部客户端打印提供商 API 密钥\n"
+  ],
+  [
+   "  # Print an OAuth bearer token for an external client (refreshes if expired)\n",
+   "  # 为外部客户端打印 OAuth 令牌（过期自动刷新）\n"
+  ],
+  [
+   "        ? `\\n${chalk.bold(\"Extension CLI Flags:\")}\\n${extensionFlags\n",
+   "        ? `\\n${chalk.bold(\"扩展 CLI 标志:\")}\\n${extensionFlags\n"
+  ],
+  [
+   "  # Use model with provider prefix (no --provider needed)\n",
+   "  # 使用带提供商前缀的模型（无需 --provider）\n"
+  ],
+  [
+   "  # Disable one tool while keeping the rest available\n",
+   "  # 禁用一个工具，其余保持可用\n"
+  ],
+  [
+   "  # Read-only mode (no file modifications possible)\n",
+   "  # 只读模式（无法修改文件）\n"
+  ],
+  [
+   "  # Limit to a specific provider with glob pattern\n",
+   "  # 使用通配符限制为特定提供商\n"
+  ],
+  [
+   "  # Non-interactive mode (process and exit)\n",
+   "  # 非交互模式（处理后退出）\n"
+  ],
+  [
+   "  # Use model with thinking level shorthand\n",
+   "  # 使用带思考级别简写的模型\n"
+  ],
+  [
+   "  # Cycle models with fixed thinking levels\n",
+   "  # 以固定思考级别循环模型\n"
+  ],
+  [
+   "  # Limit model cycling to specific models\n",
+   "  # 将模型循环限制为指定模型\n"
+  ],
+  [
+   "  # Interactive mode with initial prompt\n",
+   "  # 交互模式 with initial prompt\n"
+  ],
+  [
+   "  # Start with a specific thinking level\n",
+   "  # 以指定思考级别启动\n"
+  ],
+  [
+   "${chalk.bold(\"Environment Variables:\")}\n",
+   "${chalk.bold(\"环境变量:\")}\n"
+  ],
+  [
+   "  # Include files in initial message\n",
+   "  # 在初始消息中包含文件\n"
+  ],
+  [
+   "  # Multiple messages (interactive)\n",
+   "  # 多条消息（交互模式）\n"
+  ],
+  [
+   "  # Export a session file to HTML\n",
+   "  # 将会话文件导出为 HTML\n"
+  ],
+  [
+   "  # Continue previous session\n",
+   "  # 继续上一个会话\n"
+  ],
+  [
+   "  # Start a named session\n",
+   "  # 启动命名会话\n"
+  ],
+  [
+   "${chalk.bold(\"Usage:\")}\n",
+   "${chalk.bold(\"用法:\")}\n"
+  ],
+  [
+   "  # Use different model\n",
+   "  # 使用不同模型\n"
+  ],
+  [
+   "  # Interactive mode\n",
+   "  # 交互模式\n"
+  ]
+ ],
+ "core\\slash-commands.js": [
+  [
+   "    { name: \"settings\", description: \"Open settings menu\" },\n    { name: \"model\", description: \"Select model (opens selector UI)\", argumentHint: \"<provider/model>\" },\n    { name: \"scoped-models\", description: \"Enable/disable models for Ctrl+P cycling\" },\n    { name: \"export\", description: \"Export session (HTML default, or specify path: .html/.jsonl)\" },\n    { name: \"import\", description: \"Import and resume a session from a JSONL file\" },\n    { name: \"share\", description: \"Share session as a secret GitHub gist\" },\n    { name: \"copy\", description: \"Copy last agent message to clipboard\" },\n    { name: \"name\", description: \"Set session display name\" },\n    { name: \"session\", description: \"Show session info and stats\" },\n    { name: \"changelog\", description: \"Show changelog entries\" },\n    { name: \"hotkeys\", description: \"Show all keyboard shortcuts\" },\n    { name: \"fork\", description: \"Create a new fork from a previous user message\" },\n    { name: \"clone\", description: \"Duplicate the current session at the current position\" },\n    { name: \"tree\", description: \"Navigate session tree (switch branches)\" },\n    { name: \"trust\", description: \"Save project trust decision for future sessions\" },\n    { name: \"login\", description: \"Configure provider authentication\", argumentHint: \"<provider>\" },\n    { name: \"logout\", description: \"Remove provider authentication\" },\n    { name: \"new\", description: \"Start a new session\" },\n    { name: \"compact\", description: \"Manually compact the session context\" },\n    { name: \"resume\", description: \"Resume a different session\" },\n    { name: \"reload\", description: \"Reload keybindings, extensions, skills, prompts, themes, and context files\" },\n    { name: \"quit\", description: `Quit ${APP_NAME}` },\n",
+   "    { name: \"settings\", description: \"打开设置菜单\" },\n    { name: \"model\", description: \"选择模型（打开选择器界面）\", argumentHint: \"<provider/model>\" },\n    { name: \"scoped-models\", description: \"启用/禁用 Ctrl+P 循环切换的模型\" },\n    { name: \"export\", description: \"导出会话（默认 HTML，也可指定 .html/.jsonl 路径）\" },\n    { name: \"import\", description: \"从 JSONL 文件导入并恢复会话\" },\n    { name: \"share\", description: \"将会话分享为私密 GitHub Gist\" },\n    { name: \"copy\", description: \"复制最后一条助手消息到剪贴板\" },\n    { name: \"name\", description: \"设置会话显示名称\" },\n    { name: \"session\", description: \"显示会话信息与统计\" },\n    { name: \"changelog\", description: \"显示更新日志\" },\n    { name: \"hotkeys\", description: \"显示全部键盘快捷键\" },\n    { name: \"fork\", description: \"从之前的用户消息创建新分叉会话\" },\n    { name: \"clone\", description: \"在当前位置复制当前会话\" },\n    { name: \"tree\", description: \"浏览会话树（切换分支）\" },\n    { name: \"trust\", description: \"保存项目信任决策，供后续会话使用\" },\n    { name: \"login\", description: \"配置提供商认证\", argumentHint: \"<provider>\" },\n    { name: \"logout\", description: \"移除提供商认证\" },\n    { name: \"new\", description: \"开始新会话\" },\n    { name: \"compact\", description: \"手动压缩会话上下文\" },\n    { name: \"resume\", description: \"恢复另一个会话\" },\n    { name: \"reload\", description: \"重新加载按键绑定、扩展、技能、提示模板、主题和上下文文件\" },\n    { name: \"quit\", description: `退出 ${APP_NAME}` },\n"
+  ]
+ ],
+ "core\\trust-manager.js": [
+  [
+   "        { label: \"Trust\", trusted: true, updates: [{ path: trustPath, decision: true }], savedPath: trustPath },\n",
+   "        { label: \"信任\", trusted: true, updates: [{ path: trustPath, decision: true }], savedPath: trustPath },\n"
+  ],
+  [
+   "        trustOptions.push({ label: \"Do not trust (this session only)\", trusted: false, updates: [] });\n",
+   "        trustOptions.push({ label: \"不信任（仅本次会话）\", trusted: false, updates: [] });\n"
+  ],
+  [
+   "        trustOptions.push({ label: \"Trust (this session only)\", trusted: true, updates: [] });\n",
+   "        trustOptions.push({ label: \"信任（仅本次会话）\", trusted: true, updates: [] });\n"
+  ],
+  [
+   "            label: `Trust parent folder (${parentPath})`,\n",
+   "            label: `信任父文件夹 (${parentPath})`,\n"
+  ],
+  [
+   "        label: \"Do not trust\",\n",
+   "        label: \"不信任\",\n"
+  ]
+ ],
+ "extensions\\llama\\index.js": [
+  [
+   "        description: \"Manage llama.cpp router models\",\n",
+   "        description: \"管理 llama.cpp 路由器模型\",\n"
+  ]
+ ],
+ "modes\\interactive\\components\\assistant-message.js": [
+  [
+   "            this.contentContainer.addChild(new Text(theme.fg(\"error\", \"Error: Model stopped because it reached the maximum output token limit. The response may be incomplete.\"), this.outputPad, 0));\n",
+   "            this.contentContainer.addChild(new Text(theme.fg(\"error\", \"错误：模型已达到最大输出令牌数限制而停止。回复可能不完整。\"), this.outputPad, 0));\n"
+  ],
+  [
+   "            this.contentContainer.addChild(new Text(theme.fg(\"error\", \"错误：模型已达到最大输出令牌数限制而停止。回复可能不完整。\"), this.outputPad, 0));\n",
+   "            this.contentContainer.addChild(new Text(theme.fg(\"error\", \"错误：模型已达到最大输出词元数限制而停止。回复可能不完整。\"), this.outputPad, 0));\n"
+  ],
+  [
+   "    constructor(message, hideThinkingBlock = false, markdownTheme = getMarkdownTheme(), hiddenThinkingLabel = \"Thinking...\", outputPad = 1) {\n",
+   "    constructor(message, hideThinkingBlock = false, markdownTheme = getMarkdownTheme(), hiddenThinkingLabel = \"思考中...\", outputPad = 1) {\n"
+  ],
+  [
+   "                this.contentContainer.addChild(new Text(theme.fg(\"error\", `Error: ${errorMsg}`), this.outputPad, 0));\n",
+   "                this.contentContainer.addChild(new Text(theme.fg(\"error\", `错误：${errorMsg}`), this.outputPad, 0));\n"
+  ],
+  [
+   "                const abortMessage = message.errorMessage && message.errorMessage !== \"Request was aborted\"\n",
+   "                const abortMessage = message.errorMessage && message.errorMessage !== \"请求已中止\"\n"
+  ],
+  [
+   "                const errorMsg = message.errorMessage || \"Unknown error\";\n",
+   "                const errorMsg = message.errorMessage || \"未知错误\";\n"
+  ],
+  [
+   "                    : \"Operation aborted\";\n",
+   "                    : \"操作已中止\";\n"
+  ]
+ ],
+ "modes\\interactive\\components\\bash-execution.js": [
+  [
+   "        this.loader = new Loader(ui, (spinner) => theme.fg(colorKey, spinner), (text) => theme.fg(\"muted\", text), `Running... (${keyText(\"tui.select.cancel\")} to cancel)`);\n",
+   "        this.loader = new Loader(ui, (spinner) => theme.fg(colorKey, spinner), (text) => theme.fg(\"muted\", text), `运行中... (${keyText(\"tui.select.cancel\")} 取消)`);\n"
+  ],
+  [
+   "                    statusParts.push(`${theme.fg(\"muted\", `... ${hiddenLineCount} more lines (`)}${keyHint(\"app.tools.expand\", \"to expand\")}${theme.fg(\"muted\", \")\")}`);\n",
+   "                    statusParts.push(`${theme.fg(\"muted\", `... 还有 ${hiddenLineCount} 行 (`)}${keyHint(\"app.tools.expand\", \"展开\")}${theme.fg(\"muted\", \")\")}`);\n"
+  ],
+  [
+   "                    statusParts.push(`${theme.fg(\"muted\", \"(\")}${keyHint(\"app.tools.expand\", \"to collapse\")}${theme.fg(\"muted\", \")\")}`);\n",
+   "                    statusParts.push(`${theme.fg(\"muted\", \"(\")}${keyHint(\"app.tools.expand\", \"收起\")}${theme.fg(\"muted\", \")\")}`);\n"
+  ],
+  [
+   "                statusParts.push(theme.fg(\"warning\", `Output truncated. Full output: ${this.fullOutputPath}`));\n",
+   "                statusParts.push(theme.fg(\"warning\", `输出已截断。完整输出：${this.fullOutputPath}`));\n"
+  ],
+  [
+   "                statusParts.push(theme.fg(\"error\", `(exit ${this.exitCode})`));\n",
+   "                statusParts.push(theme.fg(\"error\", `(退出码 ${this.exitCode})`));\n"
+  ],
+  [
+   "                statusParts.push(theme.fg(\"warning\", \"(cancelled)\"));\n",
+   "                statusParts.push(theme.fg(\"warning\", \"(已取消)\"));\n"
+  ]
+ ],
+ "modes\\interactive\\components\\branch-summary-message.js": [
+  [
+   "            this.addChild(new Text(theme.fg(\"customMessageText\", \"Branch summary (\") +\n",
+   "            this.addChild(new Text(theme.fg(\"customMessageText\", \"分支摘要（\") +\n"
+  ],
+  [
+   "        const label = theme.fg(\"customMessageLabel\", `\\x1b[1m[branch]\\x1b[22m`);\n",
+   "        const label = theme.fg(\"customMessageLabel\", `\\x1b[1m[分支]\\x1b[22m`);\n"
+  ],
+  [
+   "                theme.fg(\"customMessageText\", \" to expand)\"), 0, 0));\n",
+   "                theme.fg(\"customMessageText\", \" 展开）\"), 0, 0));\n"
+  ],
+  [
+   "            const header = \"**Branch Summary**\\n\\n\";\n",
+   "            const header = \"**分支摘要**\\n\\n\";\n"
+  ]
+ ],
+ "modes\\interactive\\components\\compaction-summary-message.js": [
+  [
+   "        const label = theme.fg(\"customMessageLabel\", `\\x1b[1m[compaction]\\x1b[22m`);\n",
+   "        const label = theme.fg(\"customMessageLabel\", `\\x1b[1m[压缩]\\x1b[22m`);\n"
+  ],
+  [
+   "            const header = `**Compacted from ${tokenStr} tokens**\\n\\n`;\n",
+   "            const header = `**已从 ${tokenStr} 个令牌压缩**\\n\\n`;\n"
+  ],
+  [
+   "            const header = `**已从 ${tokenStr} 个令牌压缩**\\n\\n`;\n",
+   "            const header = `**已从 ${tokenStr} 个词元压缩**\\n\\n`;\n"
+  ],
+  [
+   "                theme.fg(\"customMessageText\", \" to expand)\"), 0, 0));\n",
+   "                theme.fg(\"customMessageText\", \" 展开)\"), 0, 0));\n"
+  ]
+ ],
+ "modes\\interactive\\components\\config-selector.js": [
+  [
+   "        const switchHint = this.projectModeAvailable ? keyHint(\"tui.input.tab\", \"switch mode\") + sep : \"\";\n        const actionHint = this.writeScope === \"project\" ? rawKeyHint(\"space\", \"cycle inherit/+/-\") : rawKeyHint(\"space\", \"toggle\");\n        const hint = switchHint + actionHint + sep + rawKeyHint(\"esc\", \"close\");\n",
+   "        const switchHint = this.projectModeAvailable ? keyHint(\"tui.input.tab\", \"切换模式\") + sep : \"\";\n        const actionHint = this.writeScope === \"project\" ? rawKeyHint(\"space\", \"循环 继承/+/-\") : rawKeyHint(\"space\", \"切换\");\n        const hint = switchHint + actionHint + sep + rawKeyHint(\"esc\", \"关闭\");\n"
+  ],
+  [
+   "            return theme.fg(\"muted\", \"  project unload\");\n        return this.isInheritedGlobalItem(item) ? theme.fg(\"dim\", \"  inherited global\") : \"\";\n",
+   "            return theme.fg(\"muted\", \"  项目卸载\");\n        return this.isInheritedGlobalItem(item) ? theme.fg(\"dim\", \"  继承自全局\") : \"\";\n"
+  ],
+  [
+   "                ? `User (${formatBaseDir(metadata.baseDir)})`\n                : `Project (${formatBaseDir(metadata.baseDir)})`;\n",
+   "                ? `用户（${formatBaseDir(metadata.baseDir)}）`\n                : `项目（${formatBaseDir(metadata.baseDir)}）`;\n"
+  ],
+  [
+   "        return metadata.scope === \"user\" ? `User (${formatBaseDir(agentDir)})` : `Project (${CONFIG_DIR_NAME}/)`;\n",
+   "        return metadata.scope === \"user\" ? `用户（${formatBaseDir(agentDir)}）` : `项目（${CONFIG_DIR_NAME}/）`;\n"
+  ],
+  [
+   "        const title = theme.bold(this.writeScope === \"project\" ? \"Project Local Resources\" : \"Global Resources\");\n",
+   "        const title = theme.bold(this.writeScope === \"project\" ? \"项目本地资源\" : \"全局资源\");\n"
+  ],
+  [
+   "            ? theme.fg(\"muted\", `${CONFIG_DIR_NAME}/settings.json · inherited global resources are dimmed`)\n",
+   "            ? theme.fg(\"muted\", `${CONFIG_DIR_NAME}/settings.json · 继承的全局资源以暗色显示`)\n"
+  ],
+  [
+   "                const label = theme.bold(`${entry.group.label}${inherited ? \" · inherited global\" : \"\"}`);\n",
+   "                const label = theme.bold(`${entry.group.label}${inherited ? \" · 继承自全局\" : \"\"}`);\n"
+  ],
+  [
+   "    extensions: \"Extensions\",\n    skills: \"Skills\",\n    prompts: \"Prompts\",\n    themes: \"Themes\",\n",
+   "    extensions: \"扩展\",\n    skills: \"技能\",\n    prompts: \"提示模板\",\n    themes: \"主题\",\n"
+  ],
+  [
+   "    return metadata.scope === \"user\" ? \"User settings\" : \"Project settings\";\n",
+   "    return metadata.scope === \"user\" ? \"用户设置\" : \"项目设置\";\n"
+  ],
+  [
+   "            lines.push(theme.fg(\"muted\", \"  No resources found\"));\n",
+   "            lines.push(theme.fg(\"muted\", \"  未找到资源\"));\n"
+  ],
+  [
+   "            return theme.fg(\"muted\", \"  project load\");\n",
+   "            return theme.fg(\"muted\", \"  项目加载\");\n"
+  ]
+ ],
+ "modes\\interactive\\components\\first-time-setup.js": [
+  [
+   "            this.addChild(new Text(theme.fg(\"text\", \"Opt-in to anonymous usage data sharing?\"), 1, 0));\n            this.addChild(new Text(theme.fg(\"muted\", \"Opting in stores a tracking identifier in settings.json and enables anonymous\\nusage analytics. This helps us to better debug, reproduce, and resolve issues\\nand bugs within Pi. You can observe what is shared using /privacy and make\\nchanges anytime in settings.json.\"), 1, 0));\n",
+   "            this.addChild(new Text(theme.fg(\"text\", \"是否同意共享匿名使用数据？\"), 1, 0));\n            this.addChild(new Text(theme.fg(\"muted\", \"启用后将在 settings.json 中存储跟踪标识并开启匿名用量分析。\\n这有助于我们更好地调试、复现和解决 Pi 中的问题。\\n你可以通过 /privacy 查看共享的内容，并随时在 settings.json 中修改。\"), 1, 0));\n"
+  ],
+  [
+   "            this.addChild(new Text(theme.fg(\"text\", \"Pick a theme.\"), 1, 0));\n            this.addChild(new Text(theme.fg(\"muted\", `Detected system appearance: ${this.options.detectedTheme}`), 1, 0));\n",
+   "            this.addChild(new Text(theme.fg(\"text\", \"选择主题。\"), 1, 0));\n            this.addChild(new Text(theme.fg(\"muted\", `检测到系统外观：${this.options.detectedTheme}`), 1, 0));\n"
+  ],
+  [
+   "        this.addChild(new Text(theme.fg(\"accent\", theme.bold(`Welcome to ${APP_NAME}, the minimal coding agent.`)), 1, 0));\n",
+   "        this.addChild(new Text(theme.fg(\"accent\", theme.bold(`欢迎使用 ${APP_NAME}，极简编码代理。`)), 1, 0));\n"
+  ],
+  [
+   "    { value: true, label: \"Share anonymous usage data\" },\n    { value: false, label: \"Don't share\" },\n",
+   "    { value: true, label: \"共享匿名使用数据\" },\n    { value: false, label: \"不共享\" },\n"
+  ],
+  [
+   "            keyHint(\"tui.select.confirm\", this.step === \"theme\" ? \"continue\" : \"finish\") +\n",
+   "            keyHint(\"tui.select.confirm\", this.step === \"theme\" ? \"继续\" : \"完成\") +\n"
+  ],
+  [
+   "    { value: \"dark\", label: \"Dark\" },\n    { value: \"light\", label: \"Light\" },\n",
+   "    { value: \"dark\", label: \"深色\" },\n    { value: \"light\", label: \"浅色\" },\n"
+  ],
+  [
+   "            keyHint(\"tui.select.cancel\", \"skip setup\"), 1, 0));\n",
+   "            keyHint(\"tui.select.cancel\", \"跳过设置\"), 1, 0));\n"
+  ],
+  [
+   "        this.addChild(new Text(rawKeyHint(\"↑↓\", \"navigate\") +\n",
+   "        this.addChild(new Text(rawKeyHint(\"↑↓\", \"导航\") +\n"
+  ]
+ ],
+ "modes\\interactive\\components\\footer.js": [
+  [
+   "                thinkingLevel === \"off\" ? `${modelName} • thinking off` : `${modelName} • ${thinkingLevel}`;\n",
+   "                thinkingLevel === \"off\" ? `${modelName} • 思考关闭` : `${modelName} • ${thinkingLevel}`;\n"
+  ],
+  [
+   "            const costStr = `$${usageTotals.cost.toFixed(3)}${usingSubscription ? \" (sub)\" : \"\"}`;\n",
+   "            const costStr = `$${usageTotals.cost.toFixed(3)}${usingSubscription ? \" (订阅)\" : \"\"}`;\n"
+  ],
+  [
+   "        const autoIndicator = this.autoCompactEnabled ? \" (auto)\" : \"\";\n",
+   "        const autoIndicator = this.autoCompactEnabled ? \" (自动)\" : \"\";\n"
+  ],
+  [
+   "        const modelName = state.model?.id || \"no-model\";\n",
+   "        const modelName = state.model?.id || \"无模型\";\n"
+  ]
+ ],
+ "modes\\interactive\\components\\login-dialog.js": [
+  [
+   "        this.contentContainer.addChild(new Text(`(${keyHint(\"tui.select.cancel\", \"to cancel,\")} ${keyHint(\"tui.select.confirm\", \"to submit\")})`, 1, 0));\n",
+   "        this.contentContainer.addChild(new Text(`(${keyHint(\"tui.select.cancel\", \"取消，\")} ${keyHint(\"tui.select.confirm\", \"提交\")})`, 1, 0));\n"
+  ],
+  [
+   "        this.contentContainer.addChild(new Text(theme.fg(\"warning\", `Enter code: ${info.userCode}`), 1, 0));\n",
+   "        this.contentContainer.addChild(new Text(theme.fg(\"warning\", `输入代码：${info.userCode}`), 1, 0));\n"
+  ],
+  [
+   "            this.contentContainer.addChild(new Text(`(${keyHint(\"tui.select.cancel\", \"to close\")})`, 1, 0));\n",
+   "            this.contentContainer.addChild(new Text(`(${keyHint(\"tui.select.cancel\", \"关闭\")})`, 1, 0));\n"
+  ],
+  [
+   "        this.contentContainer.addChild(new Text(`(${keyHint(\"tui.select.cancel\", \"to cancel\")})`, 1, 0));\n",
+   "        this.contentContainer.addChild(new Text(`(${keyHint(\"tui.select.cancel\", \"取消\")})`, 1, 0));\n"
+  ],
+  [
+   "        this.contentContainer.addChild(new Text(`(${keyHint(\"tui.select.cancel\", \"to cancel\")})`, 1, 0));\n",
+   "        this.contentContainer.addChild(new Text(`(${keyHint(\"tui.select.cancel\", \"取消\")})`, 1, 0));\n"
+  ],
+  [
+   "        const clickHint = process.platform === \"darwin\" ? \"Cmd+click to open\" : \"Ctrl+click to open\";\n",
+   "        const clickHint = process.platform === \"darwin\" ? \"Cmd+点击打开\" : \"Ctrl+点击打开\";\n"
+  ],
+  [
+   "        const clickHint = process.platform === \"darwin\" ? \"Cmd+click to open\" : \"Ctrl+click to open\";\n",
+   "        const clickHint = process.platform === \"darwin\" ? \"Cmd+点击打开\" : \"Ctrl+点击打开\";\n"
+  ],
+  [
+   "            this.contentContainer.addChild(new Text(theme.fg(\"dim\", `e.g., ${placeholder}`), 1, 0));\n",
+   "            this.contentContainer.addChild(new Text(theme.fg(\"dim\", `例如：${placeholder}`), 1, 0));\n"
+  ],
+  [
+   "        const title = titleOverride ?? `Login to ${providerName}`;\n",
+   "        const title = titleOverride ?? `登录 ${providerName}`;\n"
+  ],
+  [
+   "            this.inputRejecter(new Error(\"Login cancelled\"));\n",
+   "            this.inputRejecter(new Error(\"登录已取消\"));\n"
+  ],
+  [
+   "        this.onComplete(false, \"Login cancelled\");\n",
+   "        this.onComplete(false, \"登录已取消\");\n"
+  ]
+ ],
+ "modes\\interactive\\components\\model-selector.js": [
+  [
+   "                this.errorMessage = `Could not refresh ${result.errors.keys().next().value}; showing cached models.`;\n",
+   "                this.errorMessage = `无法刷新 ${result.errors.keys().next().value}；显示缓存的模型。`;\n"
+  ],
+  [
+   "                this.errorMessage = `Could not refresh ${result.errors.size} model catalogs; showing cached models.`;\n",
+   "                this.errorMessage = `无法刷新 ${result.errors.size} 个模型目录；显示缓存的模型。`;\n"
+  ],
+  [
+   "            this.listContainer.addChild(new Text(theme.fg(\"muted\", `  Model Name: ${selected.model.name}`), 0, 0));\n",
+   "            this.listContainer.addChild(new Text(theme.fg(\"muted\", `  模型名称：${selected.model.name}`), 0, 0));\n"
+  ],
+  [
+   "            const hintText = \"Only showing models from configured providers. Use /login to add providers.\";\n",
+   "            const hintText = \"仅显示已配置提供商的模型。使用 /login 添加提供商。\";\n"
+  ],
+  [
+   "        return `${theme.fg(\"muted\", \"Scope: \")}${allText}${theme.fg(\"muted\", \" | \")}${scopedText}`;\n",
+   "        return `${theme.fg(\"muted\", \"范围：\")}${allText}${theme.fg(\"muted\", \" | \")}${scopedText}`;\n"
+  ],
+  [
+   "            this.listContainer.addChild(new Text(theme.fg(\"muted\", \"  No matching models\"), 0, 0));\n",
+   "            this.listContainer.addChild(new Text(theme.fg(\"muted\", \"  没有匹配的模型\"), 0, 0));\n"
+  ],
+  [
+   "                this.errorMessage = \"Model refresh timed out; showing cached models.\";\n",
+   "                this.errorMessage = \"模型刷新超时；显示缓存的模型。\";\n"
+  ],
+  [
+   "        return keyHint(\"tui.input.tab\", \"scope\") + theme.fg(\"muted\", \" (all/scoped)\");\n",
+   "        return keyHint(\"tui.input.tab\", \"范围\") + theme.fg(\"muted\", \" (全部/限定)\");\n"
+  ],
+  [
+   "                    this.refreshStatusMessage = \"Model catalogs refreshed.\";\n",
+   "                    this.refreshStatusMessage = \"模型目录已刷新。\";\n"
+  ],
+  [
+   "    refreshStatusMessage = \"Refreshing model catalogs…\";\n",
+   "    refreshStatusMessage = \"正在刷新模型目录…\";\n"
+  ]
+ ],
+ "modes\\interactive\\components\\scoped-models-selector.js": [
+  [
+   "            `${keyText(\"tui.select.confirm\")} toggle`,\n            `${keyText(\"app.models.enableAll\")} all`,\n            `${keyText(\"app.models.clearAll\")} clear`,\n            `${keyText(\"app.models.toggleProvider\")} provider`,\n            `${keyText(\"app.models.reorderUp\")}/${keyText(\"app.models.reorderDown\")} reorder`,\n            `${keyText(\"app.models.save\")} save`,\n",
+   "            `${keyText(\"tui.select.confirm\")} 切换`,\n            `${keyText(\"app.models.enableAll\")} 全部`,\n            `${keyText(\"app.models.clearAll\")} 清除`,\n            `${keyText(\"app.models.toggleProvider\")} 提供商`,\n            `${keyText(\"app.models.reorderUp\")}/${keyText(\"app.models.reorderDown\")} 排序`,\n            `${keyText(\"app.models.save\")} 保存`,\n"
+  ],
+  [
+   "        this.addChild(new Text(theme.fg(\"accent\", theme.bold(\"Model Configuration\")), 0, 0));\n        this.addChild(new Text(theme.fg(\"muted\", `Session-only. ${keyText(\"app.models.save\")} to save to settings.`), 0, 0));\n",
+   "        this.addChild(new Text(theme.fg(\"accent\", theme.bold(\"模型配置\")), 0, 0));\n        this.addChild(new Text(theme.fg(\"muted\", `仅本次会话。按 ${keyText(\"app.models.save\")} 保存到设置。`), 0, 0));\n"
+  ],
+  [
+   "            this.listContainer.addChild(new Text(theme.fg(\"muted\", `  ${selected.model ? `Model Name: ${selected.model.name}` : \"Model unavailable\"}`), 0, 0));\n",
+   "            this.listContainer.addChild(new Text(theme.fg(\"muted\", `  ${selected.model ? `模型名称：${selected.model.name}` : \"模型不可用\"}`), 0, 0));\n"
+  ],
+  [
+   "            ? \"all enabled\"\n            : `${enabledCount}/${this.allIds.length} enabled${unavailableCount ? ` · ${unavailableCount} unavailable` : \"\"}`;\n",
+   "            ? \"全部启用\"\n            : `${enabledCount}/${this.allIds.length} 已启用${unavailableCount ? ` · ${unavailableCount} 不可用` : \"\"}`;\n"
+  ],
+  [
+   "            const providerBadge = theme.fg(\"muted\", item.model ? ` [${item.model.provider}]` : \" [unavailable]\");\n",
+   "            const providerBadge = theme.fg(\"muted\", item.model ? ` [${item.model.provider}]` : \" [不可用]\");\n"
+  ],
+  [
+   "            this.listContainer.addChild(new Text(theme.fg(\"muted\", \"  No matching models\"), 0, 0));\n",
+   "            this.listContainer.addChild(new Text(theme.fg(\"muted\", \"  没有匹配的模型\"), 0, 0));\n"
+  ],
+  [
+   "            ? theme.fg(\"dim\", `  ${parts.join(\" · \")} `) + theme.fg(\"warning\", \"(unsaved)\")\n",
+   "            ? theme.fg(\"dim\", `  ${parts.join(\" · \")} `) + theme.fg(\"warning\", \"（未保存）\")\n"
+  ]
+ ],
+ "modes\\interactive\\components\\session-selector-search.js": [
+  [
+   "            return { mode: \"regex\", tokens: [], regex: null, error: \"Empty regex\" };\n",
+   "            return { mode: \"regex\", tokens: [], regex: null, error: \"正则表达式为空\" };\n"
+  ]
+ ],
+ "modes\\interactive\\components\\session-selector.js": [
+  [
+   "        const sortLabel = this.sortMode === \"threaded\" ? \"Threaded\" : this.sortMode === \"recent\" ? \"Recent\" : \"Fuzzy\";\n        const sortText = theme.fg(\"muted\", \"Sort: \") + theme.fg(\"accent\", sortLabel);\n        const nameLabel = this.nameFilter === \"all\" ? \"All\" : \"Named\";\n        const nameText = theme.fg(\"muted\", \"Name: \") + theme.fg(\"accent\", nameLabel);\n",
+   "        const sortLabel = this.sortMode === \"threaded\" ? \"树形\" : this.sortMode === \"recent\" ? \"最近\" : \"模糊\";\n        const sortText = theme.fg(\"muted\", \"排序：\") + theme.fg(\"accent\", sortLabel);\n        const nameLabel = this.nameFilter === \"all\" ? \"全部\" : \"已命名\";\n        const nameText = theme.fg(\"muted\", \"名称：\") + theme.fg(\"accent\", nameLabel);\n"
+  ],
+  [
+   "                keyHint(\"app.session.toggleSort\", \"sort\"),\n                keyHint(\"app.session.toggleNamedFilter\", \"named\"),\n                keyHint(\"app.session.delete\", \"delete\"),\n                keyHint(\"app.session.togglePath\", `path ${pathState}`),\n",
+   "                keyHint(\"app.session.toggleSort\", \"排序\"),\n                keyHint(\"app.session.toggleNamedFilter\", \"命名\"),\n                keyHint(\"app.session.delete\", \"删除\"),\n                keyHint(\"app.session.togglePath\", `路径 ${pathState}`),\n"
+  ],
+  [
+   "                const errorMessage = result.error ?? \"Unknown error\";\n                this.header.setStatusMessage({ type: \"error\", message: `Failed to delete: ${errorMessage}` }, 3000);\n",
+   "                const errorMessage = result.error ?? \"未知错误\";\n                this.header.setStatusMessage({ type: \"error\", message: `删除失败：${errorMessage}` }, 3000);\n"
+  ],
+  [
+   "        panel.addChild(new Text(theme.fg(\"muted\", `${keyText(\"tui.select.confirm\")} to save · ${keyText(\"tui.select.cancel\")} to cancel`), 1, 0));\n",
+   "        panel.addChild(new Text(theme.fg(\"muted\", `${keyText(\"tui.select.confirm\")} 保存 · ${keyText(\"tui.select.cancel\")} 取消`), 1, 0));\n"
+  ],
+  [
+   "            const confirmHint = `Delete session? ${keyHint(\"tui.select.confirm\", \"confirm\")} · ${keyHint(\"tui.select.cancel\", \"cancel\")}`;\n",
+   "            const confirmHint = `删除会话？${keyHint(\"tui.select.confirm\", \"确认\")} · ${keyHint(\"tui.select.cancel\", \"取消\")}`;\n"
+  ],
+  [
+   "                    emptyMessage = `  No named sessions in current folder. Press ${toggleKey} to show all, or Tab to view all.`;\n",
+   "                    emptyMessage = `  当前文件夹中没有已命名的会话。按 ${toggleKey} 显示全部，或按 Tab 查看全部。`;\n"
+  ],
+  [
+   "            const hint1 = keyHint(\"tui.input.tab\", \"scope\") + sep + theme.fg(\"muted\", 're:<pattern> regex · \"phrase\" exact');\n",
+   "            const hint1 = keyHint(\"tui.input.tab\", \"范围\") + sep + theme.fg(\"muted\", 're:<模式> 正则 · \"短语\" 精确');\n"
+  ],
+  [
+   "            scopeText = `${theme.fg(\"muted\", \"○ Current Folder | \")}${theme.fg(\"accent\", `Loading ${progressText}`)}`;\n",
+   "            scopeText = `${theme.fg(\"muted\", \"○ 当前文件夹 | \")}${theme.fg(\"accent\", `加载中 ${progressText}`)}`;\n"
+  ],
+  [
+   "            this.header.setStatusMessage({ type: \"error\", message: `Failed to load sessions: ${message}` }, 4000);\n",
+   "            this.header.setStatusMessage({ type: \"error\", message: `加载会话失败：${message}` }, 4000);\n"
+  ],
+  [
+   "        const title = this.scope === \"current\" ? \"Resume Session (Current Folder)\" : \"Resume Session (All)\";\n",
+   "        const title = this.scope === \"current\" ? \"恢复会话（当前文件夹）\" : \"恢复会话（全部）\";\n"
+  ],
+  [
+   "                const msg = result.method === \"trash\" ? \"Session moved to trash\" : \"Session deleted\";\n",
+   "                const msg = result.method === \"trash\" ? \"会话已移入回收站\" : \"会话已删除\";\n"
+  ],
+  [
+   "            scopeText = `${theme.fg(\"accent\", \"◉ Current Folder\")}${theme.fg(\"muted\", \" | ○ All\")}`;\n",
+   "            scopeText = `${theme.fg(\"accent\", \"◉ 当前文件夹\")}${theme.fg(\"muted\", \" | ○ 全部\")}`;\n"
+  ],
+  [
+   "            scopeText = `${theme.fg(\"muted\", \"○ Current Folder | \")}${theme.fg(\"accent\", \"◉ All\")}`;\n",
+   "            scopeText = `${theme.fg(\"muted\", \"○ 当前文件夹 | \")}${theme.fg(\"accent\", \"◉ 全部\")}`;\n"
+  ],
+  [
+   "                    emptyMessage = `  No named sessions found. Press ${toggleKey} to show all.`;\n",
+   "                    emptyMessage = `  未找到已命名的会话。按 ${toggleKey} 显示全部。`;\n"
+  ],
+  [
+   "                emptyMessage = \"  No sessions in current folder. Press Tab to view all.\";\n",
+   "                emptyMessage = \"  当前文件夹中没有会话。按 Tab 查看全部。\";\n"
+  ],
+  [
+   "                hint2Parts.push(keyHint(\"app.session.rename\", \"rename\"));\n",
+   "                hint2Parts.push(keyHint(\"app.session.rename\", \"重命名\"));\n"
+  ],
+  [
+   "            this.onError?.(\"Cannot delete the currently active session\");\n",
+   "            this.onError?.(\"无法删除当前活动会话\");\n"
+  ],
+  [
+   "        panel.addChild(new Text(theme.bold(\"Rename Session\"), 1, 0));\n",
+   "        panel.addChild(new Text(theme.bold(\"重命名会话\"), 1, 0));\n"
+  ],
+  [
+   "            const pathState = this.showPath ? \"(on)\" : \"(off)\";\n",
+   "            const pathState = this.showPath ? \"(开)\" : \"(关)\";\n"
+  ],
+  [
+   "                emptyMessage = \"  No sessions found\";\n",
+   "                emptyMessage = \"  未找到会话\";\n"
+  ]
+ ],
+ "modes\\interactive\\components\\settings-selector.js": [
+  [
+   "    off: \"No reasoning\",\n    minimal: \"Very brief reasoning (~1k tokens)\",\n    low: \"Light reasoning (~2k tokens)\",\n    medium: \"Moderate reasoning (~8k tokens)\",\n    high: \"Deep reasoning (~16k tokens)\",\n    xhigh: \"Extra-high reasoning (~32k tokens)\",\n    max: \"Maximum reasoning\",\n",
+   "    off: \"不进行推理\",\n    minimal: \"极简推理（约 1k tokens）\",\n    low: \"轻度推理（约 2k tokens）\",\n    medium: \"中等推理（约 8k tokens）\",\n    high: \"深度推理（约 16k tokens）\",\n    xhigh: \"超高推理（约 32k tokens）\",\n    max: \"最大推理\",\n"
+  ],
+  [
+   "    off: \"不进行推理\",\n    minimal: \"极简推理（约 1k tokens）\",\n    low: \"轻度推理（约 2k tokens）\",\n    medium: \"中等推理（约 8k tokens）\",\n    high: \"深度推理（约 16k tokens）\",\n    xhigh: \"超高推理（约 32k tokens）\",\n    max: \"最大推理\",\n",
+   "    off: \"不进行推理\",\n    minimal: \"极简推理（约 1k 词元）\",\n    low: \"轻度推理（约 2k 词元）\",\n    medium: \"中等推理（约 8k 词元）\",\n    high: \"深度推理（约 16k 词元）\",\n    xhigh: \"超高推理（约 32k 词元）\",\n    max: \"最大推理\",\n"
+  ],
+  [
+   "        content.addChild(new Text(theme.fg(\"muted\", \"Choose themes for terminal light and dark appearance.\"), 0, 0));\n        content.addChild(new Text(theme.fg(\"muted\", \"Light/dark detection requires terminal support.\"), 0, 0));\n",
+   "        content.addChild(new Text(theme.fg(\"muted\", \"分别为终端浅色/深色外观选择主题。\"), 0, 0));\n        content.addChild(new Text(theme.fg(\"muted\", \"浅色/深色检测需要终端支持。\"), 0, 0));\n"
+  ],
+  [
+   "                label: \"Change mode\",\n                description: \"Switch to one theme for light and dark\",\n                currentValue: \"switch to single theme\",\n                values: [\"switch to single theme\"],\n",
+   "                label: \"切换模式\",\n                description: \"切换为浅色/深色共用同一主题\",\n                currentValue: \"切换为单一主题\",\n                values: [\"切换为单一主题\"],\n"
+  ],
+  [
+   "                label: \"Follow-up mode\",\n                description: `${followUpKey} queues follow-up messages until agent stops. 'one-at-a-time': deliver one, wait for response. 'all': deliver all at once.`,\n",
+   "                label: \"后续消息模式\",\n                description: `${followUpKey} 会在代理停止前排队后续消息。one-at-a-time：一次一条并等待响应；all：一次性全部投递。`,\n"
+  ],
+  [
+   "                label: \"HTTP idle timeout\",\n                description: \"Maximum idle gap while waiting for HTTP headers or body chunks. Disable for local models that pause longer than five minutes.\",\n",
+   "                label: \"HTTP 空闲超时\",\n                description: \"等待 HTTP 响应头/正文块时允许的最长空闲时间。本地模型暂停超过五分钟时可关闭。\",\n"
+  ],
+  [
+   "                label: \"Steering mode\",\n                description: \"Enter while streaming queues steering messages. 'one-at-a-time': deliver one, wait for response. 'all': deliver all at once.\",\n",
+   "                label: \"引导消息模式\",\n                description: \"流式输出时按 Enter 会排队引导消息。one-at-a-time：一次一条并等待响应；all：一次性全部投递。\",\n"
+  ],
+  [
+   "        const menu = new SelectSubmenu(\"Theme\", \"Select a theme, or choose Automatic to follow terminal appearance.\", singleModeThemeItems(this.availableThemes), this.singleTheme, (value) => {\n",
+   "        const menu = new SelectSubmenu(\"主题\", \"选择主题，或选择“自动”跟随终端外观。\", singleModeThemeItems(this.availableThemes), this.singleTheme, (value) => {\n"
+  ],
+  [
+   "                submenu: (currentValue, done) => new SelectSubmenu(\"Thinking Level\", \"Select reasoning depth for thinking-capable models\", config.availableThinkingLevels.map((level) => ({\n",
+   "                submenu: (currentValue, done) => new SelectSubmenu(\"思考级别\", \"为支持思考的模型选择推理深度\", config.availableThinkingLevels.map((level) => ({\n"
+  ],
+  [
+   "                submenu: (currentValue, done) => this.createThemeSelect(\"Light Theme\", \"Select the theme to use for light terminal appearance\", currentValue, done, (value) => {\n",
+   "                submenu: (currentValue, done) => this.createThemeSelect(\"浅色主题\", \"选择浅色终端外观使用的主题\", currentValue, done, (value) => {\n"
+  ],
+  [
+   "                label: \"Apply\",\n                description: \"Save and go back\",\n                currentValue: \"save and go back\",\n                values: [\"save and go back\"],\n",
+   "                label: \"应用\",\n                description: \"保存并返回\",\n                currentValue: \"保存并返回\",\n                values: [\"保存并返回\"],\n"
+  ],
+  [
+   "                submenu: (currentValue, done) => this.createThemeSelect(\"Dark Theme\", \"Select the theme to use for dark terminal appearance\", currentValue, done, (value) => {\n",
+   "                submenu: (currentValue, done) => this.createThemeSelect(\"深色主题\", \"选择深色终端外观使用的主题\", currentValue, done, (value) => {\n"
+  ],
+  [
+   "                label: \"Default project trust\",\n                description: \"Fallback behavior when no extension or saved trust decision decides project trust\",\n",
+   "                label: \"默认项目信任\",\n                description: \"没有扩展或已保存信任决策时的默认行为\",\n"
+  ],
+  [
+   "                label: \"Install telemetry\",\n                description: \"Send an anonymous version/update ping after changelog-detected updates\",\n",
+   "                label: \"安装遥测\",\n                description: \"检测到更新后发送匿名版本/更新统计\",\n"
+  ],
+  [
+   "                label: \"Anthropic extra usage\",\n                description: \"Warn when Anthropic subscription auth may use paid extra usage\",\n",
+   "                label: \"Anthropic 额外用量\",\n                description: \"当 Anthropic 订阅认证可能产生额外付费用量时警告\",\n"
+  ],
+  [
+   "            label: \"Show hardware cursor\",\n            description: \"Show the terminal cursor while still positioning it for IME support\",\n",
+   "            label: \"显示硬件光标\",\n            description: \"显示终端光标，并继续定位以支持输入法\",\n"
+  ],
+  [
+   "                label: \"Cache miss notices\",\n                description: \"Show transcript notices for significant prompt-cache misses\",\n",
+   "                label: \"缓存未命中提示\",\n                description: \"出现明显的提示缓存未命中时在记录中显示提示\",\n"
+  ],
+  [
+   "            label: \"Auto-resize images\",\n            description: \"Resize large images to 2000x2000 max for better model compatibility\",\n",
+   "            label: \"自动缩放图片\",\n            description: \"将大图缩放到最大 2000x2000 以提升模型兼容性\",\n"
+  ],
+  [
+   "            label: \"Output padding\",\n            description: \"Horizontal padding for user messages, assistant messages, and thinking\",\n",
+   "            label: \"输出内边距\",\n            description: \"用户消息、助手消息和思考内容的水平内边距\",\n"
+  ],
+  [
+   "                label: \"Transport\",\n                description: \"Preferred transport for providers that support multiple transports\",\n",
+   "                label: \"传输方式\",\n                description: \"在支持多种传输方式的提供商中优先使用的方式\",\n"
+  ],
+  [
+   "                label: \"Double-escape action\",\n                description: \"Action when pressing Escape twice with empty editor\",\n",
+   "                label: \"双击 Esc 行为\",\n                description: \"编辑器为空时连续按两次 Esc 的行为\",\n"
+  ],
+  [
+   "                label: \"Light theme\",\n                description: \"Theme to use in automatic mode when the terminal is light\",\n",
+   "                label: \"浅色主题\",\n                description: \"自动模式下终端为浅色时使用的主题\",\n"
+  ],
+  [
+   "                label: \"Dark theme\",\n                description: \"Theme to use in automatic mode when the terminal is dark\",\n",
+   "                label: \"深色主题\",\n                description: \"自动模式下终端为深色时使用的主题\",\n"
+  ],
+  [
+   "            label: \"Terminal progress\",\n            description: \"Show OSC 9;4 progress indicators in the terminal tab bar\",\n",
+   "            label: \"终端进度\",\n            description: \"在终端标签栏显示 OSC 9;4 进度指示\",\n"
+  ],
+  [
+   "                label: \"Auto-compact\",\n                description: \"Automatically compact context when it gets too large\",\n",
+   "                label: \"自动压缩\",\n                description: \"上下文过大时自动压缩\",\n"
+  ],
+  [
+   "            label: \"Clear on shrink\",\n            description: \"Clear empty rows when content shrinks (may cause flicker)\",\n",
+   "            label: \"收缩时清理\",\n            description: \"内容变少时清理空行（可能闪烁）\",\n"
+  ],
+  [
+   "            label: \"Autocomplete max items\",\n            description: \"Max visible items in autocomplete dropdown (3-20)\",\n",
+   "            label: \"自动补全最大项数\",\n            description: \"自动补全下拉列表最多显示项数（3-20）\",\n"
+  ],
+  [
+   "            label: \"Automatic\",\n            description: \"Use separate themes for light and dark terminal appearance\",\n",
+   "            label: \"自动\",\n            description: \"根据终端浅色/深色外观使用不同主题\",\n"
+  ],
+  [
+   "                label: \"Thinking level\",\n                description: \"Reasoning depth for thinking-capable models\",\n",
+   "                label: \"思考级别\",\n                description: \"支持思考的模型的推理深度\",\n"
+  ],
+  [
+   "                label: \"Image width\",\n                description: \"Preferred inline image width in terminal cells\",\n",
+   "                label: \"图片宽度\",\n                description: \"内联图片在终端单元格中的首选宽度\",\n"
+  ],
+  [
+   "                label: \"Hide thinking\",\n                description: \"Hide thinking blocks in assistant responses\",\n",
+   "                label: \"隐藏思考过程\",\n                description: \"隐藏助手回复中的思考块\",\n"
+  ],
+  [
+   "                label: \"Collapse changelog\",\n                description: \"Show condensed changelog after updates\",\n",
+   "                label: \"折叠更新日志\",\n                description: \"更新后显示精简版更新日志\",\n"
+  ],
+  [
+   "            label: \"Block images\",\n            description: \"Prevent images from being sent to LLM providers\",\n",
+   "            label: \"屏蔽图片\",\n            description: \"禁止将图片发送给大模型提供商\",\n"
+  ],
+  [
+   "                label: \"Tree filter mode\",\n                description: \"Default filter when opening /tree\",\n",
+   "                label: \"会话树过滤模式\",\n                description: \"打开 /tree 时的默认过滤模式\",\n"
+  ],
+  [
+   "                label: \"Quiet startup\",\n                description: \"Disable verbose printing at startup\",\n",
+   "                label: \"静默启动\",\n                description: \"启动时不输出详细信息\",\n"
+  ],
+  [
+   "            label: \"Editor padding\",\n            description: \"Horizontal padding for input editor (0-3)\",\n",
+   "            label: \"编辑器内边距\",\n            description: \"输入编辑器的水平内边距（0-3）\",\n"
+  ],
+  [
+   "                label: \"Warnings\",\n                description: \"Enable or disable individual warnings\",\n",
+   "                label: \"警告\",\n                description: \"启用或禁用各项警告\",\n"
+  ],
+  [
+   "            label: \"Skill commands\",\n            description: \"Register skills as /skill:name commands\",\n",
+   "            label: \"技能命令\",\n            description: \"将技能注册为 /skill:name 命令\",\n"
+  ],
+  [
+   "                label: \"Show images\",\n                description: \"Render images inline in terminal\",\n",
+   "                label: \"显示图片\",\n                description: \"在终端中内联显示图片\",\n"
+  ],
+  [
+   "        this.addChild(new Text(theme.fg(\"dim\", \"  Enter to select · Esc to go back\"), 0, 0));\n",
+   "        this.addChild(new Text(theme.fg(\"dim\", \"  Enter 选择 · Esc 返回\"), 0, 0));\n"
+  ],
+  [
+   "                label: \"Theme\",\n                description: \"Color theme for the interface\",\n",
+   "                label: \"主题\",\n                description: \"界面颜色主题\",\n"
+  ],
+  [
+   "        content.addChild(new Text(theme.bold(theme.fg(\"accent\", \"Automatic Theme\")), 0, 0));\n",
+   "        content.addChild(new Text(theme.bold(theme.fg(\"accent\", \"自动主题\")), 0, 0));\n"
+  ],
+  [
+   "    ask: \"Ask\",\n    always: \"Always trust\",\n    never: \"Never trust\",\n",
+   "    ask: \"询问\",\n    always: \"始终信任\",\n    never: \"永不信任\",\n"
+  ]
+ ],
+ "modes\\interactive\\components\\show-images-selector.js": [
+  [
+   "            { value: \"yes\", label: \"Yes\", description: \"Show images inline in terminal\" },\n            { value: \"no\", label: \"No\", description: \"Show text placeholder instead\" },\n",
+   "            { value: \"yes\", label: \"是\", description: \"在终端中内联显示图片\" },\n            { value: \"no\", label: \"否\", description: \"改为显示文本占位符\" },\n"
+  ]
+ ],
+ "modes\\interactive\\components\\status-indicator.js": [
+  [
+   "        super(\"branchSummary\", ui, (spinner) => theme.fg(\"accent\", spinner), (text) => theme.fg(\"muted\", text), `Summarizing branch... (${keyText(\"app.interrupt\")} to cancel)`);\n",
+   "        super(\"branchSummary\", ui, (spinner) => theme.fg(\"accent\", spinner), (text) => theme.fg(\"muted\", text), `Summarizing branch... (${keyText(\"app.interrupt\")} 取消)`);\n"
+  ],
+  [
+   "            ? `Compacting context... ${cancelHint}`\n            : `${reason === \"overflow\" ? \"Context overflow detected, \" : \"\"}Auto-compacting... ${cancelHint}`;\n",
+   "            ? `正在压缩上下文... ${cancelHint}`\n            : `${reason === \"overflow\" ? \"检测到上下文溢出，\" : \"\"}正在自动压缩... ${cancelHint}`;\n"
+  ],
+  [
+   "        const retryMessage = (seconds) => `Retrying (${attempt}/${maxAttempts}) in ${seconds}s... (${keyText(\"app.interrupt\")} to cancel)`;\n",
+   "        const retryMessage = (seconds) => `重试中 (${attempt}/${maxAttempts})，${seconds}s 后重试... (${keyText(\"app.interrupt\")} 取消)`;\n"
+  ],
+  [
+   "        const cancelHint = `(${keyText(\"app.interrupt\")} to cancel)`;\n",
+   "        const cancelHint = `(${keyText(\"app.interrupt\")} 取消)`;\n"
+  ]
+ ],
+ "modes\\interactive\\components\\theme-selector.js": [
+  [
+   "            description: name === currentTheme ? \"(current)\" : undefined,\n",
+   "            description: name === currentTheme ? \"（当前）\" : undefined,\n"
+  ]
+ ],
+ "modes\\interactive\\components\\thinking-selector.js": [
+  [
+   "    off: \"No reasoning\",\n    minimal: \"Very brief reasoning (~1k tokens)\",\n    low: \"Light reasoning (~2k tokens)\",\n    medium: \"Moderate reasoning (~8k tokens)\",\n    high: \"Deep reasoning (~16k tokens)\",\n    xhigh: \"Extra-high reasoning (~32k tokens)\",\n    max: \"Maximum reasoning\",\n",
+   "    off: \"不进行推理\",\n    minimal: \"极简推理（约 1k 词元）\",\n    low: \"轻度推理（约 2k 词元）\",\n    medium: \"中等推理（约 8k 词元）\",\n    high: \"深度推理（约 16k 词元）\",\n    xhigh: \"超高推理（约 32k 词元）\",\n    max: \"最大推理\",\n"
+  ]
+ ],
+ "modes\\interactive\\components\\tree-selector.js": [
+  [
+   "    { keys: [\"tui.select.up\", \"tui.select.down\"], label: \"move\" },\n    { keys: [\"tui.editor.cursorLeft\", \"tui.editor.cursorRight\"], label: \"page\" },\n    { keys: [\"app.tree.foldOrUp\", \"app.tree.unfoldOrDown\"], label: \"branch\" },\n    { keys: [\"app.message.copy\"], label: \"copy\" },\n    { keys: [\"app.tree.editLabel\"], label: \"label\" },\n    { keys: [\"app.tree.toggleLabelTimestamp\"], label: \"label time\" },\n",
+   "    { keys: [\"tui.select.up\", \"tui.select.down\"], label: \"移动\" },\n    { keys: [\"tui.editor.cursorLeft\", \"tui.editor.cursorRight\"], label: \"翻页\" },\n    { keys: [\"app.tree.foldOrUp\", \"app.tree.unfoldOrDown\"], label: \"分支\" },\n    { keys: [\"app.message.copy\"], label: \"复制\" },\n    { keys: [\"app.tree.editLabel\"], label: \"标签\" },\n    { keys: [\"app.tree.toggleLabelTimestamp\"], label: \"标签时间\" },\n"
+  ],
+  [
+   "                    : [theme.fg(\"dim\", \"[title: \"), theme.italic(theme.fg(\"dim\", \"empty\")), theme.fg(\"dim\", \"]\")].join(\"\");\n",
+   "                    : [theme.fg(\"dim\", \"[title: \"), theme.italic(theme.fg(\"dim\", \"空\")), theme.fg(\"dim\", \"]\")].join(\"\");\n"
+  ],
+  [
+   "            return [truncateToWidth(`  ${theme.fg(\"muted\", \"Type to search:\")} ${theme.fg(\"accent\", query)}`, width)];\n",
+   "            return [truncateToWidth(`  ${theme.fg(\"muted\", \"输入以搜索:\")} ${theme.fg(\"accent\", query)}`, width)];\n"
+  ],
+  [
+   "    { keys: [\"app.tree.filter.cycleForward\", \"app.tree.filter.cycleBackward\"], label: \"cycle\", labelFirst: true },\n",
+   "    { keys: [\"app.tree.filter.cycleForward\", \"app.tree.filter.cycleBackward\"], label: \"循环\", labelFirst: true },\n"
+  ],
+  [
+   "                        result = theme.fg(\"success\", \"assistant: \") + theme.fg(\"muted\", \"(no content)\");\n",
+   "                        result = theme.fg(\"success\", \"assistant: \") + theme.fg(\"muted\", \"（无内容）\");\n"
+  ],
+  [
+   "        lines.push(truncateToWidth(`${indent}${theme.fg(\"muted\", \"Label (empty to remove):\")}`, width));\n",
+   "        lines.push(truncateToWidth(`${indent}${theme.fg(\"muted\", \"标签（留空移除）:\")}`, width));\n"
+  ],
+  [
+   "                        result = theme.fg(\"success\", \"assistant: \") + theme.fg(\"muted\", \"(aborted)\");\n",
+   "                        result = theme.fg(\"success\", \"assistant: \") + theme.fg(\"muted\", \"（已中止）\");\n"
+  ],
+  [
+   "            lines.push(truncateToWidth(theme.fg(\"muted\", \"  No entries found\"), width));\n",
+   "            lines.push(truncateToWidth(theme.fg(\"muted\", \"  未找到条目\"), width));\n"
+  ],
+  [
+   "        return [truncateToWidth(`  ${theme.fg(\"muted\", \"Type to search:\")}`, width)];\n",
+   "        return [truncateToWidth(`  ${theme.fg(\"muted\", \"输入以搜索:\")}`, width)];\n"
+  ],
+  [
+   "                result = theme.fg(\"dim\", `[label: ${entry.label ?? \"(cleared)\"}]`);\n",
+   "                result = theme.fg(\"dim\", `[标签: ${entry.label ?? \"（已清除）\"}]`);\n"
+  ],
+  [
+   "                labels += \" [no-tools]\";\n",
+   "                labels += \" [无工具]\";\n"
+  ],
+  [
+   "                labels += \" [labeled]\";\n",
+   "                labels += \" [已标记]\";\n"
+  ],
+  [
+   "                labels += \" [user]\";\n",
+   "                labels += \" [用户]\";\n"
+  ],
+  [
+   "        label: \"filters\",\n",
+   "        label: \"过滤\",\n"
+  ]
+ ],
+ "modes\\interactive\\components\\trust-selector.js": [
+  [
+   "        this.addChild(new Text(theme.fg(\"muted\", `Saved decision: ${formatDecision(this.trustOptions[0]?.savedPath, options.savedDecision)}`), 1, 0));\n        this.addChild(new Text(theme.fg(\"muted\", `Current session: ${options.projectTrusted ? \"trusted\" : \"untrusted\"}`), 1, 0));\n",
+   "        this.addChild(new Text(theme.fg(\"muted\", `已保存的决策：${formatDecision(this.trustOptions[0]?.savedPath, options.savedDecision)}`), 1, 0));\n        this.addChild(new Text(theme.fg(\"muted\", `当前会话：${options.projectTrusted ? \"已信任\" : \"未信任\"}`), 1, 0));\n"
+  ],
+  [
+   "        this.addChild(new Text(theme.fg(\"accent\", theme.bold(\"Project trust\")), 1, 0));\n",
+   "        this.addChild(new Text(theme.fg(\"accent\", theme.bold(\"项目信任\")), 1, 0));\n"
+  ],
+  [
+   "    const label = decision.decision ? \"trusted\" : \"untrusted\";\n",
+   "    const label = decision.decision ? \"已信任\" : \"未信任\";\n"
+  ],
+  [
+   "        this.addChild(new Text(rawKeyHint(\"↑↓\", \"navigate\") +\n",
+   "        this.addChild(new Text(rawKeyHint(\"↑↓\", \"导航\") +\n"
+  ],
+  [
+   "        return `${label} (inherited from ${decision.path})`;\n",
+   "        return `${label}（继承自 ${decision.path}）`;\n"
+  ],
+  [
+   "            keyHint(\"tui.select.cancel\", \"cancel\"), 1, 0));\n",
+   "            keyHint(\"tui.select.cancel\", \"取消\"), 1, 0));\n"
+  ],
+  [
+   "            keyHint(\"tui.select.confirm\", \"save\") +\n",
+   "            keyHint(\"tui.select.confirm\", \"保存\") +\n"
+  ],
+  [
+   "        return \"none\";\n",
+   "        return \"无\";\n"
+  ]
+ ],
+ "modes\\interactive\\components\\user-message-selector.js": [
+  [
+   "        this.addChild(new Text(theme.bold(\"Fork from Message\"), 1, 0));\n        this.addChild(new Text(theme.fg(\"muted\", \"Select a user message to copy the active path up to that point into a new session\"), 1, 0));\n",
+   "        this.addChild(new Text(theme.bold(\"从消息创建分叉\"), 1, 0));\n        this.addChild(new Text(theme.fg(\"muted\", \"选择一条用户消息，将到该点为止的活动路径复制到新会话中\"), 1, 0));\n"
+  ],
+  [
+   "            lines.push(theme.fg(\"muted\", \"  No user messages found\"));\n",
+   "            lines.push(theme.fg(\"muted\", \"  未找到用户消息\"));\n"
+  ]
+ ],
+ "modes\\interactive\\interactive-mode.js": [
+  [
+   "                hint(\"app.interrupt\", \"to interrupt\"),\n                hint(\"app.clear\", \"to clear\"),\n                rawKeyHint(`${keyText(\"app.clear\")} twice`, \"to exit\"),\n                hint(\"app.exit\", \"to exit (empty)\"),\n                hint(\"app.suspend\", \"to suspend\"),\n                keyHint(\"tui.editor.deleteToLineEnd\", \"to delete to end\"),\n                hint(\"app.thinking.cycle\", \"to cycle thinking level\"),\n                rawKeyHint(`${keyText(\"app.model.cycleForward\")}/${keyText(\"app.model.cycleBackward\")}`, \"to cycle models\"),\n                hint(\"app.model.select\", \"to select model\"),\n                hint(\"app.tools.expand\", \"to expand tools\"),\n                hint(\"app.thinking.toggle\", \"to expand thinking\"),\n                hint(\"app.editor.external\", \"for external editor\"),\n                rawKeyHint(\"/\", \"for commands\"),\n                rawKeyHint(\"!\", \"to run bash\"),\n                rawKeyHint(\"!!\", \"to run bash (no context)\"),\n                hint(\"app.message.followUp\", \"to queue follow-up\"),\n                hint(\"app.message.dequeue\", \"to edit all queued messages\"),\n                hint(\"app.clipboard.pasteImage\", \"to paste image (with text fallback)\"),\n                rawKeyHint(\"drop files\", \"to attach\"),\n",
+   "                hint(\"app.interrupt\", \"中断\"),\n                hint(\"app.clear\", \"清空\"),\n                rawKeyHint(`${keyText(\"app.clear\")} 两次`, \"退出\"),\n                hint(\"app.exit\", \"退出（空输入）\"),\n                hint(\"app.suspend\", \"挂起\"),\n                keyHint(\"tui.editor.deleteToLineEnd\", \"删除到行尾\"),\n                hint(\"app.thinking.cycle\", \"切换思考级别\"),\n                rawKeyHint(`${keyText(\"app.model.cycleForward\")}/${keyText(\"app.model.cycleBackward\")}`, \"切换模型\"),\n                hint(\"app.model.select\", \"选择模型\"),\n                hint(\"app.tools.expand\", \"展开工具\"),\n                hint(\"app.thinking.toggle\", \"展开思考\"),\n                hint(\"app.editor.external\", \"打开外部编辑器\"),\n                rawKeyHint(\"/\", \"命令\"),\n                rawKeyHint(\"!\", \"运行 bash\"),\n                rawKeyHint(\"!!\", \"运行 bash（不含上下文）\"),\n                hint(\"app.message.followUp\", \"排队后续消息\"),\n                hint(\"app.message.dequeue\", \"编辑所有排队消息\"),\n                hint(\"app.clipboard.pasteImage\", \"粘贴图片（文本兜底）\"),\n                rawKeyHint(\"拖入文件\", \"附加\"),\n"
+  ],
+  [
+   "| \\`${tab}\\` | Path completion / accept autocomplete |\n| \\`${interrupt}\\` | Cancel autocomplete / abort streaming |\n| \\`${clear}\\` | Clear editor (first) / exit (second) |\n| \\`${exit}\\` | Exit (when editor is empty) |\n| \\`${suspend}\\` | Suspend to background |\n| \\`${cycleThinkingLevel}\\` | Cycle thinking level |\n| \\`${cycleModelForward}\\` / \\`${cycleModelBackward}\\` | Cycle models |\n| \\`${selectModel}\\` | Open model selector |\n| \\`${expandTools}\\` | Toggle tool output expansion |\n| \\`${toggleThinking}\\` | Toggle thinking block visibility |\n| \\`${externalEditor}\\` | Edit message in external editor |\n| \\`${copyMessage}\\` | Copy last assistant message |\n| \\`${followUp}\\` | Queue follow-up message |\n| \\`${dequeue}\\` | Restore queued messages |\n| \\`${pasteImage}\\` | Paste image or text from clipboard |\n| \\`/\\` | Slash commands |\n| \\`!\\` | Run bash command |\n| \\`!!\\` | Run bash command (excluded from context) |\n",
+   "| \\`${tab}\\` | 路径补全 / 接受自动补全 |\n| \\`${interrupt}\\` | 取消自动补全 / 中止流式输出 |\n| \\`${clear}\\` | 清空编辑器（第一次）/ 退出（第二次） |\n| \\`${exit}\\` | 退出（编辑器为空时） |\n| \\`${suspend}\\` | 挂起到后台 |\n| \\`${cycleThinkingLevel}\\` | 切换思考级别 |\n| \\`${cycleModelForward}\\` / \\`${cycleModelBackward}\\` | 切换模型 |\n| \\`${selectModel}\\` | 打开模型选择器 |\n| \\`${expandTools}\\` | 展开/收起工具输出 |\n| \\`${toggleThinking}\\` | 显示/隐藏思考块 |\n| \\`${externalEditor}\\` | 在外部编辑器中编辑消息 |\n| \\`${copyMessage}\\` | 复制最后一条助手消息 |\n| \\`${followUp}\\` | 排队后续消息 |\n| \\`${dequeue}\\` | 恢复排队消息 |\n| \\`${pasteImage}\\` | 从剪贴板粘贴图片或文本 |\n| \\`/\\` | 斜杠命令 |\n| \\`!\\` | 运行 bash 命令 |\n| \\`!!\\` | 运行 bash 命令（不含上下文） |\n"
+  ],
+  [
+   "        info += `${theme.fg(\"dim\", \"File:\")} ${stats.sessionFile ?? \"In-memory\"}\\n`;\n        info += `${theme.fg(\"dim\", \"ID:\")} ${stats.sessionId}\\n\\n`;\n        info += `${theme.bold(\"Messages\")}\\n`;\n        info += `${theme.fg(\"dim\", \"Total:\")} ${stats.totalMessages}\\n`;\n        info += `${theme.fg(\"dim\", \"User:\")} ${stats.userMessages}\\n`;\n        info += `${theme.fg(\"dim\", \"Assistant:\")} ${stats.assistantMessages}\\n`;\n        info += `${theme.fg(\"dim\", \"Tools:\")} ${stats.toolCalls} calls, ${stats.toolResults} results\\n\\n`;\n        info += `${theme.bold(\"Tokens\")}\\n`;\n",
+   "        info += `${theme.fg(\"dim\", \"文件：\")} ${stats.sessionFile ?? \"内存中\"}\\n`;\n        info += `${theme.fg(\"dim\", \"ID：\")} ${stats.sessionId}\\n\\n`;\n        info += `${theme.bold(\"消息\")}\\n`;\n        info += `${theme.fg(\"dim\", \"总计：\")} ${stats.totalMessages}\\n`;\n        info += `${theme.fg(\"dim\", \"用户：\")} ${stats.userMessages}\\n`;\n        info += `${theme.fg(\"dim\", \"助手：\")} ${stats.assistantMessages}\\n`;\n        info += `${theme.fg(\"dim\", \"工具：\")} ${stats.toolCalls} 次调用，${stats.toolResults} 个结果\\n\\n`;\n        info += `${theme.bold(\"令牌\")}\\n`;\n"
+  ],
+  [
+   "        info += `${theme.fg(\"dim\", \"令牌\")}\\n`;\n",
+   "        info += `${theme.fg(\"dim\", \"词元\")}\\n`;\n"
+  ],
+  [
+   "| \\`${submit}\\` | Send message |\n| \\`${newLine}\\` | New line${process.platform === \"win32\" ? \" (Ctrl+Enter on Windows Terminal)\" : \"\"} |\n| \\`${deleteWordBackward}\\` | Delete word backwards |\n| \\`${deleteWordForward}\\` | Delete word forwards |\n| \\`${deleteToLineStart}\\` | Delete to start of line |\n| \\`${deleteToLineEnd}\\` | Delete to end of line |\n| \\`${yank}\\` | Paste the most-recently-deleted text |\n| \\`${yankPop}\\` | Cycle through the deleted text after pasting |\n| \\`${undo}\\` | Undo |\n",
+   "| \\`${submit}\\` | 发送消息 |\n| \\`${newLine}\\` | 换行${process.platform === \"win32\" ? \"（Windows 终端为 Ctrl+Enter）\" : \"\"} |\n| \\`${deleteWordBackward}\\` | 向后删除单词 |\n| \\`${deleteWordForward}\\` | 向前删除单词 |\n| \\`${deleteToLineStart}\\` | 删除到行首 |\n| \\`${deleteToLineEnd}\\` | 删除到行尾 |\n| \\`${yank}\\` | 粘贴最近删除的文本 |\n| \\`${yankPop}\\` | 粘贴后循环切换已删除文本 |\n| \\`${undo}\\` | 撤销 |\n"
+  ],
+  [
+   "| \\`${cursorUp}\\` / \\`${cursorDown}\\` / \\`${cursorLeft}\\` / \\`${cursorRight}\\` | Move cursor / browse history |\n| \\`${cursorWordLeft}\\` / \\`${cursorWordRight}\\` | Move by word |\n| \\`${cursorLineStart}\\` | Start of line |\n| \\`${cursorLineEnd}\\` | End of line |\n| \\`${jumpForward}\\` | Jump forward to character |\n| \\`${jumpBackward}\\` | Jump backward to character |\n| \\`${pageUp}\\` / \\`${pageDown}\\` | Scroll by page |\n",
+   "| \\`${cursorUp}\\` / \\`${cursorDown}\\` / \\`${cursorLeft}\\` / \\`${cursorRight}\\` | 移动光标 / 浏览历史 |\n| \\`${cursorWordLeft}\\` / \\`${cursorWordRight}\\` | 按单词移动 |\n| \\`${cursorLineStart}\\` | 行首 |\n| \\`${cursorLineEnd}\\` | 行尾 |\n| \\`${jumpForward}\\` | 向前跳到字符 |\n| \\`${jumpBackward}\\` | 向后跳到字符 |\n| \\`${pageUp}\\` / \\`${pageDown}\\` | 按页滚动 |\n"
+  ],
+  [
+   "            info += `  ${theme.fg(\"dim\", \"Cached:\")} ${cacheRead.toLocaleString()} ${hitRate}\\n`;\n            const written = cacheWrite > 0 ? ` ${theme.fg(\"dim\", `(${cacheWrite.toLocaleString()} written to cache)`)}` : \"\";\n            info += `  ${theme.fg(\"dim\", \"Uncached:\")} ${(input + cacheWrite).toLocaleString()}${written}\\n`;\n",
+   "            info += `  ${theme.fg(\"dim\", \"缓存：\")} ${cacheRead.toLocaleString()} ${hitRate}\\n`;\n            const written = cacheWrite > 0 ? ` ${theme.fg(\"dim\", `(${cacheWrite.toLocaleString()} 已写入缓存)`)}` : \"\";\n            info += `  ${theme.fg(\"dim\", \"未缓存：\")} ${(input + cacheWrite).toLocaleString()}${written}\\n`;\n"
+  ],
+  [
+   "            const compactOnboarding = theme.fg(\"dim\", `Press ${keyText(\"app.tools.expand\")} to show full startup help and loaded resources.`);\n            const onboarding = theme.fg(\"dim\", `Pi can explain its own features and look up its docs. Ask it how to use or extend Pi.`);\n",
+   "            const compactOnboarding = theme.fg(\"dim\", `按 ${keyText(\"app.tools.expand\")} 显示完整启动帮助和已加载资源。`);\n            const onboarding = theme.fg(\"dim\", `Pi 可以解释自身功能并查阅文档。向它提问如何使用或扩展 Pi 即可。`);\n"
+  ],
+  [
+   "                        ? `\\n${theme.fg(\"dim\", \"Cache Re-billed:\")} $${cacheWaste.missedCost.toFixed(3)} ${theme.fg(\"dim\", `(${detail})`)}`\n                        : `\\n${theme.fg(\"dim\", \"Cache Re-billed:\")} ${detail}`;\n",
+   "                        ? `\\n${theme.fg(\"dim\", \"缓存重复计费：\")} $${cacheWaste.missedCost.toFixed(3)} ${theme.fg(\"dim\", `(${detail})`)}`\n                        : `\\n${theme.fg(\"dim\", \"缓存重复计费：\")} ${detail}`;\n"
+  ],
+  [
+   "        this.chatContainer.addChild(new Text(`${theme.bold(theme.fg(\"warning\", \"Package Updates Available\"))}\\n${updateInstruction}\\n${theme.fg(\"muted\", \"Packages:\")}\\n${packageLines}`, 1, 0));\n",
+   "        this.chatContainer.addChild(new Text(`${theme.bold(theme.fg(\"warning\", \"有可用的包更新\"))}\\n${updateInstruction}\\n${theme.fg(\"muted\", \"包：\")}\\n${packageLines}`, 1, 0));\n"
+  ],
+  [
+   "                hint(\"app.interrupt\", \"interrupt\"),\n                rawKeyHint(`${keyText(\"app.clear\")}/${keyText(\"app.exit\")}`, \"clear/exit\"),\n                rawKeyHint(\"/\", \"commands\"),\n",
+   "                hint(\"app.interrupt\", \"中断\"),\n                rawKeyHint(`${keyText(\"app.clear\")}/${keyText(\"app.exit\")}`, \"清空/退出\"),\n                rawKeyHint(\"/\", \"命令\"),\n"
+  ],
+  [
+   "        info += `${theme.fg(\"dim\", \"Output:\")} ${stats.tokens.output.toLocaleString()}\\n`;\n        info += `${theme.fg(\"dim\", \"Total:\")} ${stats.tokens.total.toLocaleString()}\\n`;\n",
+   "        info += `${theme.fg(\"dim\", \"输出：\")} ${stats.tokens.output.toLocaleString()}\\n`;\n        info += `${theme.fg(\"dim\", \"总计：\")} ${stats.tokens.total.toLocaleString()}\\n`;\n"
+  ],
+  [
+   "        reloadBox.addChild(new Text(theme.fg(\"muted\", \"Reloading keybindings, extensions, skills, prompts, themes, and context files...\"), 1, 0));\n",
+   "        reloadBox.addChild(new Text(theme.fg(\"muted\", \"正在重新加载按键绑定、扩展、技能、提示模板、主题和上下文文件...\"), 1, 0));\n"
+  ],
+  [
+   "        this.chatContainer.addChild(new Text(`${theme.fg(\"accent\", \"✓ Debug log written\")}\\n${theme.fg(\"muted\", debugLogPath)}`, 1, 1));\n",
+   "        this.chatContainer.addChild(new Text(`${theme.fg(\"accent\", \"✓ 调试日志已写入\")}\\n${theme.fg(\"muted\", debugLogPath)}`, 1, 1));\n"
+  ],
+  [
+   "        this.chatContainer.addChild(new Text(`${theme.bold(theme.fg(\"warning\", \"Update Available\"))}\\n${updateInstruction}`, 1, 0));\n",
+   "        this.chatContainer.addChild(new Text(`${theme.bold(theme.fg(\"warning\", \"有可用更新\"))}\\n${updateInstruction}`, 1, 0));\n"
+  ],
+  [
+   "            info += `\\n${theme.bold(\"Cost\")}\\n`;\n            info += `${theme.fg(\"dim\", \"Total:\")} $${stats.cost.toFixed(3)}`;\n",
+   "            info += `\\n${theme.bold(\"费用\")}\\n`;\n            info += `${theme.fg(\"dim\", \"总计：\")} $${stats.cost.toFixed(3)}`;\n"
+  ],
+  [
+   "            this.showWarning(`Session name was normalized from ${JSON.stringify(name)} to ${JSON.stringify(sessionName)}`);\n",
+   "            this.showWarning(`会话名称已从 ${JSON.stringify(name)} to ${JSON.stringify(sessionName)}`);\n"
+  ],
+  [
+   "        const updateInstruction = theme.fg(\"muted\", `New version ${release.version} is available. Run `) + action;\n",
+   "        const updateInstruction = theme.fg(\"muted\", `新版本 ${release.version} 可用。运行 `) + action;\n"
+  ],
+  [
+   "        this.chatContainer.addChild(new Text(theme.fg(\"dim\", `Session name set: ${sessionName ?? name}`), 1, 0));\n",
+   "        this.chatContainer.addChild(new Text(theme.fg(\"dim\", `会话名称已设置：${sessionName ?? name}`), 1, 0));\n"
+  ],
+  [
+   "                ? theme.fg(\"muted\", ` (${formatKeyText(cycleKeys.join(\"/\"), { capitalize: true })} to cycle)`)\n",
+   "                ? theme.fg(\"muted\", ` (${formatKeyText(cycleKeys.join(\"/\"), { capitalize: true })} 切换)`)\n"
+  ],
+  [
+   "                this.chatContainer.addChild(new Text(theme.fg(\"dim\", `Session name: ${currentName}`), 1, 0));\n",
+   "                this.chatContainer.addChild(new Text(theme.fg(\"dim\", `会话名称：${currentName}`), 1, 0));\n"
+  ],
+  [
+   "                const missLabel = cacheWaste.missCount === 1 ? \"1 miss\" : `${cacheWaste.missCount} misses`;\n",
+   "                const missLabel = cacheWaste.missCount === 1 ? \"1 次未命中\" : `${cacheWaste.missCount} 次未命中`;\n"
+  ],
+  [
+   "        this.chatContainer.addChild(new Text(theme.bold(theme.fg(\"accent\", \"Keyboard Shortcuts\")), 1, 0));\n",
+   "        this.chatContainer.addChild(new Text(theme.bold(theme.fg(\"accent\", \"键盘快捷键\")), 1, 0));\n"
+  ],
+  [
+   "            this.chatContainer.addChild(new Text(`${theme.fg(\"accent\", \"✓ New session started\")}`, 1, 1));\n",
+   "            this.chatContainer.addChild(new Text(`${theme.fg(\"accent\", \"✓ 已开始新会话\")}`, 1, 1));\n"
+  ],
+  [
+   "        this.chatContainer.addChild(new Text(theme.fg(\"warning\", `Warning: ${warningMessage}`), 1, 0));\n",
+   "        this.chatContainer.addChild(new Text(theme.fg(\"warning\", `警告：${warningMessage}`), 1, 0));\n"
+  ],
+  [
+   "            this.chatContainer.addChild(new Text(theme.bold(theme.fg(\"accent\", \"What's New\")), 1, 0));\n",
+   "            this.chatContainer.addChild(new Text(theme.bold(theme.fg(\"accent\", \"更新内容\")), 1, 0));\n"
+  ],
+  [
+   "        const updateInstruction = theme.fg(\"muted\", \"Package updates are available. Run \") + action;\n",
+   "        const updateInstruction = theme.fg(\"muted\", \"有可用的包更新。运行 \") + action;\n"
+  ],
+  [
+   "        this.chatContainer.addChild(new Text(theme.bold(theme.fg(\"accent\", \"What's New\")), 1, 0));\n",
+   "        this.chatContainer.addChild(new Text(theme.bold(theme.fg(\"accent\", \"更新内容\")), 1, 0));\n"
+  ],
+  [
+   "                        return this.handleFatalRuntimeError(\"Failed to create session\", error);\n",
+   "                        return this.handleFatalRuntimeError(\"创建会话失败\", error);\n"
+  ],
+  [
+   "            const hintText = theme.fg(\"dim\", `↳ ${dequeueHint} to edit all queued messages`);\n",
+   "            const hintText = theme.fg(\"dim\", `↳ ${dequeueHint} 编辑所有排队消息`);\n"
+  ],
+  [
+   "            console.log(theme.fg(\"dim\", `Model scope: ${modelList}${cycleHint}`));\n",
+   "            console.log(theme.fg(\"dim\", `模型范围：${modelList}${cycleHint}`));\n"
+  ],
+  [
+   "        info += `${theme.fg(\"dim\", \"Input:\")} ${promptTokens.toLocaleString()}\\n`;\n",
+   "        info += `${theme.fg(\"dim\", \"输入：\")} ${promptTokens.toLocaleString()}\\n`;\n"
+  ],
+  [
+   "            await this.handleFatalRuntimeError(\"Failed to create session\", error);\n",
+   "            await this.handleFatalRuntimeError(\"创建会话失败\", error);\n"
+  ],
+  [
+   "        const changelogLine = theme.fg(\"muted\", \"Changelog: \") + changelogLink;\n",
+   "        const changelogLine = theme.fg(\"muted\", \"更新日志：\") + changelogLink;\n"
+  ],
+  [
+   "                const text = theme.fg(\"dim\", `Follow-up: ${message}`);\n",
+   "                const text = theme.fg(\"dim\", `后续：${message}`);\n"
+  ],
+  [
+   "            this.showStatus(\"Copied last agent message to clipboard\");\n",
+   "            this.showStatus(\"已将最后一条助手消息复制到剪贴板\");\n"
+  ],
+  [
+   "                const text = theme.fg(\"dim\", `Steering: ${message}`);\n",
+   "                const text = theme.fg(\"dim\", `引导：${message}`);\n"
+  ],
+  [
+   "            info += `${theme.fg(\"dim\", \"Name:\")} ${sessionName}\\n`;\n",
+   "            info += `${theme.fg(\"dim\", \"名称：\")} ${sessionName}\\n`;\n"
+  ],
+  [
+   "            this.showError(\"No agent messages to copy yet.\");\n",
+   "            this.showError(\"还没有可复制的助手消息。\");\n"
+  ],
+  [
+   "                this.showWarning(\"Usage: /name <name>\");\n",
+   "                this.showWarning(\"用法：/name <名称>\");\n"
+  ],
+  [
+   "        let info = `${theme.bold(\"Session Info\")}\\n\\n`;\n",
+   "        let info = `${theme.bold(\"会话信息\")}\\n\\n`;\n"
+  ],
+  [
+   "                hint(\"app.tools.expand\", \"more\"),\n",
+   "                hint(\"app.tools.expand\", \"更多\"),\n"
+  ],
+  [
+   "            : \"No changelog entries found.\";\n",
+   "            : \"未找到更新日志条目。\";\n"
+  ],
+  [
+   "**Navigation**\n",
+   "**导航**\n"
+  ],
+  [
+   "**Extensions**\n",
+   "**扩展**\n"
+  ],
+  [
+   "**Editing**\n",
+   "**编辑**\n"
+  ],
+  [
+   "**Other**\n",
+   "**其他**\n"
+  ]
+ ]
+}

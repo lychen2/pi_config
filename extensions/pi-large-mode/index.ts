@@ -222,16 +222,44 @@ async function writeMarker(root: string, flowSource: string): Promise<void> {
   } satisfies ProfileMarker);
 }
 
+const RUN_PROCESS_TIMEOUT_MS = 20 * 60 * 1000;
+const MV_TIMEOUT_MS = 60 * 1000;
+const PROBE_TIMEOUT_MS = 15 * 1000;
+const REGISTRY_TIMEOUT_MS = 30 * 1000;
+const NPM_FETCH_RETRIES = "1";
+const NPM_FETCH_RETRY_MIN_TIMEOUT_MS = "2000";
+const NPM_FETCH_RETRY_MAX_TIMEOUT_MS = "5000";
+const NPM_FETCH_TIMEOUT_MS = "60000";
+
 async function runProcess(
   command: string,
   args: string[],
   env: NodeJS.ProcessEnv = process.env,
   onOutput?: (line: string) => void,
+  timeoutMs = RUN_PROCESS_TIMEOUT_MS,
 ): Promise<string> {
   return await new Promise((resolve, reject) => {
     const child = spawn(command, args, { env, stdio: ["ignore", "pipe", "pipe"] });
     let stdout = "";
     let stderr = "";
+    let settled = false;
+    let killTimer: NodeJS.Timeout | undefined;
+    const finish = (error?: Error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (error) reject(error);
+      else resolve(stdout.trim());
+    };
+    const timer = setTimeout(() => {
+      child.kill("SIGTERM");
+      killTimer = setTimeout(() => child.kill("SIGKILL"), 5_000);
+      const detail = (stderr || stdout).trim().slice(-6000);
+      finish(new Error(
+        `${command} timed out after ${Math.round(timeoutMs / 1000)}s` +
+        `${detail ? `: ${detail}` : ""} — check your network or proxy and retry the command`,
+      ));
+    }, timeoutMs);
     const capture = (target: "stdout" | "stderr", chunk: Buffer) => {
       const text = chunk.toString();
       if (target === "stdout") stdout += text;
@@ -241,14 +269,14 @@ async function runProcess(
     };
     child.stdout.on("data", (chunk: Buffer) => capture("stdout", chunk));
     child.stderr.on("data", (chunk: Buffer) => capture("stderr", chunk));
-    child.on("error", reject);
+    child.on("error", (error) => finish(new Error(`Failed to start ${command}: ${error.message}`)));
     child.on("close", (code) => {
       if (code === 0) {
-        resolve(stdout.trim());
+        finish();
         return;
       }
       const detail = (stderr || stdout).trim().slice(-6000);
-      reject(new Error(`${command} exited with code ${code}${detail ? `: ${detail}` : ""}`));
+      finish(new Error(`${command} exited with code ${code}${detail ? `: ${detail}` : ""}`));
     });
   });
 }
@@ -284,11 +312,60 @@ async function runOfficialFlowSetup(
   }
 }
 
+async function supportsGnuExchange(): Promise<boolean> {
+  try {
+    const help = await runProcess("mv", ["--help"], process.env, undefined, PROBE_TIMEOUT_MS);
+    return help.includes("--exchange");
+  } catch {
+    return false;
+  }
+}
+
+async function resumeStaleExchangeTemp(left: string, right: string): Promise<void> {
+  const temp = `${right}.exchange-tmp-${process.pid}`;
+  if (!await exists(temp)) return;
+  if (!await exists(left) && await exists(right)) {
+    // Crashed after the first rename: undo it.
+    await rename(temp, left);
+  } else if (await exists(left) && !await exists(right)) {
+    // Crashed after the second rename: complete the swap.
+    await rename(temp, right);
+  } else {
+    await rm(temp, { recursive: true, force: true });
+  }
+}
+
+async function exchangeViaRename(left: string, right: string): Promise<void> {
+  // GNU renameat2(RENAME_EXCHANGE) fallback for BSD/macOS mv: three renames
+  // through a sibling temp name; a crashed rerun resumes via the stale temp.
+  const temp = `${right}.exchange-tmp-${process.pid}`;
+
+  await rename(left, temp);
+  try {
+    await rename(right, left);
+  } catch (error) {
+    await rename(temp, left).catch(() => {});
+    throw error;
+  }
+  try {
+    await rename(temp, right);
+  } catch (error) {
+    await rename(left, right).catch(() => {});
+    await rename(temp, left).catch(() => {});
+    throw error;
+  }
+}
+
 async function exchangeDirectories(left: string, right: string): Promise<void> {
+  await resumeStaleExchangeTemp(left, right);
   if (!await exists(left) || !await exists(right)) {
     throw new Error(`Cannot exchange missing directories: ${left}, ${right}`);
   }
-  await runProcess("mv", ["--exchange", "--no-target-directory", left, right]);
+  if (await supportsGnuExchange()) {
+    await runProcess("mv", ["--exchange", "--no-target-directory", left, right], process.env, undefined, MV_TIMEOUT_MS);
+    return;
+  }
+  await exchangeViaRename(left, right);
 }
 
 async function piCommand(): Promise<{ command: string; args: string[] }> {
@@ -298,11 +375,11 @@ async function piCommand(): Promise<{ command: string; args: string[] }> {
   return { command: process.execPath, args: [process.argv[1]] };
 }
 
-async function rewriteJsonPaths(path: string, fromAgent: string, fromMaestro: string): Promise<void> {
+async function rewriteJsonPaths(path: string, fromAgent: string, fromMaestro?: string): Promise<void> {
   const value = await readJsonObject(path);
   const agentRewritten = rewriteAgentPath(value, fromAgent, agentDir());
-  const maestroRewritten = rewriteAgentPath(agentRewritten, fromMaestro, maestroDir());
-  await writeJsonAtomically(path, maestroRewritten);
+  const rewritten = fromMaestro ? rewriteAgentPath(agentRewritten, fromMaestro, maestroDir()) : agentRewritten;
+  await writeJsonAtomically(path, rewritten);
 }
 
 async function rewriteManifestPaths(manifestsDir: string, fromAgent: string, fromMaestro: string): Promise<void> {
@@ -445,7 +522,14 @@ async function validateProfile(profile: FlowProfile, flowSource: string): Promis
   const beautifyPath = join(agentDir(), "npm", "node_modules", BEAUTIFY_PACKAGE_NAME);
   const settings = await readJsonObject(join(profile.templateAgent, "settings.json"));
   if (!isCompleteFlowSettings(settings, flowSource, beautifyPath, CONTROLLER_PATH)) {
-    throw new Error("Flow installation did not produce the complete clean package profile");
+    const actualPackages = Array.isArray(settings.packages)
+      ? settings.packages.map((entry) => typeof entry === "string" ? entry : entry?.source)
+      : settings.packages;
+    throw new Error(
+      "Flow installation did not produce the complete clean package profile: "
+      + `expected packages ${JSON.stringify([flowSource, beautifyPath])}, `
+      + `received ${JSON.stringify(actualPackages)}`,
+    );
   }
 
   const sidecar = await readJsonObject(join(profile.templateAgent, "pi-maestro-flow-companions.json"));
@@ -535,13 +619,22 @@ async function buildStagingProfile(flowSource: string, progress?: ProgressReport
     };
     refreshInstallProgress();
     const progressTimer = setInterval(refreshInstallProgress, 1000);
+    const installEnv = {
+      ...process.env,
+      HOME: stagingHome,
+      PI_CODING_AGENT_DIR: stagingAgent,
+      MAESTRO_HOME: profile.maestro,
+      // Keep the isolated HOME from forcing a cold npm cache on every install.
+      npm_config_cache: process.env.npm_config_cache?.trim()
+        || process.env.NPM_CONFIG_CACHE?.trim()
+        || join(homedir(), ".npm"),
+      npm_config_fetch_retries: NPM_FETCH_RETRIES,
+      npm_config_fetch_retry_mintimeout: NPM_FETCH_RETRY_MIN_TIMEOUT_MS,
+      npm_config_fetch_retry_maxtimeout: NPM_FETCH_RETRY_MAX_TIMEOUT_MS,
+      npm_config_fetch_timeout: NPM_FETCH_TIMEOUT_MS,
+    };
     try {
-      await runProcess(pi.command, [...pi.args, "install", flowSource], {
-        ...process.env,
-        HOME: stagingHome,
-        PI_CODING_AGENT_DIR: stagingAgent,
-        MAESTRO_HOME: profile.maestro,
-      }, (line) => {
+      await runProcess(pi.command, [...pi.args, "install", flowSource], installEnv, (line) => {
         latestInstallOutput = line.slice(-100);
         refreshInstallProgress();
       });
@@ -553,8 +646,8 @@ async function buildStagingProfile(flowSource: string, progress?: ProgressReport
 
     await installBeautifyPackage(profile, flowSource, progress);
     await assertKnownAgentSideEffects(stagingAgent);
-    await rewriteJsonPaths(join(stagingAgent, "settings.json"), stagingAgent, profile.maestro);
-    await rewriteJsonPaths(join(stagingAgent, "pi-maestro-flow-companions.json"), stagingAgent, profile.maestro);
+    await rewriteJsonPaths(join(stagingAgent, "settings.json"), stagingAgent);
+    await rewriteJsonPaths(join(stagingAgent, "pi-maestro-flow-companions.json"), stagingAgent);
     await rewriteManifestPaths(join(profile.maestro, "manifests"), stagingAgent, profile.maestro);
     await writeMarker(profile.npm, flowSource);
     await writeMarker(profile.maestro, flowSource);
@@ -582,6 +675,7 @@ async function replaceInactiveProfile(staging: FlowProfile): Promise<void> {
 async function latestFlowVersion(): Promise<string> {
   const response = await fetch("https://registry.npmjs.org/pi-maestro-flow/latest", {
     headers: { accept: "application/json" },
+    signal: AbortSignal.timeout(REGISTRY_TIMEOUT_MS),
   });
   if (!response.ok) throw new Error(`npm registry returned ${response.status}`);
   const manifest = await response.json() as { version?: unknown };
@@ -693,6 +787,10 @@ async function ensureSwapRoots(): Promise<void> {
 
 async function recoverTransaction(state: LargeModeState): Promise<LargeModeState> {
   const inactive = inactiveProfile();
+  // Rename-fallback swaps are not atomic; reconcile any temp left by a crash
+  // before the marker-driven checks decide whether to swap back.
+  await resumeStaleExchangeTemp(npmDir(), inactive.npm);
+  await resumeStaleExchangeTemp(maestroDir(), inactive.maestro);
   if (state.phase === "stable") {
     if (state.mode === "default") {
       const cached = await readMarker(inactive.npm);
@@ -757,7 +855,7 @@ async function ensureInactiveVersion(flowSource: string, progress?: ProgressRepo
       progress?.(85, "缓存验证完成");
       return;
     } catch (error) {
-      throw new Error(`本地 Flow 缓存校验失败: ${error instanceof Error ? error.message : String(error)}`);
+      progress?.(22, "本地 Flow 缓存已过期，重新构建");
     }
   }
   await replaceInactiveProfile(await buildStagingProfile(flowSource, progress));
@@ -898,8 +996,10 @@ async function profileStatus(state: LargeModeState): Promise<string> {
 }
 
 export default function register(pi: ExtensionAPI): void {
+  let inFlight: Promise<void> | undefined;
+
   pi.registerCommand("large", {
-    description: "切换纯净 Pi + 完整 pi-maestro-flow profile",
+    description: "切换纯净 Pi 与完整 pi-maestro-flow 配置档",
     getArgumentCompletions: () => [
       { value: "on", label: "完整安装并启用 Flow" },
       { value: "off", label: "恢复 Large 前 profile" },
@@ -914,30 +1014,49 @@ export default function register(pi: ExtensionAPI): void {
         ctx.ui.notify("用法: /large [on|off|status|update [apply]]", "warning");
         return;
       }
-      const progress: ProgressReporter = (percent, label) => reportProgress(ctx, percent, label);
-      const actionLabel = command === "on" ? "启用 Large" : command === "off" ? "关闭 Large" : "检查/更新 Flow";
-      let contextReplaced = false;
-      ctx.ui.notify(`${actionLabel} 已开始`, "info");
-      progress(1, actionLabel);
+      const mutating = command !== "status";
+      if (mutating && inFlight) {
+        ctx.ui.notify("Large 操作正在进行中，请等待当前事务完成。", "warning");
+        return;
+      }
+
+      const operation = (async (): Promise<void> => {
+        const progress: ProgressReporter = (percent, label) => reportProgress(ctx, percent, label);
+        const actionLabel = command === "on" ? "启用 Large" : command === "off" ? "关闭 Large" : "检查/更新 Flow";
+        let contextReplaced = false;
+        ctx.ui.notify(`${actionLabel} 已开始`, "info");
+        progress(1, actionLabel);
+        try {
+          if (command === "status") {
+            const state = await recoverTransaction(await readState());
+            ctx.ui.notify(await profileStatus(state), "info");
+            return;
+          }
+          if (command === "update") {
+            await updateFlow(args[1]?.toLowerCase() === "apply", ctx, progress);
+            return;
+          }
+          contextReplaced = command === "on"
+            ? await activate(ctx, progress)
+            : await deactivate(ctx, progress);
+        } catch (error) {
+          if (!contextReplaced) {
+            ctx.ui.notify(`Large 操作失败: ${error instanceof Error ? error.message : String(error)}`, "error");
+          }
+        } finally {
+          if (!contextReplaced) clearProgress(ctx);
+        }
+      })();
+
+      if (!mutating) {
+        await operation;
+        return;
+      }
+      inFlight = operation;
       try {
-        if (command === "status") {
-          const state = await recoverTransaction(await readState());
-          ctx.ui.notify(await profileStatus(state), "info");
-          return;
-        }
-        if (command === "update") {
-          await updateFlow(args[1]?.toLowerCase() === "apply", ctx, progress);
-          return;
-        }
-        contextReplaced = command === "on"
-          ? await activate(ctx, progress)
-          : await deactivate(ctx, progress);
-      } catch (error) {
-        if (!contextReplaced) {
-          ctx.ui.notify(`Large 操作失败: ${error instanceof Error ? error.message : String(error)}`, "error");
-        }
+        await operation;
       } finally {
-        if (!contextReplaced) clearProgress(ctx);
+        if (inFlight === operation) inFlight = undefined;
       }
     },
   });

@@ -27,8 +27,14 @@ if (argv.some((arg) => !["--apply"].includes(arg) && !arg.startsWith("--target="
   process.exit(2);
 }
 
+const NPM_QUERY_TIMEOUT_MS = 2 * 60 * 1000;
+const RUN_TIMEOUT_MS = 20 * 60 * 1000;
+
 function npmView(spec, field) {
-  return execFileSync("npm", ["view", spec, field, "--json"], { encoding: "utf8" }).trim();
+  return execFileSync("npm", ["view", spec, field, "--json"], {
+    encoding: "utf8",
+    timeout: NPM_QUERY_TIMEOUT_MS,
+  }).trim();
 }
 
 function npmScalar(spec, field) {
@@ -37,8 +43,13 @@ function npmScalar(spec, field) {
 }
 
 function run(command, args, cwd) {
-  const result = spawnSync(command, args, { cwd, stdio: "inherit" });
-  if (result.error) throw result.error;
+  const result = spawnSync(command, args, { cwd, stdio: "inherit", timeout: RUN_TIMEOUT_MS });
+  if (result.error) {
+    if (result.error.code === "ETIMEDOUT") {
+      throw new Error(`Timed out after ${Math.round(RUN_TIMEOUT_MS / 1000)}s running ${command}: check your network or proxy and retry`);
+    }
+    throw result.error;
+  }
   if (result.status !== 0) throw new Error(`${command} exited with ${result.status}`);
 }
 
@@ -56,7 +67,10 @@ async function exists(file) {
 async function packAndExtract(version, tempRoot) {
   const packDir = path.join(tempRoot, version);
   await import("node:fs/promises").then(({ mkdir }) => mkdir(packDir, { recursive: true }));
-  const filename = execFileSync("npm", ["pack", `${packageName}@${version}`, "--pack-destination", packDir, "--silent"], { encoding: "utf8" }).trim().split(/\r?\n/).at(-1);
+  const filename = execFileSync("npm", ["pack", `${packageName}@${version}`, "--pack-destination", packDir, "--silent"], {
+    encoding: "utf8",
+    timeout: NPM_QUERY_TIMEOUT_MS,
+  }).trim().split(/\r?\n/).at(-1);
   const tarball = path.join(packDir, filename);
   run("tar", ["-xzf", tarball, "-C", packDir], repoRoot);
   return { root: path.join(packDir, "package"), tarball: npmScalar(`${packageName}@${version}`, "dist.tarball") };
