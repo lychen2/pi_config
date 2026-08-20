@@ -23,26 +23,6 @@ const isWindows = process.platform === "win32";
 const homeDir = os.homedir();
 const defaultAgentDir = path.join(homeDir, ".pi", "agent");
 const agentDir = path.resolve(process.env.PI_CODING_AGENT_DIR || defaultAgentDir);
-const retiredPackageSources = new Set([
-  "git:github.com/Xichun123/pi-cometix-footer",
-  "npm:@narumitw/pi-goal",
-  "npm:@narumitw/pi-subagents",
-  "npm:@narumitw/pi-btw",
-  "npm:pi-add-dir",
-  "npm:@tmustier/pi-raw-paste",
-  "npm:pi-autoresearch",
-  "npm:@monotykamary/pi-tps",
-  "npm:pi-hashline-edit-pro",
-  "npm:pi-markdown-preview",
-  "npm:@cortexkit/aft-pi",
-  "npm:pi-gsd",
-  "npm:pi-cache-optimizer",
-  "npm:@cortexkit/pi-magic-context",
-  "npm:@juicesharp/rpiv-todo",
-  "npm:pi-maestro-teammate",
-  "npm:pi-readseek",
-  "npm:pi-web-access",
-]);
 const retiredLocalPackageNames = new Set([
   "pi-agent-browser-compat",
   "pi-deferred-tools",
@@ -102,7 +82,7 @@ function parseArgs(argv) {
     external: undefined,
     rtk: undefined,
     modelDefaults: undefined,
-    cleanPlugins: false,
+    cleanPlugins: true,
   };
 
   for (const arg of argv) {
@@ -163,7 +143,7 @@ Options:
       --skip-rtk           Skip the RTK binary
       --with-model-defaults  Apply provider/model defaults from public settings
       --skip-model-defaults  Keep the machine's provider/model selection
-      --clean-plugins        Back up, remove all Pi extensions and packages, then reinstall
+      --clean-plugins        Compatibility flag; cleanup is always enabled
    Local extensions/pi-*/package.json packages are always installed.
   -h, --help               Show this help
 
@@ -252,14 +232,6 @@ function configuredPackageSource(value) {
   return undefined;
 }
 
-function isRetiredPackageSource(value) {
-  const source = configuredPackageSource(value)?.replaceAll("\\", "/").replace(/\/+$/, "");
-  if (!source) return false;
-  if (retiredPackageSources.has(source)) return true;
-  if ([...retiredPackageSources].some((retired) => source.startsWith(`${retired}@`))) return true;
-  return [...retiredLocalPackageNames].some((name) => source.endsWith(`/extensions/${name}`));
-}
-
 function isLocalPackageSource(value, packageName) {
   const source = configuredPackageSource(value)?.replaceAll("\\", "/").replace(/\/+$/, "");
   return source?.endsWith(`/extensions/${packageName}`) ?? false;
@@ -287,24 +259,6 @@ async function normalizeAnchoredStandardOrder() {
   if (!installerOptions.dryRun) {
     await writeFile(settingsPath, `${JSON.stringify(settings, null, 2)}\n`, "utf8");
   }
-}
-
-function retiredNpmPackageNames() {
-  return [...retiredPackageSources]
-    .filter((source) => source.startsWith("npm:"))
-    .map((source) => source.slice("npm:".length));
-}
-
-async function removeRetiredNpmPackages() {
-  const npmDir = path.join(agentDir, "npm");
-  const packageJsonPath = path.join(npmDir, "package.json");
-  const packageJson = await readJson(packageJsonPath, null);
-  if (!packageJson || !isPlainObject(packageJson.dependencies)) return;
-
-  const installed = retiredNpmPackageNames().filter((name) => name in packageJson.dependencies);
-  if (!installed.length) return;
-  console.log(`  uninstall retired npm packages: ${installed.join(", ")}`);
-  run(commandName("npm"), ["uninstall", "--ignore-scripts", ...installed], { cwd: npmDir });
 }
 
 
@@ -606,12 +560,8 @@ async function mergePublicSettings(includeModelDefaults) {
 
   const currentSettings = await readJson(settingsPath);
   const mergedSettings = mergeObjects(currentSettings, publicSettings);
-  if (Array.isArray(mergedSettings.packages)) {
-    const retiredPackages = mergedSettings.packages.filter(isRetiredPackageSource);
-    mergedSettings.packages = mergedSettings.packages.filter((entry) => !isRetiredPackageSource(entry));
-    if (retiredPackages.length) {
-      console.log(`  removed retired packages: ${retiredPackages.map(configuredPackageSource).filter(Boolean).join(", ")}`);
-    }
+  if (installerOptions.cleanPlugins) {
+    delete mergedSettings.packages;
   }
   if (installerOptions.dryRun) {
     console.log(`  merge ${publicSettingsPath} -> ${settingsPath}`);
@@ -762,7 +712,6 @@ async function main() {
   await restoreFiles();
   await mergeModelOverrides();
   await mergePublicSettings(choices.modelDefaults);
-  await removeRetiredNpmPackages();
   await installLocalPackages();
   await installExternalPackages(choices.external);
   await installOptionalTools(choices);

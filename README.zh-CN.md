@@ -183,16 +183,12 @@ node install.mjs --yes
 
 ### 清空插件后重装
 
-排查旧插件、旧工具 schema 或 package 缓存残留时，使用：
+安装器每次都会从干净的插件状态开始，避免旧插件、旧工具 schema 或 package 缓存残留。它会先备份 `~/.pi/agent`，再删除 `extensions/`、`npm/` 和 `settings.json` 中的 `packages`，随后从本仓库和 `config/external-packages.txt` 重装插件。skills、themes、模型配置、provider 凭据、headers 和 sessions 会保留。
+
+应用前先预览清理计划：
 
 ```bash
-node install.mjs --yes --clean-plugins
-```
-
-安装器会先备份 `~/.pi/agent`，再删除 `extensions/`、`npm/` 和 `settings.json` 中的 `packages`，随后从本仓库和 `config/external-packages.txt` 重装插件。它不会删除 skills、themes、模型配置、provider 凭据、headers 或 sessions。先预览：
-
-```bash
-node install.mjs --yes --clean-plugins --dry-run
+node install.mjs --yes --dry-run
 ```
 
 ## 安全检查
