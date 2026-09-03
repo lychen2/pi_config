@@ -10,5 +10,5 @@
     "allowImportingTsExtensions": true,
     "types": ["node"]
   },
-  "include": ["index.ts"]
+  "include": ["index.ts", "manager-models.ts", "continuity.ts"]
 }

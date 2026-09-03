@@ -1,7 +1,7 @@
 {
   "name": "pi-context-bridge",
   "version": "0.2.0",
-  "description": "Default-profile bridge for Web Access and teammate tools",
+  "description": "Default-profile bridge for Web Access and manager models",
   "license": "MIT",
   "type": "module",
   "engines": {
@@ -10,11 +10,12 @@
   "keywords": [
     "pi-package",
     "pi",
-    "web",
-    "teammate"
+    "web"
   ],
   "files": [
     "index.ts",
+    "manager-models.ts",
+    "continuity.ts",
     "README.md"
   ],
   "pi": {
@@ -28,7 +29,6 @@
   },
   "dependencies": {
     "jiti": "2.7.0",
-    "pi-maestro-teammate": "1.14.0",
     "pi-web-access": "0.22.0"
   },
   "peerDependencies": {
