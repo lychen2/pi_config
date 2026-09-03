@@ -192,15 +192,6 @@ test("keeps the first actionable error instead of a trailing stack frame", () =>
   );
 });
 
-test("preserves task-owned rows in collapsed mode", () => {
-  const rendered = [
-    "push-task: Review implementation",
-    "Check changed files and tests",
-    "Task stored. Use /start-task or /auto to start it.",
-  ];
-  assert.deepEqual(visibleToolContentLines(rendered, false, { toolName: "push-task" }), rendered);
-});
-
 test("keeps tool text neutral while tinting the adjacent diff divider", () => {
   const neutral = "\u001b[48;2;71;71;71m";
   const red = "\u001b[48;2;82;57;61m";

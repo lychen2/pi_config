@@ -154,7 +154,7 @@ function providerLabel(provider: string | undefined): string {
   );
 }
 
-export default function promptFrame(pi: ExtensionAPI): void {
+export default function promptFrame(pi: ExtensionAPI, installDefaultEditor = true): void {
   let restoreSetEditor = () => {};
   let meta: EditorMeta = { modelLabel: "未选择模型", providerLabel: "未知提供商" };
   pi.on("model_select", (event) => {
@@ -213,6 +213,7 @@ export default function promptFrame(pi: ExtensionAPI): void {
     // editor here would occupy the slot and block other extensions (Cockpit)
     // from installing their own editor later in the same session_start.
     if (previous) wrapped(previous);
+    else if (installDefaultEditor) wrapped(undefined);
 
     restoreSetEditor = () => {
       if (ui.setEditorComponent === wrapped) ui.setEditorComponent = original;

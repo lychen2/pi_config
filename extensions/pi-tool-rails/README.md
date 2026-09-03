@@ -3,7 +3,7 @@
 Quiet TUI styling for Pi:
 
 - a fixed-width tool column with compact emoji labels; emoji sits immediately left of centered text, with explicit Material Symbols Rounded glyphs available via `PI_TOOL_RAILS_ICON_STYLE=material`
-- a verified registry of compact labels and purpose-specific emoji for 40 known compatibility and optional tool names
+- a verified registry of compact labels and purpose-specific emoji for 41 known compatibility and optional tool names
 - a theme `text` separator with full-block pending, success, and error backgrounds from the active Pi theme
 - reason-first built-in tool calls that show `goal → concrete target` on one line and a useful result on the next
 - collapsed generic third-party output limited to two semantic lines, while task tools keep their own bounded task rows; `Ctrl+O` still reveals complete renderer detail
@@ -19,7 +19,7 @@ Tool ownership is conservative. The extension presents registered tools but does
 
 ## Tool labels
 
-`tool-presentations.mjs` is the single runtime registry. It verifies 40 known names, including compatibility and optional entries; it does not claim that all 40 are active. Every text label stays within the rail's eight-column text budget; an unknown third-party tool uses `🧩` until it is added explicitly. `PI_TOOL_RAILS_ICON_STYLE=material` switches the emoji rail to Material Symbols Rounded codepoints; `text` is a plain-glyph diagnostic mode.
+`tool-presentations.mjs` is the single runtime registry. It verifies 41 known names, including compatibility and optional entries; it does not claim that all 41 are active. Every text label stays within the rail's eight-column text budget; an unknown third-party tool uses `🧩` until it is added explicitly. `PI_TOOL_RAILS_ICON_STYLE=material` switches the emoji rail to Material Symbols Rounded codepoints; `text` is a plain-glyph diagnostic mode.
 
 | Group | Display labels | Tool identifiers |
 | --- | --- | --- |
@@ -29,7 +29,6 @@ Tool ownership is conservative. The extension presents registered tools but does
 | Tasks | `📋 tasks` | `todo` |
 | Web | `🌐 web`, `✅ verify`, `📥 fetch`, `📚 sources` | `web_search`, `source_check`, `fetch_content`, `get_search_content` |
 | Context | `🔭 recall`, `🧠 memory`, `🗒️ note`, `🔬 expand`, `🗜️ reduce` | `ctx_search`, `ctx_memory`, `ctx_note`, `ctx_expand`, `ctx_reduce` |
-| Task branches | `🧵 task` | `push-task` |
 | Background shell | `📊 status`, `👁️ watch`, `⌨️ input`, `🛑 stop` | `bash_status`, `bash_watch`, `bash_write`, `bash_kill` |
 | Deferred | `🧰 tools`, `🧬 semantic` | `load_tools`, `semantic_code` |
 | Readseek and local tools | `✏️ edit`, `📝 write`, `🔎 grep`, `🌳 search`, `🧭 def`, `🕸️ refs`, `♻️ rename`, `🩺 digest`, `🔬 view`, `🗂️ files`, `🔎 literal`, `💻 bg shell`, `⚔️ conflict` | `readSeek_*`, `fffind`, `ffgrep`, `bash_bg`, `conflict` |

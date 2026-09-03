@@ -156,8 +156,6 @@ type ContentSelection = {
   toolName?: string;
 };
 
-const STRUCTURED_RESULT_TOOLS = new Set(["push-task"]);
-
 export function isInternalToolDiagnosticLine(line: string): boolean {
   return /^\s*RTK rewrite:\s*/i.test(plain(line));
 }
@@ -207,7 +205,6 @@ export function visibleToolContentLines(
   selection: ContentSelection = {},
 ): string[] {
   if (expanded || lines.length <= 1) return lines;
-  if (selection.toolName && STRUCTURED_RESULT_TOOLS.has(selection.toolName)) return lines;
   const visibleLines = lines.filter(isUsefulContentLine);
   if (visibleLines.length === 0) return [];
   const headline = visibleLines[0]!;
@@ -267,9 +264,18 @@ export function styleStructuredLine(line: string, theme: ToolTheme, selection: C
   if (delimited) return delimited;
   if (line.includes("\x1b[")) return line;
   if (/^\s*Todos\b/.test(line)) return theme.fg("toolTitle", line);
-  const match = line.match(/^(\s*)([✓◐○×•])(.*)$/);
+  const match = line.match(/^(\s*)([✓◐○×•★✦✧🌸♥🍡])(.*)$/);
   if (!match) return line;
-  const color = match[2] === "✓" ? "success" : match[2] === "×" ? "error" : match[2] === "○" ? "muted" : "warning";
+  const symbol = match[2]!;
+  const color = (symbol === "✓" || symbol === "★" || symbol === "🌸" || symbol === "♥")
+    ? "success"
+    : symbol === "×"
+      ? "error"
+      : symbol === "○"
+        ? "muted"
+        : (symbol === "✦" || symbol === "✧" || symbol === "🍡")
+          ? "accent"
+          : "warning";
   const rest = match[3]!.replace(/^(\s+)(#[^\s]+)/, (_value, spacing, id) => `${spacing}${theme.fg("accent", id)}`);
   return `${match[1]}${theme.fg(color, match[2])}${rest}`;
 }
@@ -443,7 +449,6 @@ function installLabeledShell(theme: ToolTheme): () => void {
       : withoutHeader.filter((line) => !isInternalToolDiagnosticLine(line));
     const bodyLines = stabilizeToolBoxBody(name, compactToolBody(bodySource, {
       expanded: Boolean(execution.expanded),
-      preserveAll: STRUCTURED_RESULT_TOOLS.has(name),
       theme: state.theme,
       formatLine: (content) => styleStructuredLine(content, state.theme, selection),
     }));

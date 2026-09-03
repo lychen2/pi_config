@@ -38,14 +38,36 @@ async function emit(pi, event, payload, ctx) {
 
 function createContext() {
   let editor;
+  const notices = [];
   const originalSetEditor = (factory) => { editor = factory; };
   const ui = {
     theme,
+    notify(message, type) { notices.push({ message, type }); },
     setEditorComponent: originalSetEditor,
     getEditorComponent: () => editor,
   };
-  return { mode: "tui", cwd: process.cwd(), ui, originalSetEditor };
+  return { mode: "tui", cwd: process.cwd(), ui, notices, originalSetEditor };
 }
+
+test("filters workspace home and marker warnings, preserves other warnings, and restores notify", async () => {
+  const pi = createPi();
+  const ctx = createContext();
+  const originalNotify = ctx.ui.notify;
+  toolRails(pi);
+
+  await emit(pi, "session_start", { reason: "startup" }, ctx);
+  ctx.ui.notify("Workspace history is disabled for this directory: current directory is the user home folder. Open pi inside a project directory or set workspaceHistory.enabled to true.", "warning");
+  ctx.ui.notify("Workspace history is disabled for this directory: no project marker found. Open pi inside a project directory or set workspaceHistory.enabled to true.", "warning");
+  ctx.ui.notify("Workspace history is disabled for this directory: current directory is a filesystem root. Open pi inside a project directory or set workspaceHistory.enabled to true.", "warning");
+
+  assert.deepEqual(ctx.notices, [{
+    message: "Workspace history is disabled for this directory: current directory is a filesystem root. Open pi inside a project directory or set workspaceHistory.enabled to true.",
+    type: "warning",
+  }]);
+
+  await emit(pi, "session_shutdown", { reason: "test" }, ctx);
+  assert.equal(ctx.ui.notify, originalNotify);
+});
 
 test("repeated session starts leave one cleanup owner for every presentation patch", async () => {
   const assistantRender = AssistantMessageComponent.prototype.render;

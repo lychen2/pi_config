@@ -35,7 +35,7 @@ const mappings = [
     path.join("extensions", "pi-large-beautify", "vendor", "tool-rails", file),
   ]),
   [
-    path.join("extensions", "pi-brand-header", "index.ts"),
+    path.join("extensions", "pi-tool-rails", "brand-header.ts"),
     path.join("extensions", "pi-large-beautify", "vendor", "brand-header.ts"),
   ],
   ...MATUGEN_STANDALONE_FILES.map((file) => [
@@ -85,7 +85,7 @@ async function sync() {
   await mkdir(path.join(vendorDir, "matugen-footer"), { recursive: true });
   await mkdir(path.join(beautifyDir, "themes"), { recursive: true });
   for (const file of TOOL_RAILS_FILES) await cp(path.join(repoRoot, "extensions", "pi-tool-rails", file), path.join(vendorDir, "tool-rails", file));
-  await cp(path.join(repoRoot, "extensions", "pi-brand-header", "index.ts"), path.join(vendorDir, "brand-header.ts"));
+  await cp(path.join(repoRoot, "extensions", "pi-tool-rails", "brand-header.ts"), path.join(vendorDir, "brand-header.ts"));
   for (const file of MATUGEN_STANDALONE_FILES) await cp(path.join(repoRoot, "extensions", file), path.join(vendorDir, file));
   await cp(path.join(repoRoot, "extensions", "matugen-footer"), path.join(vendorDir, "matugen-footer"), { recursive: true });
   await cp(path.join(repoRoot, "themes", "matugen.json"), path.join(beautifyDir, "themes", "matugen.json"));

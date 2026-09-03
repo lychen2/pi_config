@@ -4,15 +4,13 @@ import toolRails from "./vendor/tool-rails/index.ts";
 import resultBridge from "./vendor/tool-rails/result-bridge.ts";
 import promptFrame from "./vendor/tool-rails/prompt-frame.ts";
 import brandHeader from "./vendor/brand-header.ts";
-import matugenChrome from "./vendor/matugen-chrome.ts";
 
 export default function largeBeautify(pi: ExtensionAPI): void {
   labeledToolShell(pi);
   toolRails(pi);
   resultBridge(pi);
-  promptFrame(pi);
+  promptFrame(pi, false);
   brandHeader(pi);
-  matugenChrome(pi);
 
   pi.on("session_shutdown", (_event, ctx) => {
     if (ctx.mode === "tui") {

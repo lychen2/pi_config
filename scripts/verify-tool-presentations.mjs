@@ -31,7 +31,6 @@ const EXPECTED_TOOL_NAMES = [
   "ctx_note",
   "ctx_expand",
   "ctx_reduce",
-  "push-task",
   "bash_status",
   "bash_watch",
   "bash_write",

@@ -28,8 +28,6 @@ export const TOOL_PRESENTATIONS = Object.freeze({
   ctx_expand: { label: "展开", emoji: "🔬" },
   ctx_reduce: { label: "压缩", emoji: "🗜️" },
 
-  "push-task": { label: "任务", emoji: "🧵" },
-
   bash_status: { label: "状态", emoji: "📊" },
   bash_watch: { label: "监视", emoji: "👁️" },
   bash_write: { label: "输入", emoji: "⌨️" },
@@ -94,7 +92,6 @@ const MATERIAL_ICONS = Object.freeze({
   ctx_note: 0xe06f,
   ctx_expand: 0xe8b6,
   ctx_reduce: 0xe94d,
-  "push-task": 0xe97a,
   bash_status: 0xe8b6,
   bash_watch: 0xe8b6,
   bash_write: 0xe150,

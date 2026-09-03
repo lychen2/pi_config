@@ -44,6 +44,10 @@ const OSC133_END = "\x1b]133;B\x07\x1b]133;C\x07";
 const STYLED_BUILTINS = new Set(["bash", "edit", "grep", "read", "write"]);
 const PREVIEW_LINES = 5;
 const HOME = homedir().replace(/\\/g, "/").replace(/\/$/, "");
+const WORKSPACE_HISTORY_IGNORED_WARNINGS = [
+  "Workspace history is disabled for this directory: current directory is the user home folder",
+  "Workspace history is disabled for this directory: no project marker found",
+];
 
 function addAssistantMarker(line: string, marker: string): string {
   const prefix = LEADING_ANSI_SPACE.exec(line)?.[0];
@@ -83,7 +87,7 @@ function withReasoning(parameters: any): any {
   return {
     ...(parameters ?? { type: "object", properties: {} }),
     properties: { reasoning, ...(parameters?.properties ?? {}) },
-    required: Array.from(new Set(["reasoning", ...(parameters?.required ?? [])])),
+    required: parameters?.required ?? [],
   };
 }
 
@@ -398,17 +402,37 @@ function isUnclaimedBuiltin(pi: ExtensionAPI, name: string): boolean {
   return current?.sourceInfo.source === "builtin";
 }
 
+export function shouldSuppressNotification(message: string): boolean {
+  return WORKSPACE_HISTORY_IGNORED_WARNINGS.some((warning) => message.startsWith(warning));
+}
+
+function installNotificationFilter(ui: {
+  notify(message: string, type?: "info" | "warning" | "error"): void;
+}): () => void {
+  const originalNotify = ui.notify;
+  const filteredNotify = (message: string, type?: "info" | "warning" | "error"): void => {
+    if (!shouldSuppressNotification(message)) originalNotify.call(ui, message, type);
+  };
+  ui.notify = filteredNotify;
+  return () => {
+    if (ui.notify === filteredNotify) ui.notify = originalNotify;
+  };
+}
+
 export default function toolRails(pi: ExtensionAPI): void {
   let activeTheme: ActiveTheme | undefined;
   let cleanupAssistantMarker = () => {};
+  let cleanupNotificationFilter = () => {};
   let cleanupThinkingMessage = () => {};
   let cleanupUserMessage = () => {};
 
   function disposeSessionPresentation(): void {
     activeTheme = undefined;
+    cleanupNotificationFilter();
     cleanupThinkingMessage();
     cleanupAssistantMarker();
     cleanupUserMessage();
+    cleanupNotificationFilter = () => {};
     cleanupThinkingMessage = () => {};
     cleanupAssistantMarker = () => {};
     cleanupUserMessage = () => {};
@@ -419,6 +443,7 @@ export default function toolRails(pi: ExtensionAPI): void {
     disposeSessionPresentation();
     if (ctx.mode !== "tui") return;
 
+    cleanupNotificationFilter = installNotificationFilter(ctx.ui);
     const builtins = [
       createReadToolDefinition(ctx.cwd),
       createBashToolDefinition(ctx.cwd),

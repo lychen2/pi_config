@@ -61,15 +61,15 @@ test("normalizes background watcher JSONL into readable status rows", () => {
   assert.deepEqual(
     summarizeBackgroundShell([
       "Task bash-test: running",
-      'Waited 46ms; matched "push-task" at offset 997.',
-      '{"type":"extension_ui_request","method":"notify","message":"Task stored. Use /start-task or /auto to start it."}',
+      'Waited 46ms; matched "background-task" at offset 997.',
+      '{"type":"extension_ui_request","method":"notify","message":"Background task stored."}',
       '{"type":"agent_settled"}',
       "PTY task is still running.",
     ]),
     [
       "Task bash-test: running",
-      'Waited 46ms; matched "push-task" at offset 997.',
-      "Task stored. Use /start-task or /auto to start it.",
+      'Waited 46ms; matched "background-task" at offset 997.',
+      "Background task stored.",
     ],
   );
 });
@@ -99,7 +99,7 @@ test("renders normalized watcher details only when collapsed", () => {
       type: "text",
       text: [
         "Task bash-test: running",
-        'Waited 46ms; matched "push-task" at offset 997.',
+        'Waited 46ms; matched "background-task" at offset 997.',
         '{"type":"extension_ui_request","method":"notify","message":"Task stored."}',
       ].join("\n"),
     }],
