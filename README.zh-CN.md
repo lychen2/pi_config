@@ -139,15 +139,7 @@ pi
 
 ### 并行委派独立任务
 
-默认模式提供真正并行的 `teammate` 工具：它启动独立 Pi 子进程，支持多任务、DAG 依赖、后台完成通知和结果聚合。
-
-```text
-请使用 teammate 同时派发两个互不修改同一文件的任务，并汇总各自状态和结果。
-```
-
-常用工具是 `teammate`、`teammate-send`、`teammate-list` 和 `observe`。仓库仍保留 `extensions/pi-gsd`，需要 `/start-task`、`/finish-task` 和 `/auto` 的串行 session-tree 工作流时可单独安装，但安装器不再默认启用它。
-
-只在子任务边界清楚、可以独立执行或审查，并且新上下文或并行推进确实有收益时使用 `teammate`；简单任务、强串行任务和持续依赖主会话上下文的工作留在主 agent。传递最小任务简报，主 agent 负责集成和最终验证。
+默认模式由主 agent 直接执行任务；需要并行委派时使用 Large profile。
 
 ## 仓库结构
 

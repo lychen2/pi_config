@@ -6,21 +6,20 @@
 
 ## 本仓库 package
 
-安装器会扫描 `extensions/` 下带 `pi-*/package.json` 的 package；默认退役清单中的兼容包（目前包括 `pi-gsd` 和 Large 专用的 `pi-large-beautify`）保留源码但不会自动安装。开发时进入对应目录运行 `npm run typecheck`；带测试的 package 还可运行 `npm test`。
+安装器会扫描 `extensions/` 下带 `pi-*/package.json` 的 package，但默认只安装四个聚合入口：`pi-context-bridge`、`pi-default-workbench`、`pi-slim-skills` 和 `pi-tool-rails`。其他 package 保留源码，供 Large profile 或明确的手动安装使用；`pi-zh-localizer` 只作为安装器补丁脚本运行。
 
 | 扩展 | 解决的问题 | 使用入口 | 配置或开关 |
 | --- | --- | --- | --- |
-| `pi-brand-header` | 在启动栏显示模型、思考级别、目录、主题、技能和工具数量 | `/logo` 显示或隐藏 | 仅 TUI 生效；窄终端自动折叠 |
+| `pi-brand-header` | 品牌标题栏实现，已并入 `pi-tool-rails` | `/logo` | 默认不单独安装 |
 | `pi-deepseek-anchored-standard` | DeepSeek V4 Pro/Flash 的 Minimal bootstrap、锚点和渐进式上下文恢复 | `/dsh-anchor` 查看、`promote` 或 `rearm` 管理 | 仅匹配目标模型；`PI_DEEPSEEK_ANCHORED_STANDARD_DISABLE=1` 禁用 |
-| `pi-default-workbench` | Default 功能工作台：adaptive/fast/full 工具模式、Puppeteer 浏览器、Todo、FFF/后台 Shell/冲突处理和 Markdown Preview | `/tools`、`/todos`、模型调用 `browser`、`todo`、`fffind`、`ffgrep`、`bash_bg`、`conflict`、`preview_export` | 五类功能共用一个根 `index.ts`；项目 `.pi/tool-selector.json` 仍可按工具管理 |
+| `pi-default-workbench` | Default 功能工作台：adaptive/fast/full 工具模式、Puppeteer 浏览器、Todo、Todo guard、FFF/后台 Shell/冲突处理、Markdown Preview 和 `/large` | `/tools`、`/todos`、模型调用工具、`/large on|off|status|update` | 四类工作流共用一个根入口 |
 | `pi-manager-models` | 从 OpenAI-compatible `/models` 刷新 `manager` 模型目录 | 启动时自动刷新 | `PI_MANAGER_MODELS_PROVIDER`、`PI_MANAGER_MODELS_CONFIG` |
 | `pi-slim-skills` | 压缩模型可见的技能索引，降低提示词体积 | `/slim-skills remove <名称>`、`none`、`reset`、`inject <名称>` | `slim-skills-whitelist.json`；`SLIM_SKILLS_DISABLE=1` 禁用 |
 | `pi-todo-guard` | Todo 仍有未完成项目时，提醒代理继续当前任务 | 自动处理 | `PI_TODO_GUARD_DISABLE=1`；默认兼容 `todo` 工具 |
-| `pi-context-bridge` | 将锁定的 Web Access 与 teammate 实现统一接入 Default profile | 模型调用 `web_search`、联网工具、`teammate`/`observe` | 不替换 Pi 原生文件工具；统一管理 Default 侧的联网和协作入口 |
-| `pi-large-mode` | 在当前会话的默认 package 边界与固定上游 Maestro Flow profile 之间切换 | `/large on|off|status|update` | Large 固定加载 Flow、teammate 与 Cockpit；关闭时恢复原始顺序和 `autoload` |
-| `pi-tool-rails` | 提供稳定的工具标签、结果面板、diff、输入框样式和步骤化思考轨迹 | 自动处理；`Ctrl+T` 显示或隐藏思考轨迹 | `PI_TOOL_RAILS_DISABLE_USER_FRAME=1` 仅关闭用户消息边框 |
+| `pi-context-bridge` | 将锁定的 Web Access、manager 模型目录和 continuity 统一接入 Default profile | 模型调用联网工具；启动时注册 manager provider | 不替换 Pi 原生文件工具 |
+| `pi-large-mode` | Large profile 的实现源码，已由 `pi-default-workbench` 聚合；默认不单独安装 | `/large on|off|status|update` | 手动安装旧入口时不要与工作台重复加载 |
+| `pi-tool-rails` | 提供稳定的工具标签、结果面板、diff、输入框样式、步骤化思考轨迹和品牌标题栏 | 自动处理；`Ctrl+T` 显示或隐藏思考轨迹；`/logo` 切换标题栏 | Default 与 Large 共用 UI 聚合入口 |
 | `pi-large-beautify` | Large profile 专用的工具栏、消息/输入框框架、品牌头和 Matugen 主题 | 由 Large profile 复制并加载 | Default 安装器跳过；与 `pi-tool-rails`、`pi-brand-header` 保持 profile 隔离 |
-| `pi-gsd` | 可选的串行 session-tree subagent；安装器不再默认启用 | 手动安装后用 `push-task`、`/start-task`、`/finish-task`、`/auto` | 默认并行委派使用 `pi-maestro-teammate`；仅在明确需要同一 session tree 工作流时安装 |
 
 
 ### 项目工具选择
@@ -48,10 +47,11 @@
 
 ## 第三方 package
 
-这些 package 来自 [`../config/external-packages.txt`](../config/external-packages.txt)，由安装器在选择 `--with-external` 时安装。版本以本机 `pi list` 为准。Web Access、默认 teammate 和 Markdown Preview 不再作为独立 package 条目安装；前两者由 `pi-context-bridge` 统一接入，Preview 由本地兼容入口锁定依赖。
+这些 package 来自 [`../config/external-packages.txt`](../config/external-packages.txt)，由安装器在选择 `--with-external` 时安装。版本以本机 `pi list` 为准。Web Access 和 Markdown Preview 不再作为独立 package 条目安装；前者由 `pi-context-bridge` 统一接入，Preview 由本地兼容入口锁定依赖。
 
 | Package | 能力 | 常用入口 |
 | --- | --- | --- |
+| `@cortexkit/pi-magic-context` | 持久记忆、历史搜索与上下文回收 | `ctx_search`、`ctx_memory`、`ctx_note`、`ctx_expand`、`ctx_reduce` |
 | `@narumitw/pi-plan-mode` | 只读的计划协作模式 | `/plan` |
 | `@juicesharp/rpiv-ask-user-question` | 有选项、可结构化回答的问题组件 | 模型在需要澄清时调用 `ask_user_question` |
 | `pi-slopchop` | 终端内代码审阅与注释 | `/slopchop` 或 `/diff` |
@@ -62,7 +62,7 @@
 
 ## 组合建议
 
-- **常规编码**：Pi 原生 `bash`、`pi-context-bridge` 提供的 Web/teammate 工具、`pi-markdown-preview-compat`、`pi-maestro-tools`、`pi-maestro-todo`、`pi-tool-rails`、`pi-rtk-optimizer` 与 `pi-todo-guard` 构成默认基础。
+- **常规编码**：Pi 原生 `bash`、`pi-context-bridge` 提供的 Web/manager 能力、Magic Context 的 `ctx_*` 工具、`pi-default-workbench`、`pi-tool-rails`、`pi-slim-skills`、`pi-rtk-optimizer` 与结构化提问 package 构成默认基础。
 - **需要深度项目编排**：在当前 Pi 会话运行 `/large on`；它加载固定版本的完整上游 Flow、teammate 和 Cockpit，包括 GUI、MCP、LSP、browser/web search、FFF、conflict、root `bash_bg`、Advisor、self-evolve、Goal、Todo、Plan、Loop、agents 和 Maestro skills。完成后用 `/large off` 恢复默认 package 边界。
 - **需要联网资料**：直接要求模型搜索网页、抓取 URL 或克隆 GitHub 仓库；相关工具默认可用。
 

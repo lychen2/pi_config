@@ -139,15 +139,7 @@ For code tasks, ask Pi to report changed files, verification commands, and remai
 
 ### Delegate independent work in parallel
 
-The default profile provides the `teammate` tool, which launches independent Pi subprocesses with multi-task dispatch, DAG dependencies, background completion notifications, and result aggregation.
-
-```text
-Use teammate to dispatch two independent tasks that do not edit the same files, then summarize both statuses and results.
-```
-
-The main tools are `teammate`, `teammate-send`, `teammate-list`, and `observe`. The repository still keeps `extensions/pi-gsd` for users who explicitly want the sequential `/start-task`, `/finish-task`, and `/auto` session-tree workflow, but the installer no longer enables it by default.
-
-Use `teammate` only for bounded independent or reviewable work where fresh context or parallel progress materially helps. Keep trivial, tightly coupled, and continuously context-dependent work in the parent agent. Pass a minimal brief; the parent agent owns integration and final verification.
+The default profile keeps task execution in the parent agent. The optional Large profile provides teammate-based parallel dispatch when a task needs it.
 
 ## Repository map
 

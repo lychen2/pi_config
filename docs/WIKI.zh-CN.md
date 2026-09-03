@@ -2,8 +2,8 @@
 
 本页面面向第一次使用此仓库的人。先完成下面 5 步；需要查看项目工具开关、验收、DAG 和完整基础场景时，直接打开[完整使用手册](USAGE.zh-CN.md)。
 
-- [完整使用手册](USAGE.zh-CN.md)：安装、工具选择、全部能力和六个基础场景
-- [Skill 目录](skills.zh-CN.md)：58 个当前有效 skill 定义及逐项调用示例
+- [完整使用手册](USAGE.zh-CN.md)：安装、工具选择、全部能力和五个基础场景
+- [Skill 目录](skills.zh-CN.md)：仓库 57 个 skill 及本机外部 skill 的逐项调用示例
 - [工具目录](tools.zh-CN.md)：当前默认工具类别与逐项使用示例；实际数量以 `/tools list` 为准
 - [扩展目录](extensions.zh-CN.md)：本地 package、第三方 package、命令与工具
 - [公开设置](../config/settings-public.json)：可选的默认模型、主题与技能设置
@@ -13,14 +13,14 @@
 
 1. 在仓库根目录运行 `./install.sh --yes`，或已安装 Pi 时运行 `node install.mjs --yes`。
 2. 运行 `pi`，输入 `/provider add` 配置本机提供方，再用 `/model` 选择可用模型。
-3. 输入一个具体任务，例如“检查当前项目的测试失败原因并修复”。浏览器、并行 teammate 和 DAG 工具默认可用；当前项目不需要某些工具时用 `/tools` 关闭。
-4. 需要明确工作流时，输入 `/skill:<名称>`，例如 `/skill:batch-grill-me`、`/skill:mineru-file-processing` 或 `/skill:scientific-visualization`。
+3. 输入一个具体任务，例如“检查当前项目的测试失败原因并修复”。浏览器、Web Access 和本地工作台默认可用；当前项目不需要某些工具时用 `/tools` 关闭。
+4. 需要明确工作流时，输入 `/skill:<名称>`，例如 `/skill:grill-with-docs`、`/skill:mineru-file-processing` 或 `/skill:scientific-visualization`。
 5. 修改 `~/.pi/agent/settings.json`、扩展或主题后，在 Pi 中运行 `/reload`。
 
 ## 当前清单和命名边界
 
-- **Skill：58 个有效定义。** 仓库跟踪 57 个 `SKILL.md` 定义；本机保留的 `batch-grill-me` 计入当前有效清单。仓库内有两个同名 `mineru` 定义，所以是 58 个定义、57 个唯一名称。
-- **工具数量随 profile 变化。** 默认安装包含并行 `teammate`；当前会话运行 `/large on` 会替换重叠 package 并加载固定版本的完整上游 Maestro Flow、teammate 与 Cockpit，`/large off` 恢复默认边界。用 `/tools list` 查看当前会话的真实工具集。
+- **Skill：仓库基线为 57 个唯一名称。** 外部 package 可能提供额外 skill；当前 `grill-with-docs` 已纳入安装器清单并由安装器保留。
+- **工具数量随 profile 变化。** 默认安装包含本地工作台；当前会话运行 `/large on` 会替换重叠 package 并加载固定版本的完整上游 Maestro Flow、teammate 与 Cockpit，`/large off` 恢复默认边界。用 `/tools list` 查看当前会话的真实工具集。
 - **`pi-default-workbench`：Default 功能工作台。** 统一承载工具选择器、浏览器、Todo、FFF/后台 Shell/冲突处理和 Markdown Preview；`/tools` 管理模型可见工具，`/deferred-tools` 保留为兼容别名。
 
 ## Pi 的工作方式
@@ -63,9 +63,9 @@ Pi 是终端编码代理。它将当前目录、`AGENTS.md`、已启用技能和
 | 安全重命名 | `把 handleRequest 改名为 handleRequestV2，先预览将修改的文件；我确认后才应用。` |
 | 长任务必须验证 | 在任务中写明范围、验收命令和停止条件；完成前运行验收命令。 |
 | 小型并行工作流 | `把任务拆成检查现状、实现修改、复核测试三个有依赖的步骤；每步只返回结论和验证结果。` |
-| 独立调查 | `使用 teammate 派发只读调查任务，检查实现、测试和最近提交。` |
+| 独立调查 | 使用 Large profile 的 teammate 派发只读调查任务，检查实现、测试和最近提交。 |
 
-详细参数、配置 JSON 和六个完整场景在[完整使用手册](USAGE.zh-CN.md)。
+详细参数、配置 JSON 和五个完整场景在[完整使用手册](USAGE.zh-CN.md)。
 
 ## 必记快捷键
 
@@ -123,7 +123,7 @@ Pi 是终端编码代理。它将当前目录、`AGENTS.md`、已启用技能和
 
 - 提示词先写结果，再写边界。例如“把 X 改成 Y；不修改 API；测试必须通过”。
 - 用 `/name 发布检查` 给重要会话命名，后续用 `/resume` 更容易找到。
-- 长任务开始前要求模型使用 Todo；`pi-todo-guard` 会在仍有未完成任务时提醒代理继续。
+- 长任务开始前要求模型使用 Todo；`pi-default-workbench` 内置 Todo guard，会在仍有未完成任务时提醒代理继续。
 - 扩展工具默认启用；工具定义过多时用 `/tools` 为当前项目关闭整组或单个工具。
 - 通过 `/tree` 分支试验。实验失败时回到旧节点继续，避免把试验性改动混入主分支。
 - 不要将 API key、token 或私钥贴进提示词和仓库。provider 凭据保存在本机 Pi 配置中，不属于此仓库。

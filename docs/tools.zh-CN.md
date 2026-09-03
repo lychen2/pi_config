@@ -6,7 +6,7 @@
 
 | 数字 | 含义 |
 | ---: | --- |
-| 默认模式加上 Web Access、FFF、后台 Shell、冲突处理与并行 teammate。 |
+| 默认模式 | Web Access、FFF、后台 Shell、冲突处理和本地工作台。 |
 | 大型模式 | `/large on` 在当前会话加载固定上游 Flow、teammate 与 Cockpit，恢复 GUI、MCP、LSP、browser/web search、FFF、conflict、root `bash_bg`、Goal、Todo、Plan、Loop 与 Maestro skills。 |
 | 项目实际工具数 | 会随 `pi list`、`/tools`、启动参数、信任状态和已安装 package 变化；用 `/tools list` 核对。 |
 
@@ -53,20 +53,9 @@
 
 `ctx_memory` 记录稳定事实；`ctx_note` 记录以后处理的事项；当前任务不要用 note 代替 Todo。
 
-## 并行 Subagent（4）
-
-| 工具 | 用途 | 使用示例 |
-| --- | --- | --- |
-| `teammate` | 并行派发独立 Pi 子进程任务，支持 DAG 与结果聚合 | `同时派发只读审查和测试盘点；concurrency=2，等待两者完成后汇总。` |
-| `teammate-send` | 向运行中的 agent 发送 steer、follow-up 或 abort | `让 reviewer 额外检查迁移兼容性，不要改文件。` |
-| `teammate-list` | 查看可用角色、运行中 agent 或跨窗口目标 | `列出当前运行中的 teammate agent。` |
-| `observe` | 一次性状态、等待或 watch teammate 与 workspace | `等待 reviewer 和 tester 都完成，最多 10 分钟。` |
-
-并行写任务不能修改同一文件集。仓库保留可选 `pi-gsd` 源码；只有手动安装后才提供 `push-task`、`/start-task` 和 `/auto`。
-
 ## 后台 shell 任务（1）
 
-`bash_bg` 自主管理其任务 ID；不要把 `bash_bg` 返回的 ID 传给 `observe`。
+`bash_bg` 自主管理其任务 ID。
 
 | 工具 | 用途 | 使用示例 |
 | --- | --- | --- |
@@ -91,10 +80,6 @@ Pi 原生 `read` 读取普通文件和图片，`bash` 负责命令执行；`writ
 
 ```text
 先用 `read`、`grep` 和 `fffind` 理解 UserStore；只读返回最安全的修改入口。
-```
-
-```text
-使用 teammate 并行派发一个只读 review 和一个测试盘点任务；不要让它们修改文件。
 ```
 
 ```text
