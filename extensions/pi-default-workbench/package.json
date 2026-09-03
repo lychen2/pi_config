@@ -42,6 +42,7 @@
   },
   "dependencies": {
     "@ff-labs/fff-node": "0.10.3",
+    "@huggingface/transformers": "^3.8.1",
     "jiti": "2.7.0",
     "pi-markdown-preview": "0.14.0",
     "puppeteer-core": "24.31.0",

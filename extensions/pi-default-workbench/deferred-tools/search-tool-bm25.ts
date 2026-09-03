@@ -2,6 +2,7 @@ import type { ExtensionAPI, ToolDefinition } from "@earendil-works/pi-coding-age
 import { Type } from "typebox";
 
 import { buildToolSearchIndex, searchTools, toDiscoverableTool } from "./tool-discovery.ts";
+import { fuseWithSemanticRanking } from "../embedding-search.ts";
 import { capabilityToolsForMatches } from "./tool-selection-state.ts";
 
 const DEFAULT_LIMIT = 8;
@@ -60,7 +61,7 @@ export function createSearchToolBm25(
   return {
     name: "search_tool_bm25",
     label: "Search Tools",
-    description: "Search registered tools by capability using weighted BM25 ranking. Describe the missing capability in natural language; matching inactive tools become callable on the next request.",
+    description: "Search registered tools by capability using weighted BM25 ranking fused with local semantic embeddings. Describe the missing capability in natural language; matching inactive tools become callable on the next request.",
     promptSnippet: "Before claiming a capability is unavailable, answering what capabilities exist, or proceeding without a suitable active tool, call search_tool_bm25 once with a natural-language description of the needed capability. Use the activated tools on the next request.",
     parameters: SearchToolBm25Params,
     async execute(_id, params, signal) {
@@ -72,10 +73,18 @@ export function createSearchToolBm25(
       const catalog = pi.getAllTools()
         .filter((tool) => tool.name !== "search_tool_bm25" && (options.canDiscover?.(tool.name) ?? true))
         .map(toDiscoverableTool);
-      const ranked = searchTools(buildToolSearchIndex(catalog), query, limit);
+      const index = buildToolSearchIndex(catalog);
+      const bm25Ranked = searchTools(index, query, catalog.length).map((result) => result.tool);
+      const ranked = await fuseWithSemanticRanking(
+        catalog,
+        bm25Ranked,
+        (tool) => `${tool.name}. ${tool.description}`,
+        query,
+        limit,
+      );
       if (signal?.aborted) throw abortError();
 
-      const matchedNames = ranked.map((result) => result.tool.name);
+      const matchedNames = ranked.map((result) => result.item.name);
       const activationCandidates = capabilityToolsForMatches(
         matchedNames,
         catalog.map((tool) => tool.name),
@@ -87,12 +96,12 @@ export function createSearchToolBm25(
         limit,
         totalTools: catalog.length,
         activatedTools: activated,
-        tools: ranked.map(({ tool, score }) => ({
-          name: tool.name,
-          label: tool.label,
-          summary: tool.summary,
-          description: tool.description,
-          schemaKeys: tool.schemaKeys,
+        tools: ranked.map(({ item, score }) => ({
+          name: item.name,
+          label: item.label,
+          summary: item.summary,
+          description: item.description,
+          schemaKeys: item.schemaKeys,
           score: Number(score.toFixed(6)),
         })),
       };

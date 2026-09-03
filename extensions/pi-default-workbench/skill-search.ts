@@ -5,6 +5,7 @@ import {
   getAgentDir,
   type ExtensionAPI,
 } from "@earendil-works/pi-coding-agent";
+import { fuseWithSemanticRanking } from "./embedding-search.ts";
 
 type SkillLike = {
   name: string;
@@ -168,7 +169,7 @@ export default function registerSkillSearch(pi: ExtensionAPI): void {
   pi.registerTool({
     name: "search_skill_bm25",
     label: "Search Skills",
-    description: "Search skill metadata with BM25, then explicitly load one previously returned candidate.",
+    description: "Search skill metadata with BM25 fused with local semantic embeddings, then explicitly load one previously returned candidate.",
     promptSnippet: "When a task needs a specialized workflow, first call search_skill_bm25 with action=search and inspect 1-3 metadata candidates. Call it again with action=load only for the best matching candidate. Do not search for a pasted error or log unless the user asks you to diagnose or fix it.",
     parameters: SEARCH_SKILL_PARAMS,
     async execute(_id, params, signal) {
@@ -202,10 +203,18 @@ export default function registerSkillSearch(pi: ExtensionAPI): void {
         searchIndex = buildSearchIndex(knownSkills);
         searchIndexSignature = signature;
       }
-      const ranked = bm25Search(query, searchIndex, limit);
-      for (const { skill } of ranked) candidateSkillNames.add(skill.name);
+      const catalog = searchIndex.documents.map(({ skill }) => skill);
+      const bm25Ranked = bm25Search(query, searchIndex, catalog.length).map(({ skill }) => skill);
+      const ranked = await fuseWithSemanticRanking(
+        catalog,
+        bm25Ranked,
+        (skill) => `${skill.name}. ${skill.description}`,
+        query,
+        limit,
+      );
+      for (const { item: skill } of ranked) candidateSkillNames.add(skill.name);
 
-      const skills = ranked.map(({ skill, score }) => ({
+      const skills = ranked.map(({ item: skill, score }) => ({
         name: skill.name,
         description: skill.description,
         score: Number(score.toFixed(6)),

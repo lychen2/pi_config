@@ -1,5 +1,6 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import toolSelector from "./deferred-tools/deferred-tools.ts";
+import { ensureEmbeddingModel } from "./embedding-search.ts";
 import { registerLazyLargeCommand, registerLazyTools } from "./lazy-tools.ts";
 import registerSkillSearch from "./skill-search.ts";
 import { installToolFailureMarker } from "./maestro/src/tool-error.ts";
@@ -13,6 +14,7 @@ export default function register(pi: ExtensionAPI): void {
 
   let todoLoaded = false;
   pi.on("session_start", async () => {
+    if (process.env.PI_WORKBENCH_NO_EMBEDDING !== "1") ensureEmbeddingModel();
     if (todoLoaded) return;
     todoLoaded = true;
     const [todo, todoGuard] = await Promise.all([
