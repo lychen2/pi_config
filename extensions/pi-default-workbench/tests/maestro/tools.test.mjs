@@ -73,7 +73,7 @@ async function makeTwoConflictWorkspace() {
 test("registers the focused replacement tools", () => {
   const pi = fakePi();
   register(pi);
-  assert.deepEqual([...pi.tools.keys()].sort(), ["bash_bg", "conflict", "fffind", "grep"]);
+  assert.deepEqual([...pi.tools.keys()].sort(), ["bash_bg", "conflict", "fffind", "ffgrep"]);
   assert.equal(pi.handlers.get("session_shutdown").length, 3);
 });
 

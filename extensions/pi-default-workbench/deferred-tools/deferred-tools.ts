@@ -41,6 +41,8 @@ type SelectorMode =
   | { kind: "extensions" }
   | { kind: "tools"; extensionId: string };
 
+type ToolContext = Pick<ExtensionContext, "hasUI" | "ui">;
+
 const CONFIG_FILE = "tool-selector.json";
 const MAX_VISIBLE_ITEMS = 12;
 
@@ -51,6 +53,13 @@ const TOOL_COMMAND_ARGUMENTS = [
   { value: "reset", description: "清除禁用规则并切换到完整模式" },
   { value: "list", description: "显示当前工具选择和已启用工具" },
 ] as const;
+
+const TOOL_MODE_CYCLE: readonly ToolMode[] = ["fast", "adaptive", "full"];
+
+function nextToolMode(mode: ToolMode): ToolMode {
+  const index = TOOL_MODE_CYCLE.indexOf(mode);
+  return TOOL_MODE_CYCLE[(index + 1) % TOOL_MODE_CYCLE.length]!;
+}
 
 function completeToolCommand(prefix: string): AutocompleteItem[] | null {
   const query = prefix.trim();
@@ -181,7 +190,7 @@ function isAllowedTool(config: ToolSelectionConfig, groups: ExtensionGroup[], na
   return !config.disabledExtensions.includes(group.id);
 }
 
-function notify(ctx: ExtensionCommandContext, message: string, level: "info" | "warning" | "error" = "info"): void {
+function notify(ctx: ToolContext, message: string, level: "info" | "warning" | "error" = "info"): void {
   if (ctx.hasUI) ctx.ui.notify(message, level);
 }
 
@@ -441,12 +450,18 @@ export default function toolSelector(pi: ExtensionAPI): void {
     },
   }));
 
-  const refresh = (ctx: ExtensionContext, resetActivated = true): void => {
+  const refresh = (
+    ctx: ExtensionContext,
+    resetActivated = true,
+    validateCore = true,
+  ): void => {
     const nextPath = projectConfigPath(ctx);
-    try {
-      assertCoreToolsRegistered(pi.getAllTools().map((tool) => tool.name));
-    } catch (error) {
-      if (ctx.hasUI) ctx.ui.notify(error instanceof Error ? error.message : String(error), "error");
+    if (validateCore) {
+      try {
+        assertCoreToolsRegistered(pi.getAllTools().map((tool) => tool.name));
+      } catch (error) {
+        if (ctx.hasUI) ctx.ui.notify(error instanceof Error ? error.message : String(error), "error");
+      }
     }
     const previousConfig = JSON.stringify(config);
     const previousPath = configPath;
@@ -474,7 +489,7 @@ export default function toolSelector(pi: ExtensionAPI): void {
   const changeMode = (
     mode: ToolMode,
     path: string,
-    ctx: ExtensionCommandContext,
+    ctx: ToolContext,
     clearDisabled = false,
   ): void => {
     config = clearDisabled
@@ -559,6 +574,18 @@ export default function toolSelector(pi: ExtensionAPI): void {
 
   registerToolCommands(pi, openSelector);
 
-  pi.on("session_start", (_event, ctx) => refresh(ctx));
-  pi.on("before_agent_start", (_event, ctx) => refresh(ctx, false));
+  pi.registerShortcut(Key.ctrlAlt("t"), {
+    description: "Cycle tool mode: fast, adaptive, full",
+    handler: (ctx) => {
+      const path = projectConfigPath(ctx);
+      if (!path) {
+        notify(ctx, "Tool mode cycling requires a trusted project.", "warning");
+        return;
+      }
+      changeMode(nextToolMode(config.toolMode), path, ctx);
+    },
+  });
+
+  pi.on("session_start", (_event, ctx) => refresh(ctx, true, false));
+  pi.on("before_agent_start", (_event, ctx) => refresh(ctx, false, true));
 }

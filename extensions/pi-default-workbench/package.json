@@ -4,10 +4,38 @@
   "description": "Default-profile workbench for tool selection, browser control, Todo, workspace tools, and Markdown preview",
   "license": "MIT",
   "type": "module",
-  "engines": { "node": ">=22.19.0" },
-  "keywords": ["pi-package", "pi", "workbench", "tools", "todo", "browser", "preview"],
-  "files": ["index.ts", "deferred-tools", "browser", "todo", "maestro", "preview", "README.md", "config.example.json", "LICENSE"],
-  "pi": { "extensions": ["./index.ts"] },
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "keywords": [
+    "pi-package",
+    "pi",
+    "workbench",
+    "tools",
+    "todo",
+    "browser",
+    "preview"
+  ],
+  "files": [
+    "index.ts",
+    "lazy-tools.ts",
+    "deferred-tools",
+    "browser",
+    "todo",
+    "maestro",
+    "preview",
+    "large-mode.ts",
+    "large-mode-core.ts",
+    "skill-search.ts",
+    "README.md",
+    "config.example.json",
+    "LICENSE"
+  ],
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ]
+  },
   "scripts": {
     "test": "node --experimental-strip-types --test tests/**/*.test.mjs",
     "typecheck": "tsc --noEmit"

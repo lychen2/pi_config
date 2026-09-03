@@ -1,6 +1,6 @@
 import type { AgentToolResult } from "@earendil-works/pi-agent-core";
 import type { ToolDefinition } from "@earendil-works/pi-coding-agent";
-import { browserManager, type BrowserManagerLike } from "./manager.ts";
+import type { BrowserManagerLike } from "./manager.ts";
 
 type BrowserWaitUntil = "load" | "domcontentloaded" | "networkidle0" | "networkidle2";
 type BrowserDialogPolicy = "accept" | "dismiss";
@@ -59,7 +59,7 @@ export interface BrowserToolDetails {
   result?: string;
 }
 
-export function createBrowserTool(manager: BrowserManagerLike = browserManager): ToolDefinition<typeof BrowserParams, BrowserToolDetails> {
+export function createBrowserTool(manager?: BrowserManagerLike): ToolDefinition<typeof BrowserParams, BrowserToolDetails> {
   return {
     name: "browser",
     label: "Browser",
@@ -83,9 +83,10 @@ export function createBrowserTool(manager: BrowserManagerLike = browserManager):
       const name = params.name?.trim() || "main";
       const action = params.action as BrowserToolDetails["action"];
       const timeoutMs = Math.min(300, Math.max(1, params.timeout ?? 30)) * 1_000;
+      const runtimeManager = manager ?? (await import("./manager.ts")).browserManager;
       try {
         if (action === "open") {
-          const info = await manager.open({
+          const info = await runtimeManager.open({
             name,
             cwd: ctx.cwd,
             url: params.url,
@@ -105,16 +106,17 @@ export function createBrowserTool(manager: BrowserManagerLike = browserManager):
         }
         if (action === "close") {
           if (params.all) {
-            const count = await manager.closeAll();
+            const count = await runtimeManager.closeAll();
             const text = `Closed ${count} browser tab${count === 1 ? "" : "s"}.`;
             return success(text, { action: "close", result: text });
           }
-          const closed = await manager.close(name);
+          const closed = await runtimeManager.close(name);
           const text = closed ? `Closed tab ${JSON.stringify(name)}.` : `No tab named ${JSON.stringify(name)}.`;
           return success(text, { action: "close", name, result: text });
         }
         if (!params.code?.trim()) throw new Error("Browser run requires non-empty code.");
-        const output = await manager.run(name, params.code, ctx.cwd, signal, timeoutMs);
+        const output = await runtimeManager.run(name, params.code, ctx.cwd, signal, timeoutMs);
+
         const content = [...output.displays];
         if (output.returnValue !== undefined) content.push({ type: "text" as const, text: formatValue(output.returnValue) });
         if (content.length === 0) content.push({ type: "text" as const, text: `Ran code on tab ${JSON.stringify(name)}.` });

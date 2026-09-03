@@ -91,10 +91,10 @@ export function registerFff(pi: ExtensionAPI): void {
   };
 
   pi.registerTool({
-    name: "grep",
-    label: "Grep",
+    name: "ffgrep",
+    label: "FFF Grep",
     description: "Fast indexed literal content search in the current workspace.",
-    promptSnippet: "Use grep for fast indexed literal content search in the current workspace.",
+    promptSnippet: "Use ffgrep for fast indexed literal content search in the current workspace.",
     parameters: FffGrepParams,
     async execute(_id, params, signal, _onUpdate, ctx): Promise<AgentToolResult<unknown>> {
       if (signal?.aborted) throw abortError();

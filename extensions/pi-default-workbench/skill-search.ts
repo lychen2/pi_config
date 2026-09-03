@@ -14,17 +14,12 @@ type SkillLike = {
   searchText?: string;
 };
 
-const SEARCH_SKILL_PARAMS = Type.Union([
-  Type.Object({
-    action: Type.Literal("search"),
-    query: Type.String({ minLength: 1, description: "Natural-language description of the skill needed" }),
-    limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 3, description: "Maximum metadata candidates; default 3" })),
-  }),
-  Type.Object({
-    action: Type.Literal("load"),
-    name: Type.String({ minLength: 1, description: "Exact name of a skill returned by an earlier search" }),
-  }),
-]);
+const SEARCH_SKILL_PARAMS = Type.Object({
+  action: Type.String({ enum: ["search", "load"] }),
+  query: Type.Optional(Type.String({ minLength: 1, description: "Natural-language description of the skill needed" })),
+  limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 3, description: "Maximum metadata candidates; default 3" })),
+  name: Type.Optional(Type.String({ minLength: 1, description: "Exact name of a skill returned by an earlier search" })),
+}, { additionalProperties: false });
 
 type SearchDocument = {
   skill: SkillLike;
@@ -180,7 +175,8 @@ export default function registerSkillSearch(pi: ExtensionAPI): void {
       if (signal?.aborted) throw abortError();
 
       if (params.action === "load") {
-        const name = params.name.trim();
+        const name = params.name?.trim();
+        if (!name) throw new Error("Skill name is required and must not be empty.");
         if (!candidateSkillNames.has(name)) {
           throw new Error(`Skill ${name} must be returned by search before it can be loaded.`);
         }
@@ -197,7 +193,7 @@ export default function registerSkillSearch(pi: ExtensionAPI): void {
         return { content: [{ type: "text", text }], details };
       }
 
-      const query = params.query.trim();
+      const query = params.query?.trim();
       if (!query) throw new Error("Query is required and must not be empty.");
 
       const limit = params.limit ?? SEARCH_SKILL_DEFAULT_LIMIT;

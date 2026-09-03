@@ -32,16 +32,17 @@ export const TOOL_CAPABILITY_GROUPS = {
     "edit",
     "grep",
     "fffind",
+    "ffgrep",
     "web_search",
     "todo",
     "ask_user_question",
+    "search_skill_bm25",
   ],
   web: ["source_check", "fetch_content", "get_search_content"],
-  delegation: ["teammate", "teammate-send", "teammate-list", "observe"],
   memory: ["ctx_search", "ctx_memory", "ctx_note", "ctx_expand", "ctx_reduce"],
   ops: ["bash_bg", "conflict"],
   preview: ["preview_export"],
-  workflow: ["execute_command", "push-task"],
+  workflow: ["execute_command"],
 } as const;
 
 export const FAST_TOOL_NAMES: readonly string[] = TOOL_CAPABILITY_GROUPS.core;

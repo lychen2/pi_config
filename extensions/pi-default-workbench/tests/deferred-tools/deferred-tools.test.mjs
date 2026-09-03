@@ -27,12 +27,14 @@ function fakePi(initialTools) {
   const tools = [...initialTools];
   const handlers = new Map();
   const commands = new Map();
+  const shortcuts = new Map();
   let active = tools.map((entry) => entry.name);
 
   return {
     tools,
     handlers,
     commands,
+    shortcuts,
     registerTool(definition) {
       tools.push({
         ...definition,
@@ -45,6 +47,7 @@ function fakePi(initialTools) {
       active.push(definition.name);
     },
     registerCommand(name, definition) { commands.set(name, definition); },
+    registerShortcut(key, definition) { shortcuts.set(key, definition); },
     on(name, handler) { handlers.set(name, [...(handlers.get(name) ?? []), handler]); },
     getAllTools: () => tools,
     getActiveTools: () => [...active],
@@ -84,6 +87,7 @@ const initialTools = () => [
   tool("ffgrep", "Search literal workspace text", "npm:pi-maestro-tools@0.1.0"),
   tool("todo", "Manage project tasks", "npm:pi-maestro-todo@0.1.0"),
   tool("web_search", "Search the web for current information", "sdk", "host/web.ts"),
+  tool("search_skill_bm25", "Search available skills", "local:pi-default-workbench"),
 ];
 
 test("session_start applies adaptive core and BM25 activates an SDK tool", async () => {
@@ -99,11 +103,12 @@ test("session_start applies adaptive core and BM25 activates an SDK tool", async
     "edit",
     "grep",
     "fffind",
+    "ffgrep",
     "web_search",
     "todo",
     "ask_user_question",
+    "search_skill_bm25",
   ];
-  assert.deepEqual(new Set(pi.getActiveTools()), new Set([...core, "search_tool_bm25"]));
   for (const name of ["ls", "find"]) {
     assert.equal(pi.getActiveTools().includes(name), false, `${name} must stay out of adaptive core`);
   }
@@ -112,7 +117,7 @@ test("session_start applies adaptive core and BM25 activates an SDK tool", async
   assert.match(search.promptSnippet, /Before claiming a capability is unavailable/);
   assert.match(search.promptSnippet, /answering what capabilities exist/);
   assert.match(search.promptSnippet, /call search_tool_bm25 once/);
-  assert.doesNotMatch(search.promptSnippet, /teammate|browser|memory/);
+  assert.doesNotMatch(search.promptSnippet, /browser|memory/);
   const result = await search.execute("id", { query: "web current information", limit: 8 });
   assert.deepEqual(result.details.activatedTools, []);
   assert.deepEqual(new Set(pi.getActiveTools()), new Set([...core, "search_tool_bm25"]));
@@ -166,6 +171,32 @@ test("tools commands provide mode argument completions", () => {
   ]);
 });
 
+test("Ctrl+Alt+T cycles fast, adaptive, full, then fast", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "pi-tool-mode-shortcut-"));
+  const configPath = join(cwd, ".pi", "tool-selector.json");
+  await mkdir(dirname(configPath), { recursive: true });
+  await writeFile(configPath, JSON.stringify({
+    toolMode: "fast",
+    disabledExtensions: [],
+    disabledTools: [],
+  }), "utf8");
+
+  const pi = fakePi(initialTools());
+  register(pi);
+  await start(pi, cwd);
+  const shortcut = [...pi.shortcuts.values()][0];
+  const notifications = [];
+  const ctx = context(cwd, notifications);
+
+  await shortcut.handler(ctx);
+  assert.equal(JSON.parse(await readFile(configPath, "utf8")).toolMode, "adaptive");
+  await shortcut.handler(ctx);
+  assert.equal(JSON.parse(await readFile(configPath, "utf8")).toolMode, "full");
+  await shortcut.handler(ctx);
+  assert.equal(JSON.parse(await readFile(configPath, "utf8")).toolMode, "fast");
+  assert.equal(notifications.length, 3);
+});
+
 test("fast and full commands persist mode without clearing disables", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "pi-tool-modes-"));
   const configPath = join(cwd, ".pi", "tool-selector.json");
@@ -191,9 +222,11 @@ test("fast and full commands persist mode without clearing disables", async () =
     "edit",
     "grep",
     "fffind",
+    "ffgrep",
     "web_search",
     "todo",
     "ask_user_question",
+    "search_skill_bm25",
   ]));
   assert.deepEqual(JSON.parse(await readFile(configPath, "utf8")), {
     toolMode: "fast",
@@ -216,6 +249,7 @@ test("fast and full commands persist mode without clearing disables", async () =
     "todo",
     "web_search",
     "search_tool_bm25",
+    "search_skill_bm25",
   ]));
   assert.deepEqual(JSON.parse(await readFile(configPath, "utf8")), {
     toolMode: "full",

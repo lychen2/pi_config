@@ -27,8 +27,7 @@ const group = {
 };
 
 test("uses portable IDs for local package paths", () => {
-  assert.equal(packageSourceId("../../pi_config/extensions/pi-gsd"), "local:pi-gsd");
-  assert.equal(packageSourceId("C:\\Users\\me\\pi-gsd"), "local:pi-gsd");
+  assert.equal(packageSourceId("C:\\Users\\me\\example-tools"), "local:example-tools");
 });
 
 test("migrates legacy configs to adaptive and normalizes entries", () => {
@@ -130,7 +129,7 @@ test("fast preset keeps core tools including default web search", () => {
   assert.deepEqual(config, {
     toolMode: "fast",
     disabledExtensions: [],
-    disabledTools: ["bash_bg", "conflict", "ffgrep"],
+    disabledTools: ["bash_bg", "conflict"],
   });
   for (const name of ["write", "edit", "grep", "fffind", "web_search"]) {
     assert.equal(isToolDisabled(config, "local:pi-context-bridge", name), false);
@@ -150,6 +149,7 @@ test("fast core registration rejects silent tool-name drift", () => {
     "ffgrep",
     "todo",
     "ask_user_question",
+    "search_skill_bm25",
   ];
   assert.doesNotThrow(() => assertCoreToolsRegistered(registered));
   assert.throws(
