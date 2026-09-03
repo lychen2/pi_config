@@ -10,7 +10,6 @@ import type { AutocompleteItem } from "@earendil-works/pi-tui";
 
 const CONFIG_FILE = join(getAgentDir(), "slim-skills-whitelist.json");
 const DISABLE_ENV = "SLIM_SKILLS_DISABLE";
-const MIN_SKILL_COUNT = 8;
 const SKILL_COMMAND_ARGUMENTS = [
   { value: "list", description: "查看技能索引状态" },
   { value: "add", description: "加入自动发现列表" },
@@ -185,7 +184,7 @@ export default function slimSkills(pi: ExtensionAPI): void {
   pi.on("before_agent_start", async (event) => {
     const skills = (event.systemPromptOptions?.skills ?? []) as SkillLike[];
     if (skills.length) knownSkills = skills;
-    if (process.env[DISABLE_ENV] === "1" || skills.length < MIN_SKILL_COUNT) return;
+    if (process.env[DISABLE_ENV] === "1") return;
 
     let prompt = event.systemPrompt;
 

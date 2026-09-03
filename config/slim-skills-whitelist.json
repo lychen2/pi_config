@@ -4,10 +4,18 @@
     "figure-style",
     "humanizer",
     "humanizer-zh",
-    "batch-grill-me",
+    "grill-with-docs",
     "mineru",
     "mineru-file-processing",
-    "scientific-visualization"
+    "literature-search-openalex",
+    "academic-paper",
+    "academic-paper-reviewer",
+    "citation-management",
+    "deep-research",
+    "sympy",
+    "scientific-visualization",
+    "docx",
+    "pdfs"
   ],
   "inject": []
 }

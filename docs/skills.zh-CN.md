@@ -4,33 +4,37 @@
 
 ## 统计口径
 
-当前有效目录包含 **58 个 skill 定义**：
+当前有效目录以仓库中的 **57 个唯一 skill** 为基线；外部 package 还可能提供本机额外 skill，例如 `grill-with-docs`。
 
-- 仓库中有 57 个文件名严格为 `SKILL.md` 的定义，对应 56 个唯一名称。
-- `skills/mineru/SKILL.md` 与 `skills/mineru/skills/mineru/SKILL.md` 都叫 `mineru`，所以同名定义计两项。
-- 本机现有的 `batch-grill-me` 由 slim-skills allowlist 保留，但不属于本仓库文件；安装器不会覆盖它。它是第 58 项有效定义。
-- 这意味着目录是 58 个定义、57 个唯一名称，不应把它写成“仓库里有 58 个独立目录”。
-
-默认发现索引只保留以下 7 个轻量入口；`i-have-adhd` 由配置单独注入：
+默认发现索引保留 `config/slim-skills-whitelist.json` 中声明的入口；当前 allowlist 为：
 
 ```text
 figure-style
 humanizer
 humanizer-zh
-batch-grill-me
+grill-with-docs
 mineru
 mineru-file-processing
+literature-search-openalex
+academic-paper
+academic-paper-reviewer
+citation-management
+deep-research
+sympy
 scientific-visualization
 ```
 
+Pi 会递归发现嵌套目录中的 `SKILL.md`；安装器同步完整 skill 树。外部 package 提供的 skills 以本机实际安装结果为准。
+
 其他 skill 仍会被同步，但如果 `/skill:` 补全中没有出现，可显式运行 `/slim-skills inject <名称>`，或直接提供对应 `SKILL.md` 路径。技能所需的 Python、浏览器、远程计算、网络服务和凭据必须先在本机配置。
 
-## 编码、设计与技能维护（13）
+## 编码、设计与技能维护（14）
 
 | Skill | 用途 | 使用示例 |
 | --- | --- | --- |
 | [`agents-progressive-disclosure`](../skills/agents-progressive-disclosure/SKILL.md) | 拆分过大的 `AGENTS.md`、`CLAUDE.md` 或规则文件 | `/skill:agents-progressive-disclosure`；把 900 行项目规则拆成入口、路由和按需参考文档，保持规则语义不变。 |
-| `batch-grill-me`（本机保留） | 对复杂需求进行分轮澄清和设计决策 | `/skill:batch-grill-me`；先确认用户、约束、验收标准和不可接受的方案，再输出实现边界。 |
+| [`fuck-my-shit-mountain`](../skills/fuck-my-shit-mountain/SKILL.md) | 对代码库进行跨质量维度的证据化审计 | `/skill:fuck-my-shit-mountain`；先选择审计维度、语言、输出格式和范围，再生成结构化报告。 |
+| `grill-with-docs`（本机安装） | 在需求边界不清时进行访谈，并随过程维护决策文档 | `/skill:grill-with-docs`；先确认目标、约束、验收标准和不可接受的方案，再确定实现边界。 |
 | [`baoyu-design`](../skills/baoyu-design/SKILL.md) | 生成自包含 HTML 的界面、原型、设计系统和演示稿 | `/skill:baoyu-design`；为研究管理工具做一个可交互 HTML 原型，先问清受众、视觉参考和验收方式。 |
 | [`cavecrew`](../skills/cavecrew/SKILL.md) | 使用该技能定义的协作式分工流程 | `/skill:cavecrew`；把资料整理拆成角色分工，每个角色只返回证据和结论。 |
 | [`find-skills`](../skills/find-skills/SKILL.md) | 查找适合当前任务的已有 skill | `/skill:find-skills`；查找一个能把论文 PDF 转成带页码证据的 Markdown reader。 |
@@ -43,7 +47,7 @@ scientific-visualization
 | [`uv`](../skills/uv/SKILL.md) | 检查、安装和配置 Python 的 `uv` 工作流 | `/skill:uv`；检查当前项目是否有 uv，为脚本建立隔离环境，并给出可复现的运行命令。 |
 | [`workflow-skill-creator`](../skills/workflow-skill-creator/SKILL.md) | 把完成过的工作流程整理成可复用 Agent Skill | `/skill:workflow-skill-creator`；根据本次 PDF 审阅流程生成新的 `SKILL.md`，包含触发条件、步骤、失败路径和验收。 |
 
-## 论文、文献、数学和文件处理（13）
+## 论文、文献、数学和文件处理（12）
 
 | Skill | 用途 | 使用示例 |
 | --- | --- | --- |
@@ -55,7 +59,6 @@ scientific-visualization
 | [`deep-research`](../skills/deep-research/SKILL.md) | 进行多来源、带证据和风险控制的深度研究 | `/skill:deep-research`；研究某技术的近五年进展，只使用可追溯来源，标注冲突证据和结论置信度。 |
 | [`literature-search-openalex`](../skills/literature-search-openalex/SKILL.md) | 通过 OpenAlex 检索论文、作者和引用关系 | `/skill:literature-search-openalex`；按主题、年份和领域筛选 OpenAlex 论文，输出 DOI、引用数和候选阅读顺序。 |
 | [`mineru`](../skills/mineru/SKILL.md)（根定义） | 使用 MinerU 解析 PDF、Office、图片、表格和公式 | `/skill:mineru`；解析 `paper.pdf`，输出带表格、公式和页码的 Markdown；大文件先说明 token 和页数限制。 |
-| [`mineru`](../skills/mineru/skills/mineru/SKILL.md)（嵌套定义） | 同名 MinerU 打包定义，功能入口相近 | 需要稳定命中时使用 `/skill:mineru-file-processing`；不要依赖两个同名 `mineru` 的发现顺序。 |
 | [`mineru-file-processing`](../skills/mineru-file-processing/SKILL.md) | 将 PDF、Office、图片和 OCR 任务路由到适当解析流程 | `/skill:mineru-file-processing`；读取这个扫描 PDF，提取正文、表格、公式和页码证据，并说明是否需要 OCR。 |
 | [`pubmed-database`](../skills/pubmed-database/SKILL.md) | 检索 PubMed/PMC 生物医学文献和数据库关联 | `/skill:pubmed-database`；检索过去五年关于某疾病的随机对照试验，返回 PMID、DOI 和纳入理由。 |
 | [`scientific-visualization`](../skills/scientific-visualization/SKILL.md) | 生成可投稿的 matplotlib、seaborn 或 plotly 科学图 | `/skill:scientific-visualization`；用现有数据做一张色盲友好多面板图，包含误差线、显著性标记，并导出 PDF/TIFF。 |
@@ -112,7 +115,7 @@ scientific-visualization
 | PDF 论文阅读并核对引用 | `pdf-explore` → `nature-reader` → `nature-ref-verifier` |
 | 实验数据制作投稿级多面板图 | `figure-style` → `scientific-visualization` → `figure-composer` |
 | 论文写作后模拟评审并回复 | `academic-paper` → `academic-paper-reviewer` → `nature-response` |
-| 复杂需求先澄清再实现 | `batch-grill-me` → 普通编码工具 → `todo`/`todowrite` |
+| 复杂需求先澄清再实现 | `grill-with-docs` → 普通编码工具 → `todo` |
 | 论文转专利或汇报 | `nature-reader` → `nature-paper-to-patent` 或 `nature-paper2ppt` |
 
-同名 `mineru` 的发现顺序不稳定；PDF、Office、OCR 和表格任务优先使用 `mineru-file-processing`。技能不会替代工具：需要读取文件、联网、执行脚本或验证输出时，仍要在请求中写清输入、权限和验收命令。
+PDF、Office、OCR 和表格任务可使用 `mineru` 或 `mineru-file-processing`。技能不会替代工具：需要读取文件、联网、执行脚本或验证输出时，仍要在请求中写清输入、权限和验收命令。

@@ -6,6 +6,8 @@ The default is lossless: all skills remain auto-discoverable. Use `/slim-skills 
 
 Use `/slim-skills inject <name>` to append a skill's full body to every system prompt, and `/slim-skills uninject <name>` to stop. Before appending, the extension checks both the current prompt and the current injection batch so the same body is not added twice.
 
+For the nine high-risk skills `mineru-file-processing`, `mineru`, `scientific-visualization`, `literature-search-openalex`, `deep-research`, `academic-paper`, `academic-paper-reviewer`, `citation-management`, and `sympy`, the extension also borrows viktomas' skill-nudge pattern: a clear matching request preloads the skill once per session, and a matching `bash` command is blocked once until the skill is loaded. The rules are intentionally limited to explicit document processing, scientific research, academic writing/review, citation verification, and symbolic-math workflows.
+
 ## Install
 
 ```bash
