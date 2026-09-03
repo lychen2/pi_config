@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   RESOURCE_BLOCK_ALL,
+  LARGE_THEME_RESOURCE,
   buildLargeGlobalSettings,
   buildLargeProjectSettings,
   companionNameFromPath,
@@ -29,7 +30,7 @@ function completeSettings() {
     extensions: [controller, RESOURCE_BLOCK_ALL, `+${controller}`],
     skills: [RESOURCE_BLOCK_ALL],
     prompts: [RESOURCE_BLOCK_ALL],
-    themes: [RESOURCE_BLOCK_ALL],
+    themes: [RESOURCE_BLOCK_ALL, `+${LARGE_THEME_RESOURCE}`],
   };
 }
 
@@ -105,7 +106,7 @@ test("builds a clean global profile with only the recovery controller", () => {
     extensions: [controller, RESOURCE_BLOCK_ALL, `+${controller}`],
     skills: [RESOURCE_BLOCK_ALL],
     prompts: [RESOURCE_BLOCK_ALL],
-    themes: [RESOURCE_BLOCK_ALL],
+    themes: [RESOURCE_BLOCK_ALL, `+${LARGE_THEME_RESOURCE}`],
   });
 });
 
@@ -123,7 +124,7 @@ test("builds the same clean resource boundary for project settings", () => {
     extensions: [controller, RESOURCE_BLOCK_ALL, `+${controller}`],
     skills: [RESOURCE_BLOCK_ALL],
     prompts: [RESOURCE_BLOCK_ALL],
-    themes: [RESOURCE_BLOCK_ALL],
+    themes: [RESOURCE_BLOCK_ALL, `+${LARGE_THEME_RESOURCE}`],
   });
 });
 

@@ -279,10 +279,15 @@ export default function deepseekAnchoredStandard(pi: ExtensionAPI): void {
       task.images.length > 0
         ? [{ type: "text" as const, text: task.text }, ...task.images]
         : task.text;
-    pi.sendUserMessage(content, {
-      deliverAs: "followUp",
+    const followUpOptions = {
+      deliverAs: "followUp" as const,
+      // Pi 0.82 ignores this option; Pi 0.84+ uses it to expand templates.
       expandPromptTemplates: true,
-    });
+    };
+    pi.sendUserMessage(
+      content,
+      followUpOptions as Parameters<typeof pi.sendUserMessage>[1],
+    );
   });
 
   pi.registerCommand("dsh-anchor", {

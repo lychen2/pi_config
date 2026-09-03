@@ -8,6 +8,7 @@ import {
 
 const PROVIDER_ENV = "PI_MANAGER_MODELS_PROVIDER";
 const CONFIG_ENV = "PI_MANAGER_MODELS_CONFIG";
+const REFRESH_ON_START_ENV = "PI_MANAGER_MODELS_REFRESH_ON_START";
 const providerId = process.env[PROVIDER_ENV]?.trim() || "manager";
 const configPath = process.env[CONFIG_ENV]?.trim() || join(getAgentDir(), "models.json");
 const defaultCost = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
@@ -171,14 +172,24 @@ export async function discoverModels(config: ProviderConfig, apiKey?: string, si
   return models;
 }
 
+export function configuredModels(config: ProviderConfig): ProviderModelConfig[] {
+  return (config.models ?? []).map(completeModel);
+}
+
 export async function loadModels(config: ProviderConfig, apiKey?: string): Promise<ProviderModelConfig[]> {
-  const configured = (config.models ?? []).map(completeModel);
+  const configured = configuredModels(config);
   try {
     return await discoverModels(config, apiKey);
   } catch (error) {
     if (!configured.length) throw error;
     return configured;
   }
+}
+
+async function loadInitialModels(config: ProviderConfig, apiKey?: string): Promise<ProviderModelConfig[]> {
+  const configured = configuredModels(config);
+  if (configured.length > 0 && process.env[REFRESH_ON_START_ENV] !== "1") return configured;
+  return loadModels(config, apiKey);
 }
 
 export default async function managerModels(pi: ExtensionAPI): Promise<void> {
@@ -189,7 +200,7 @@ export default async function managerModels(pi: ExtensionAPI): Promise<void> {
   // model catalog can still source its credential from the environment. Plain
   // text keys pass through unchanged (no behavior change for existing configs).
   const apiKey = await resolveInitialKey(pi, initial.apiKey);
-  let models = await loadModels(initial, apiKey);
+  let models = await loadInitialModels(initial, apiKey);
 
   pi.on("before_provider_request", (event, ctx) => {
     if (ctx.model?.provider !== providerId || ctx.model.api !== "openai-responses") return;

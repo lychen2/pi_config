@@ -4,6 +4,7 @@ export const FLOW_PACKAGE_NAME = "pi-maestro-flow";
 export const RESOURCE_BLOCK_ALL = "!**/*";
 export const PROFILE_MARKER_FILE = "pi-large-profile.json";
 export const LARGE_THEME = "matugen";
+export const LARGE_THEME_RESOURCE = "themes/matugen.json";
 export const LARGE_PROFILE_VERSION = 4;
 export const BEAUTIFY_PACKAGE_NAME = "pi-large-beautify";
 
@@ -71,7 +72,7 @@ export function buildLargeGlobalSettings(settings: JsonObject, controllerPath: s
     extensions: [controllerPath, RESOURCE_BLOCK_ALL, `+${controllerPath}`],
     skills: [RESOURCE_BLOCK_ALL],
     prompts: [RESOURCE_BLOCK_ALL],
-    themes: [RESOURCE_BLOCK_ALL],
+    themes: [RESOURCE_BLOCK_ALL, `+${LARGE_THEME_RESOURCE}`],
   };
 }
 
@@ -85,7 +86,7 @@ export function buildLargeProjectSettings(settings: JsonObject, controllerPath: 
     extensions: [controllerPath, RESOURCE_BLOCK_ALL, `+${controllerPath}`],
     skills: [RESOURCE_BLOCK_ALL],
     prompts: [RESOURCE_BLOCK_ALL],
-    themes: [RESOURCE_BLOCK_ALL],
+    themes: [RESOURCE_BLOCK_ALL, `+${LARGE_THEME_RESOURCE}`],
   };
 }
 
@@ -127,7 +128,7 @@ export function isCompleteFlowSettings(
   return JSON.stringify(settings.extensions) === JSON.stringify([controllerPath, RESOURCE_BLOCK_ALL, `+${controllerPath}`])
     && JSON.stringify(settings.skills) === JSON.stringify([RESOURCE_BLOCK_ALL])
     && JSON.stringify(settings.prompts) === JSON.stringify([RESOURCE_BLOCK_ALL])
-    && JSON.stringify(settings.themes) === JSON.stringify([RESOURCE_BLOCK_ALL]);
+    && JSON.stringify(settings.themes) === JSON.stringify([RESOURCE_BLOCK_ALL, `+${LARGE_THEME_RESOURCE}`]);
 }
 
 export function rewriteAgentPath(value: unknown, fromAgentDir: string, toAgentDir: string): unknown {
