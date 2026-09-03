@@ -2,12 +2,16 @@
 npm:@pi-lab/notify
 # pi-markdown-preview@0.14.0 is a locked dependency of
 # extensions/pi-default-workbench, its sole registration entry.
+# Magic Context owns the ctx_* memory and conversation-history tools.
+npm:@cortexkit/pi-magic-context
 npm:@narumitw/pi-plan-mode
 npm:@juicesharp/rpiv-ask-user-question
-# Web Access 0.22.0 and teammate 1.11.0 are locked dependencies of
-# extensions/pi-context-bridge, their sole default-mode registration entry.
+# Web Access 0.22.0 is a locked dependency of
+# extensions/pi-context-bridge, its sole default-mode registration entry.
 npm:pi-slopchop
 npm:pi-workspace-history
 npm:pi-rtk-optimizer
 npm:@victor-software-house/pi-curated-themes
 git:github.com/BevalZ/pi-provider
+# Ponytail Pi extension and bundled skills.
+git:github.com/DietrichGebert/ponytail

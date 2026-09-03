@@ -3,6 +3,7 @@
 import { constants as fsConstants, realpathSync } from "node:fs";
 import {
   access,
+  chmod,
   cp,
   mkdir,
   readFile,
@@ -36,8 +37,13 @@ const retiredLocalPackageNames = new Set([
   "pi-aft-compat",
   "pi-rtk-aft-capture",
   "pi-rtk-aft-restore",
-  "pi-gsd",
   "pi-large-beautify",
+  "pi-brand-header",
+  "pi-deepseek-anchored-standard",
+  "pi-large-mode",
+  "pi-manager-models",
+  "pi-todo-guard",
+  "pi-zh-localizer",
 ]);
 
 function normalizeChildPath() {
@@ -322,11 +328,6 @@ async function mergeSkillTree(source, destination) {
   }
 
   for (const entry of await readdir(source, { withFileTypes: true })) {
-    if (entry.isDirectory() && entry.name === "skills") {
-      console.log(`  skip nested skill bundle ${path.relative(repoDir, path.join(source, entry.name))}`);
-      continue;
-    }
-
     const sourceEntry = path.join(source, entry.name);
     const destinationEntry = path.join(destination, entry.name);
     if (entry.isDirectory()) {
@@ -676,6 +677,31 @@ async function installOptionalTools(choices) {
   }
 }
 
+async function securePrivateFiles(backupDir) {
+  if (installerOptions.dryRun) return;
+
+  for (const entry of await readdir(agentDir, { withFileTypes: true })) {
+    if (entry.isFile() && (entry.name === "models.json" || entry.name.startsWith("models.json."))) {
+      await chmod(path.join(agentDir, entry.name), 0o600);
+    }
+  }
+
+  async function secureTree(root) {
+    if (!(await pathExists(root))) return;
+    await chmod(root, 0o700);
+    for (const entry of await readdir(root, { withFileTypes: true })) {
+      const target = path.join(root, entry.name);
+      if (entry.isDirectory()) {
+        await secureTree(target);
+      } else if (entry.isFile()) {
+        await chmod(target, 0o600);
+      }
+    }
+  }
+
+  if (backupDir) await secureTree(path.join(backupDir, "agent"));
+}
+
 function verifyPi() {
   if (installerOptions.dryRun) {
     return;
@@ -715,6 +741,7 @@ async function main() {
   await installLocalPackages();
   await installExternalPackages(choices.external);
   await installOptionalTools(choices);
+  await securePrivateFiles(backupDir);
 
   if (installerOptions.dryRun) {
     console.log("\nDry run complete. No changes were made.");
