@@ -31,8 +31,8 @@ These packages are pinned production dependencies of local compatibility entries
 
 | Package | Pinned version | Registration entry |
 | --- | ---: | --- |
-| `pi-markdown-preview` | 0.14.0 | `pi-default-workbench` |
-| `pi-web-access` | 0.22.0 | `pi-context-bridge` |
+| `pi-markdown-preview` | latest | `pi-default-workbench` |
+| `pi-web-access` | latest | `pi-context-bridge` |
 
 ## Configured Third-Party Extensions
 

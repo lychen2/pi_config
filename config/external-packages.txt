@@ -1,12 +1,12 @@
 # External pi packages recorded from ~/.pi/agent/settings.json
 npm:@pi-lab/notify
-# pi-markdown-preview@0.14.0 is a locked dependency of
+# pi-markdown-preview is a dependency of
 # extensions/pi-default-workbench, its sole registration entry.
 # Magic Context owns the ctx_* memory and conversation-history tools.
 npm:@cortexkit/pi-magic-context
 npm:@narumitw/pi-plan-mode
 npm:@juicesharp/rpiv-ask-user-question
-# Web Access 0.22.0 is a locked dependency of
+# Web Access is a dependency of
 # extensions/pi-context-bridge, its sole default-mode registration entry.
 npm:pi-slopchop
 npm:pi-workspace-history
