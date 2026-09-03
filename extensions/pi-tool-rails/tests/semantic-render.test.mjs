@@ -82,9 +82,9 @@ test("colors non-empty grep summaries as success", () => {
   assert.deepEqual(lines(empty), ["<toolOutput>0 处匹配</toolOutput>"]);
 });
 
-test("adds reasoning to the schema and strips it before execution", async () => {
+test("adds optional reasoning to the schema and strips it before execution", async () => {
   const tool = decorateTool(sourceTool("read"));
-  assert.ok(tool.parameters.required.includes("reasoning"));
+  assert.ok(!tool.parameters.required.includes("reasoning"));
   assert.equal(Object.keys(tool.parameters.properties)[0], "reasoning");
 
   const result = await tool.execute(
