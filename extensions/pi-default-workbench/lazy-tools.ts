@@ -96,6 +96,42 @@ type LazyToolSpec = {
   executionMode?: "sequential" | "parallel";
 };
 
+type PreviewCommand = {
+  description?: string;
+  handler: (args: string, ctx: ExtensionCommandContext) => Promise<void>;
+};
+
+// pi-markdown-preview registers one tool and four commands from the same factory. Load it
+// once and capture both surfaces, otherwise the commands only exist after the tool runs.
+let previewRuntime: Promise<{ tool: AnyTool; commands: Map<string, PreviewCommand> }> | undefined;
+
+function loadPreviewRuntime(pi: ExtensionAPI) {
+  return previewRuntime ??= (async () => {
+    let tool: AnyTool | undefined;
+    const commands = new Map<string, PreviewCommand>();
+    const runtimePi = new Proxy(pi, {
+      get(target, property, receiver) {
+        if (property === "registerTool") {
+          return (registered: AnyTool) => {
+            if (registered.name === "preview_export") tool = registered;
+          };
+        }
+        if (property === "registerCommand") {
+          return (name: string, definition: PreviewCommand) => {
+            commands.set(name, definition);
+          };
+        }
+        const value = Reflect.get(target, property, receiver);
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
+    const module = await import("./preview/index.ts");
+    await module.default(runtimePi as ExtensionAPI);
+    if (!tool) throw new Error("pi-markdown-preview did not register preview_export.");
+    return { tool, commands };
+  })();
+}
+
 function runtimeTool(pi: ExtensionAPI, name: string, loader: RuntimeLoader): Promise<AnyTool> {
   let captured: AnyTool | undefined;
   const runtimePi = new Proxy(pi, {
@@ -183,15 +219,37 @@ export function registerLazyTools(pi: ExtensionAPI): void {
     module.registerConflictTool(runtimePi);
   });
 
-  registerLazyTool(pi, {
+  pi.registerTool({
     name: "preview_export",
     label: "Preview",
     description: "Render Markdown/LaTeX, a local file, or the latest assistant response to PDF, HTML, or PNG artifact files.",
     parameters: PreviewParams,
-  }, async (runtimePi) => {
-    const module = await import("./preview/index.ts");
-    await module.default(runtimePi);
-  });
+    async execute(...args: Parameters<ToolExecutor>): Promise<unknown> {
+      const { tool } = await loadPreviewRuntime(pi);
+      return (tool.execute as ToolExecutor)(...args);
+    },
+  } as AnyTool);
+}
+
+const PREVIEW_COMMAND_SHELLS: ReadonlyArray<readonly [string, string, string]> = [
+  ["preview", "", "Rendered markdown preview (--file <path> or bare path, --browser/-b, --watch/-w, --pdf, --terminal, --font-size <px>)"],
+  ["preview-browser", "--browser", "Open browser preview (--watch/-w, --list, --stop)"],
+  ["preview-pdf", "--pdf", "Export markdown to PDF via pandoc + LaTeX and open it"],
+  ["preview-clear-cache", "", "Clear the rendered preview cache"],
+];
+
+export function registerLazyPreviewCommands(pi: ExtensionAPI): void {
+  for (const [name, prefix, description] of PREVIEW_COMMAND_SHELLS) {
+    pi.registerCommand(name, {
+      description,
+      handler: async (args, ctx) => {
+        const { commands } = await loadPreviewRuntime(pi);
+        const command = commands.get(name);
+        if (!command) throw new Error(`pi-markdown-preview has no /${name} command.`);
+        await command.handler(prefix ? `${prefix} ${args}`.trim() : args, ctx);
+      },
+    });
+  }
 }
 
 export function registerLazyLargeCommand(pi: ExtensionAPI): void {

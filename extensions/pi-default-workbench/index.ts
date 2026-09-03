@@ -1,12 +1,13 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import toolSelector from "./deferred-tools/deferred-tools.ts";
 import { ensureEmbeddingModel } from "./embedding-search.ts";
-import { registerLazyLargeCommand, registerLazyTools } from "./lazy-tools.ts";
+import { registerLazyLargeCommand, registerLazyPreviewCommands, registerLazyTools } from "./lazy-tools.ts";
 import registerSkillSearch from "./skill-search.ts";
 import { installToolFailureMarker } from "./maestro/src/tool-error.ts";
 
 export default function register(pi: ExtensionAPI): void {
   registerLazyTools(pi);
+  registerLazyPreviewCommands(pi);
   registerLazyLargeCommand(pi);
   installToolFailureMarker(pi);
   toolSelector(pi);
