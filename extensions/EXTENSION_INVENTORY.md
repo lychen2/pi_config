@@ -6,7 +6,7 @@ Audited against Pi 0.84.1 extension, package, TUI, keybinding, provider, and lif
 
 | Package | Purpose | Source |
 | --- | --- | --- |
-| `pi-default-workbench` | Unified Default functional workbench: adaptive tool selection, Puppeteer browser control, persistent Todo, Todo guard, FFF/background shell/conflict tools, Markdown Preview, and `/large` profile switching | `pi-default-workbench/index.ts`, `pi-default-workbench/{deferred-tools,browser,todo,maestro,preview,large-mode}.ts` |
+| `pi-default-workbench` | Unified Default functional workbench: adaptive tool selection, bash-to-tool guard, Puppeteer browser control, persistent Todo, Todo guard, FFF/background shell/conflict tools, Markdown Preview, and `/large` profile switching | `pi-default-workbench/index.ts`, `pi-default-workbench/{bash-guard,deferred-tools,browser,todo,maestro,preview,large-mode}.ts` |
 | `pi-context-bridge` | Sole Default registration entry for Web Access, configurable provider model refresh, and bounded checkpoint context continuity | `pi-context-bridge/index.ts`, `pi-context-bridge/{manager-models,continuity}.ts` |
 | `pi-large-mode` | Large profile switching implementation, aggregated by `pi-default-workbench` | `pi-default-workbench/large-mode.ts`, `pi-default-workbench/large-mode-core.ts` |
 | `pi-brand-header` | Responsive themed startup header, aggregated by `pi-tool-rails` | `pi-tool-rails/brand-header.ts` |

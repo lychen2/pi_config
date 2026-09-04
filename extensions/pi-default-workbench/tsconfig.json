@@ -11,6 +11,7 @@
     "types": ["node"]
   },
   "include": [
+    "bash-guard.ts",
     "index.ts",
     "deferred-tools/**/*.ts",
     "browser/**/*.ts",

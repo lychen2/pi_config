@@ -19,6 +19,7 @@
   "files": [
     "index.ts",
     "lazy-tools.ts",
+    "bash-guard.ts",
     "deferred-tools",
     "browser",
     "todo",

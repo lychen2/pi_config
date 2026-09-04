@@ -1,4 +1,5 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import bashGuard from "./bash-guard.ts";
 import toolSelector from "./deferred-tools/deferred-tools.ts";
 import { ensureEmbeddingModel } from "./embedding-search.ts";
 import { registerLazyLargeCommand, registerLazyPreviewCommands, registerLazyTools } from "./lazy-tools.ts";
@@ -10,6 +11,7 @@ export default function register(pi: ExtensionAPI): void {
   registerLazyPreviewCommands(pi);
   registerLazyLargeCommand(pi);
   installToolFailureMarker(pi);
+  bashGuard(pi);
   toolSelector(pi);
   registerSkillSearch(pi);
 
