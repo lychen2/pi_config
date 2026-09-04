@@ -7,6 +7,7 @@
   },
   "theme": "matugen",
   "quietStartup": true,
+  "tuiMode": "regular",
   "hideThinkingBlock": false,
   "enableSkillCommands": true,
   "desktopSkillOverrides": {
