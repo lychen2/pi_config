@@ -13,5 +13,3 @@ npm:pi-workspace-history
 npm:pi-rtk-optimizer
 npm:@victor-software-house/pi-curated-themes
 git:github.com/BevalZ/pi-provider
-# Ponytail Pi extension and bundled skills.
-git:github.com/DietrichGebert/ponytail

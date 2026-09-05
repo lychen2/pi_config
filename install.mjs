@@ -88,7 +88,7 @@ function parseArgs(argv) {
     external: undefined,
     rtk: undefined,
     modelDefaults: undefined,
-    cleanPlugins: true,
+    cleanPlugins: false,
   };
 
   for (const arg of argv) {
@@ -149,8 +149,8 @@ Options:
       --skip-rtk           Skip the RTK binary
       --with-model-defaults  Apply provider/model defaults from public settings
       --skip-model-defaults  Keep the machine's provider/model selection
-      --clean-plugins        Compatibility flag; cleanup is always enabled
-   Local extensions/pi-*/package.json packages are always installed.
+      --clean-plugins        Clear plugins before an explicit clean reinstall
+   Existing local package selections are preserved on incremental installs.
   -h, --help               Show this help
 
 Recommended install:
@@ -399,10 +399,12 @@ async function promptYesNo(rl, question, defaultValue) {
 }
 
 async function resolveChoices() {
+  const existingSettings = await readJson(path.join(agentDir, "settings.json"));
+  const externalDefault = installerOptions.cleanPlugins || !Array.isArray(existingSettings.packages);
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
   try {
-  const external = installerOptions.external ??
-      (await promptYesNo(rl, "Install the external Pi package manifest?", true));
+    const external = installerOptions.external ??
+      (await promptYesNo(rl, "Install the external Pi package manifest?", externalDefault));
     const rtk = installerOptions.rtk ??
       (await promptYesNo(rl, "Install the RTK binary used by pi-rtk-optimizer?", true));
     const modelDefaults = installerOptions.modelDefaults ??
@@ -556,7 +558,12 @@ async function mergePublicSettings(includeModelDefaults) {
 
 
   const currentSettings = await readJson(settingsPath);
-  const mergedSettings = mergeObjects(currentSettings, publicSettings);
+  const mergedSettings = mergeObjects(publicSettings, currentSettings);
+  if (includeModelDefaults) {
+    for (const key of ["defaultProvider", "defaultModel", "enabledModels"]) {
+      if (Object.hasOwn(publicSettings, key)) mergedSettings[key] = publicSettings[key];
+    }
+  }
   if (installerOptions.cleanPlugins) {
     delete mergedSettings.packages;
   }
@@ -594,6 +601,8 @@ async function retireLegacyLargeLauncher() {
 async function installLocalPackages() {
   console.log(`\n${installStep(4)} Installing local Pi packages`);
   const extensionsDir = path.join(repoDir, "extensions");
+  const settings = await readJson(path.join(agentDir, "settings.json"));
+  const preserveSelection = !installerOptions.cleanPlugins && Array.isArray(settings.packages);
   const entries = await readdir(extensionsDir, { withFileTypes: true });
   const packageDirs = [];
 
@@ -610,11 +619,14 @@ async function installLocalPackages() {
   packageDirs.sort();
   console.log(`  discovered local packages: ${packageDirs.map((packageDir) => path.basename(packageDir)).join(", ") || "none"}`);
   for (const packageDir of packageDirs.filter((entry) => !retiredLocalPackageNames.has(path.basename(entry)))) {
+    if (preserveSelection && !settings.packages.some((entry) => isLocalPackageSource(entry, path.basename(packageDir)))) {
+      continue;
+    }
     const packageJson = await readJson(path.join(packageDir, "package.json"), {});
     if (isPlainObject(packageJson.dependencies) && Object.keys(packageJson.dependencies).length > 0) {
       run(commandName("npm"), ["install", "--omit=dev", "--omit=peer"], { cwd: packageDir });
     }
-    run(commandName("pi"), ["install", packageDir]);
+    if (!preserveSelection) run(commandName("pi"), ["install", packageDir]);
   }
   await normalizeAnchoredStandardOrder();
 
