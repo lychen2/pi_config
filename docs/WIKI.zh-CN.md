@@ -3,7 +3,7 @@
 本页面面向第一次使用此仓库的人。先完成下面 5 步；需要查看项目工具开关、验收、DAG 和完整基础场景时，直接打开[完整使用手册](USAGE.zh-CN.md)。
 
 - [完整使用手册](USAGE.zh-CN.md)：安装、工具选择、全部能力和五个基础场景
-- [Skill 目录](skills.zh-CN.md)：仓库 57 个 skill 及本机外部 skill 的逐项调用示例
+- [Skill 目录](skills.zh-CN.md)：仓库及本机外部 skill 的逐项调用示例
 - [工具目录](tools.zh-CN.md)：当前默认工具类别与逐项使用示例；实际数量以 `/tools list` 为准
 - [扩展目录](extensions.zh-CN.md)：本地 package、第三方 package、命令与工具
 - [公开设置](../config/settings-public.json)：可选的默认模型、主题与技能设置
@@ -19,7 +19,7 @@
 
 ## 当前清单和命名边界
 
-- **Skill：仓库基线为 57 个唯一名称。** 外部 package 可能提供额外 skill；当前 `grill-with-docs` 已纳入安装器清单并由安装器保留。
+- **Skill：有效目录以仓库中的 `SKILL.md` 为准。** 外部 package 可能提供额外 skill；默认自动发现入口以 `config/slim-skills-whitelist.json` 为准。
 - **工具数量随 profile 变化。** 默认安装包含本地工作台；当前会话运行 `/large on` 会替换重叠 package 并加载固定版本的完整上游 Maestro Flow、teammate 与 Cockpit，`/large off` 恢复默认边界。用 `/tools list` 查看当前会话的真实工具集。
 - **`pi-default-workbench`：Default 功能工作台。** 统一承载工具选择器、浏览器、Todo、FFF/后台 Shell/冲突处理和 Markdown Preview；`/tools` 管理模型可见工具，`/deferred-tools` 保留为兼容别名。
 

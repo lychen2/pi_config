@@ -322,7 +322,7 @@ async function skillExistsInOtherRoot(name) {
   return undefined;
 }
 
-async function mergeSkillTree(source, destination) {
+async function mergeSkillTree(source, destination, overwriteFiles = false) {
   if (!(await pathExists(destination)) && !installerOptions.dryRun) {
     await mkdir(destination, { recursive: true });
   }
@@ -331,8 +331,8 @@ async function mergeSkillTree(source, destination) {
     const sourceEntry = path.join(source, entry.name);
     const destinationEntry = path.join(destination, entry.name);
     if (entry.isDirectory()) {
-      await mergeSkillTree(sourceEntry, destinationEntry);
-    } else if (!(await pathExists(destinationEntry))) {
+      await mergeSkillTree(sourceEntry, destinationEntry, overwriteFiles);
+    } else if (overwriteFiles || !(await pathExists(destinationEntry))) {
       await copyPath(sourceEntry, destinationEntry);
     }
   }
@@ -353,7 +353,7 @@ async function mergeRepositorySkills() {
       console.log(`  preserve existing skill ${entry.name} from ${externalRoot}`);
       continue;
     }
-    await mergeSkillTree(path.join(source, entry.name), path.join(destination, entry.name));
+    await mergeSkillTree(path.join(repoDir, "skills", entry.name), path.join(destination, entry.name), true);
   }
 }
 
@@ -485,16 +485,12 @@ async function restoreFiles() {
     await copyPath(path.join(repoDir, "config", file), path.join(agentDir, file));
   }
 
-  for (const file of ["adhd-mode.ts", "matugen-chrome.ts", "matugen-footer-core.mjs"]) {
+  for (const file of ["matugen-chrome.ts", "matugen-footer-core.mjs"]) {
     await copyPath(
       path.join(repoDir, "extensions", file),
       path.join(agentDir, "extensions", file),
     );
   }
-  await copyPath(
-    path.join(repoDir, "extensions", "pi-adhd"),
-    path.join(agentDir, "extensions", "pi-adhd"),
-  );
   await copyPath(
     path.join(repoDir, "extensions", "matugen-footer"),
     path.join(agentDir, "extensions", "matugen-footer"),

@@ -1,18 +1,14 @@
 {
   "mode": "allowlist",
   "whitelist": [
-    "figure-style",
     "humanizer",
     "humanizer-zh",
-    "grill-with-docs",
     "mineru",
     "mineru-file-processing",
     "literature-search-openalex",
     "academic-paper",
     "academic-paper-reviewer",
-    "citation-management",
     "deep-research",
-    "sympy",
     "scientific-visualization",
     "docx",
     "pdfs"

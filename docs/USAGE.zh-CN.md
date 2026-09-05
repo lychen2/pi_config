@@ -4,7 +4,7 @@
 
 - [根 README](../README.zh-CN.md)：项目概览和安装入口
 - [扩展目录](extensions.zh-CN.md)：所有本地和第三方扩展
-- [Skill 目录](skills.zh-CN.md)：仓库 57 个 skill 及本机外部 skill 的逐项调用示例
+- [Skill 目录](skills.zh-CN.md)：仓库 34 个 skill 及本机外部 skill 的逐项调用示例
 - [工具目录](tools.zh-CN.md)：35 个当前 `functions.*` 工具及逐项示例
 
 ## 1. 安装
@@ -160,16 +160,20 @@ adaptive/fast 的严格 core 是 `read`、`bash`、`write`、`edit`、`grep`、`
 
 ### Skills
 
-当前有效清单以仓库 57 个唯一 `SKILL.md` 名称为基线；本机外部 package 还可能提供额外 skill，`grill-with-docs` 已由安装器清单保留。安装器递归同步完整 skill 树。默认 slim-skills allowlist 使用 [`../config/slim-skills-whitelist.json`](../config/slim-skills-whitelist.json) 中的入口；完整路径和逐项示例见[Skill 目录](skills.zh-CN.md)：
+当前有效清单以仓库 34 个唯一 `SKILL.md` 名称为基线；本机外部 package 还可能提供额外 skill。安装器递归同步完整 skill 树。默认 slim-skills allowlist 使用 [`../config/slim-skills-whitelist.json`](../config/slim-skills-whitelist.json) 中的入口：
 
 ```text
-figure-style
 humanizer
 humanizer-zh
-grill-with-docs
 mineru
 mineru-file-processing
+literature-search-openalex
+academic-paper
+academic-paper-reviewer
+deep-research
 scientific-visualization
+docx
+pdfs
 ```
 
 调用例子：
