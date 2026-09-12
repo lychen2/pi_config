@@ -1,10 +1,7 @@
 import { readFile, stat } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname } from "node:path";
 import { Type } from "typebox";
-import {
-  getAgentDir,
-  type ExtensionAPI,
-} from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { fuseWithSemanticRanking } from "./embedding-search.ts";
 
 type SkillLike = {
@@ -170,7 +167,7 @@ export default function registerSkillSearch(pi: ExtensionAPI): void {
     name: "search_skill_bm25",
     label: "Search Skills",
     description: "Search skill metadata with BM25 fused with local semantic embeddings, then explicitly load one previously returned candidate.",
-    promptSnippet: "When a task needs a specialized workflow, first call search_skill_bm25 with action=search and inspect 1-3 metadata candidates. Call it again with action=load only for the best matching candidate. Do not search for a pasted error or log unless the user asks you to diagnose or fix it.",
+    promptSnippet: "Use action=search when specialized guidance would help and the matching skill is unknown, then action=load for a relevant candidate. Reuse guidance already in context.",
     parameters: SEARCH_SKILL_PARAMS,
     async execute(_id, params, signal) {
       if (signal?.aborted) throw abortError();
@@ -190,7 +187,7 @@ export default function registerSkillSearch(pi: ExtensionAPI): void {
         const details: SkillSearchDetails = { action: "load", name, loaded: true, alreadyLoaded };
         const text = alreadyLoaded
           ? JSON.stringify({ name, loaded: true, already_loaded: true })
-          : `## Loaded skill: ${name}\n\n${body}`;
+          : `## Loaded skill: ${name}\nSource: ${skill.filePath}\nResolve relative references from: ${dirname(skill.filePath)}\n\n${body}`;
         return { content: [{ type: "text", text }], details };
       }
 
@@ -231,18 +228,17 @@ export default function registerSkillSearch(pi: ExtensionAPI): void {
     },
   });
 
+  const resetLoaded = () => {
+    loadedSkillBodies.clear();
+    candidateSkillNames.clear();
+  };
+  pi.on("session_start", resetLoaded);
+  pi.on("session_tree", resetLoaded);
+  pi.on("session_compact", resetLoaded);
+
   pi.on("before_agent_start", (event) => {
     const skills = (event.systemPromptOptions?.skills ?? []) as SkillLike[];
-    const grill = {
-      name: "grill-with-docs",
-      description: "A relentless interview to sharpen a plan or design, which also creates docs (ADR's and glossary) as we go.",
-      filePath: join(getAgentDir(), "skills", "grill-with-docs", "SKILL.md"),
-      searchText: "grillme grill-me grill me 帮我修复这个问题 请帮我解决这个问题 help me fix this issue help me fix this problem ambiguous scope unclear requirements boundary clarification design plan",
-    } satisfies SkillLike;
-    knownSkills = [
-      ...skills,
-      ...(skills.some((skill) => skill.name === grill.name) ? [] : [grill]),
-    ];
+    knownSkills = skills.filter((skill) => !skill.disableModelInvocation);
     const signature = skillCatalogSignature(knownSkills);
     if (signature !== searchIndexSignature) {
       searchIndex = undefined;

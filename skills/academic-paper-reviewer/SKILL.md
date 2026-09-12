@@ -102,7 +102,7 @@ User: "Review this paper"
            * Reviewer 3 (Perspective): Cross-disciplinary angle, what unique perspective they bring
            * Devil's Advocate: Specifically challenges core arguments, detects logical gaps
      |
-     ** Presents Reviewer Configuration to user for confirmation (adjustable) **
+     ** Presents Reviewer Configuration to the user for confirmation when reviewer identities, journal assumptions, or review scope contain unresolved material choices; otherwise proceed with the supplied configuration. **
      |
 === Phase 1: PARALLEL MULTI-PERSPECTIVE REVIEW ===
      |
@@ -166,7 +166,9 @@ User: "Review this paper"
 
 ### Checkpoint Rules
 
-1. **After Phase 0 completes**: Present Reviewer Configuration Card to user; user can adjust reviewer identities
+These checkpoints apply only to the corresponding multi-phase review workflow. Single-mode reviews, explicitly supplied reviewer configuration, and explicit continue instructions do not require a second confirmation.
+
+1. **After Phase 0 completes**: Present the Reviewer Configuration Card when it contains unresolved material choices; the user can adjust reviewer identities.
 2. ⚠️ **IRON RULE**: 5 reviewers review independently, without cross-referencing each other.
 3. ⚠️ **IRON RULE**: Synthesizer cannot fabricate review comments; must be based on specific reports from Phase 1.
 4. ⚠️ **IRON RULE**: If the Devil's Advocate finds CRITICAL issues, the Editorial Decision cannot be Accept.

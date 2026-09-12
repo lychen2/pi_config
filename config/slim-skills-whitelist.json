@@ -1,17 +1,5 @@
 {
   "mode": "allowlist",
-  "whitelist": [
-    "humanizer",
-    "humanizer-zh",
-    "mineru",
-    "mineru-file-processing",
-    "literature-search-openalex",
-    "academic-paper",
-    "academic-paper-reviewer",
-    "deep-research",
-    "scientific-visualization",
-    "docx",
-    "pdfs"
-  ],
+  "whitelist": [],
   "inject": []
 }

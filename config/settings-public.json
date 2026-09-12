@@ -8,7 +8,7 @@
   "theme": "matugen",
   "quietStartup": true,
   "tuiMode": "regular",
-  "hideThinkingBlock": false,
+  "hideThinkingBlock": true,
   "enableSkillCommands": true,
   "desktopSkillOverrides": {
     "name:alphafold2": false,

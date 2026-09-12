@@ -18,7 +18,7 @@
 | `pi-todo-guard` | Todo 仍有未完成项目时，提醒代理继续当前任务 | 自动处理 | `PI_TODO_GUARD_DISABLE=1`；默认兼容 `todo` 工具 |
 | `pi-context-bridge` | 将锁定的 Web Access、manager 模型目录和 continuity 统一接入 Default profile | 模型调用联网工具；启动时注册 manager provider | 不替换 Pi 原生文件工具 |
 | `pi-large-mode` | Large profile 的实现源码，已由 `pi-default-workbench` 聚合；默认不单独安装 | `/large on|off|status|update` | 手动安装旧入口时不要与工作台重复加载 |
-| `pi-tool-rails` | 提供稳定的工具标签、结果面板、diff、输入框样式、步骤化思考轨迹和品牌标题栏 | 自动处理；`Ctrl+T` 显示或隐藏思考轨迹；`/logo` 切换标题栏 | Default 与 Large 共用 UI 聚合入口 |
+| `pi-tool-rails` | 提供稳定的工具标签、结果面板、diff、输入框样式、步骤化思考轨迹和品牌标题栏 | 自动处理；折叠的思考轨迹显示 `✦ 思考 · N 步 · 18s`，`Ctrl+T` 显示或展开全部步骤；`/logo` 切换标题栏 | Default 与 Large 共用 UI 聚合入口 |
 | `pi-large-beautify` | Large profile 专用的工具栏、消息/输入框框架、品牌头和 Matugen 主题 | 由 Large profile 复制并加载 | Default 安装器跳过；与 `pi-tool-rails`、`pi-brand-header` 保持 profile 隔离 |
 
 
@@ -40,7 +40,6 @@
 
 | 扩展 | 用途 | 入口 |
 | --- | --- | --- |
-| `adhd-mode.ts` | 面向 ADHD 的输出规则、sticky notes、side-chat 和提醒 | `/adhd`、`/note`、`/btw` | `pi-adhd.reminderTurns` 配置提醒回合数 |
 | `matugen-chrome.ts` + `matugen-footer-core.mjs` | Matugen footer：实时 Context、Git 操作状态、扩展状态清洗和 working 行 | `/matugen-chrome` 开关 |
 
 这些文件只在 `~/.pi/agent/extensions/` 中不存在时复制；本机已有文件会保留。修改文件后在 Pi 内运行 `/reload`。

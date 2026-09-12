@@ -30,9 +30,9 @@ export const TOOL_LABEL = "Todo";
 export const COMMAND_NAME = "todos";
 
 const PROMPT_GUIDELINES = [
-  "Use `todo` for complex work with 3+ steps, when the user gives you a list of tasks, or immediately after receiving new instructions to capture requirements. Skip it for single trivial tasks and purely conversational requests.",
-  "When starting any task, mark it in_progress BEFORE beginning work. Mark it completed IMMEDIATELY when done — never batch completions. Exactly one task should be in_progress at a time.",
-  "Never mark a task completed if tests are failing, the implementation is partial, or you hit unresolved errors — keep it in_progress and create a new task for the blocker instead.",
+  "Use `todo` when persistent tracking helps with multiple deliverables, dependencies, or a user-requested checklist. Incorporate new requirements into the relevant task; simple edits and conversational requests do not need a task list.",
+  "For tracked work, mark the current task in_progress and update it when its deliverable is complete. The tool allows exactly one in_progress task at a time.",
+  "Completion means the task's requested result and relevant verification are finished. Record concrete blockers or unrelated test failures accurately; do not mark partial work completed or stop merely because a first implementation exists.",
   "Task status is a 4-state machine: pending → in_progress → completed, plus deleted as a tombstone. Pass activeForm (present-continuous label, e.g. 'researching existing tool') when marking in_progress.",
   "To change a task's status, call update with the task id and the target status. An update without a mutable field is rejected.",
   "Use blockedBy to express dependencies. On create, pass blockedBy; on update, use addBlockedBy and removeBlockedBy. Cycles are rejected.",

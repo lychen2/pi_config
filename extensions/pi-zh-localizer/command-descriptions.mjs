@@ -21,7 +21,7 @@ function sourceTag(description) {
 }
 
 export function localizeSlashSuggestions(suggestions) {
-  if (!suggestions?.prefix?.startsWith("/")) return suggestions;
+  if (!suggestions?.prefix?.startsWith("/") || !Array.isArray(suggestions.items)) return suggestions;
 
   return {
     ...suggestions,

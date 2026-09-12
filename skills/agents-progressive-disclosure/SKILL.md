@@ -1,15 +1,15 @@
 ---
 name: agents-progressive-disclosure
-description: Refactor bloated AGENTS.md, CLAUDE.md, or similar agent instruction files into a compact routing entrypoint plus focused docs/ reference files. Use when the user asks to apply progressive disclosure to agent instructions, split global or project rules into docs, reduce instruction bloat, or turn one large agent rule file into an entry file with on-demand documentation.
+description: Refactor oversized agent instruction files into concise shared rules and task-specific references when instruction cleanup is requested.
 ---
 
 # Agents Progressive Disclosure
 
-Use this skill to convert a long agent instruction file into a high-signal entrypoint that routes to focused documentation files. The goal is to preserve rules while reducing always-loaded context.
+Use this skill to reduce unnecessary instruction context while preserving project-specific constraints. Keep a short, self-contained file when splitting it would add indirection without helping task selection.
 
 ## Core Model
 
-Treat the root instruction file as a router, not a rule warehouse.
+Treat the root instruction file as a router, not a rule warehouse. Audit the instruction surfaces as a system: nearest `AGENTS.md` files, skill metadata and bodies, tool/action descriptions, and task-local instructions must have clear ownership and precedence.
 
 - The entry file keeps only high-frequency, long-lived, must-always-apply rules.
 - Detailed task-specific rules move into `docs/` files.
@@ -24,8 +24,9 @@ Treat the root instruction file as a router, not a rule warehouse.
 
 2. Inspect existing structure.
    - Read the target file fully.
-   - List existing `docs/` files, if any.
-   - Check for backups before editing.
+   - Inspect linked docs and the applicable instruction hierarchy.
+   - For catalog audits or suspected shadowing, inspect the relevant active skill roots for duplicate names, stale copies, and missing references. A single-file cleanup does not require an inventory of every installed skill.
+   - Inspect tool/action descriptions when the instruction depends on how the agent selects or invokes a capability.
 
 3. Classify rules into buckets.
    - Keep in entrypoint: language defaults, safety boundaries, tool priority, conflict priority, and critical must-always-follow rules.
@@ -42,7 +43,9 @@ Treat the root instruction file as a router, not a rule warehouse.
    - Create `docs/README.md` only when it helps navigate multiple docs.
 
 5. Edit conservatively.
-   - Back up the original file before replacing it.
+   - Preserve user- and project-specific instructions unless they are demonstrably contradictory, unreachable, unsafe, or stale.
+   - Do not turn a discovery index into a second copy of the full skill body; metadata should make the right skill findable, while the body owns the workflow.
+   - Keep a recoverable original through version control or a local backup when needed.
    - Rewrite the entrypoint as a compact router with:
      - scope statement;
      - core principles;
@@ -83,7 +86,9 @@ Treat the root instruction file as a router, not a rule warehouse.
 
 - [short critical rules]
 
-## Priority
+## Repository Convention Priority
+
+Subject to the host's instruction hierarchy:
 
 1. User's current explicit instruction.
 2. Nearest project instruction file.
@@ -93,11 +98,11 @@ Treat the root instruction file as a router, not a rule warehouse.
 
 ## Validation Commands
 
-Use macOS/zsh-compatible commands:
+Use focused checks appropriate to the changed files, for example:
 
 ```zsh
 wc -l AGENTS.md docs/*.md
-find docs -maxdepth 1 -type f -print | sort
+rg --files docs
 rg -n 'critical keyword|another keyword' AGENTS.md docs
 sed -n '1,180p' AGENTS.md
 ```

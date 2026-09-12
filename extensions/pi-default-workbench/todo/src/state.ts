@@ -210,6 +210,13 @@ export function applyMutation(
     if (params.status !== undefined && !isTransitionValid(current.status, params.status)) {
       return failure(state, `illegal transition ${current.status} -> ${params.status}`);
     }
+    if (
+      params.status === "in_progress"
+      && current.status !== "in_progress"
+      && state.tasks.some((task) => task.id !== current.id && task.status === "in_progress")
+    ) {
+      return failure(state, "only one task may be in_progress at a time");
+    }
 
     let blockedBy = [...(current.blockedBy ?? [])];
     if (params.removeBlockedBy?.length) {

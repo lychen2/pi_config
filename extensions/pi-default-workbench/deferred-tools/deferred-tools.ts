@@ -441,7 +441,8 @@ export default function toolSelector(pi: ExtensionAPI): void {
   const activatedTools = new Set<string>();
 
   pi.registerTool(createSearchToolBm25(pi, {
-    canDiscover: (name) => isAllowedTool(config, groups, name),
+    canDiscover: (name) => isAllowedTool(config, groups, name)
+      && (!pi.getActiveTools().includes("update_plan") || (name !== "todo" && name !== "todowrite")),
     canActivate: (name) => config.toolMode === "adaptive"
       && isAllowedTool(config, groups, name)
       && groups.some((group) => group.tools.some((tool) => tool.name === name)),
@@ -587,5 +588,6 @@ export default function toolSelector(pi: ExtensionAPI): void {
   });
 
   pi.on("session_start", (_event, ctx) => refresh(ctx, true, false));
+  pi.on("resources_discover", (_event, ctx) => refresh(ctx, false, true));
   pi.on("before_agent_start", (_event, ctx) => refresh(ctx, false, true));
 }

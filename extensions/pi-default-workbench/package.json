@@ -28,6 +28,8 @@
     "large-mode.ts",
     "large-mode-core.ts",
     "skill-search.ts",
+    "embedding-search.ts",
+    "scripts/fetch-embedding-model.mjs",
     "README.md",
     "config.example.json",
     "LICENSE"

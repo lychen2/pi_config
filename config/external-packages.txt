@@ -2,7 +2,9 @@
 npm:@pi-lab/notify
 # pi-markdown-preview is a dependency of
 # extensions/pi-default-workbench, its sole registration entry.
-# Magic Context owns the ctx_* memory and conversation-history tools.
+# SoL owns action fusion, observation packing, log reduction and compaction.
+git:github.com/NVlabs/SoL-Pi
+# Magic Context retains knowledge/history with compaction disabled.
 npm:@cortexkit/pi-magic-context
 npm:@narumitw/pi-plan-mode
 npm:@juicesharp/rpiv-ask-user-question

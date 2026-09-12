@@ -114,8 +114,8 @@ test("session_start applies adaptive core and BM25 activates an SDK tool", async
   }
 
   const search = pi.tools.find((entry) => entry.name === "search_tool_bm25");
-  assert.match(search.promptSnippet, /Before claiming a capability is unavailable/);
-  assert.match(search.promptSnippet, /answering what capabilities exist/);
+  assert.match(search.promptSnippet, /Use active tools directly/);
+  assert.match(search.promptSnippet, /When a needed capability is missing/);
   assert.match(search.promptSnippet, /call search_tool_bm25 once/);
   assert.doesNotMatch(search.promptSnippet, /browser|memory/);
   const result = await search.execute("id", { query: "web current information", limit: 8 });
@@ -142,6 +142,22 @@ test("explicit disables outrank adaptive discovery including SDK tools", async (
   const result = await search.execute("id", { query: "web current information", limit: 8 });
   assert.deepEqual(result.details.activatedTools, []);
   assert.equal(result.details.tools.some((entry) => entry.name === "web_search"), false);
+});
+
+test("resource discovery settles late SoL tools and prevents duplicate task discovery", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "pi-sol-tools-"));
+  const pi = fakePi(initialTools());
+  register(pi);
+  await start(pi, cwd);
+  pi.registerTool(tool("update_plan", "Track execution plan", "sol"));
+  pi.registerTool(tool("obs_recall", "Recall observations", "sol"));
+  for (const handler of pi.handlers.get("resources_discover")) await handler({}, context(cwd));
+  assert.ok(pi.getActiveTools().includes("update_plan"));
+  assert.ok(pi.getActiveTools().includes("obs_recall"));
+  assert.ok(!pi.getActiveTools().includes("todo"));
+  const search = pi.tools.find(t => t.name === "search_tool_bm25");
+  const result = await search.execute("search", { query: "todo project tasks", limit: 50 });
+  assert.ok(!result.details.tools.some(t => t.name === "todo" || t.name === "todowrite"));
 });
 
 test("tools commands provide mode argument completions", () => {
@@ -248,7 +264,6 @@ test("fast and full commands persist mode without clearing disables", async () =
     "ffgrep",
     "todo",
     "web_search",
-    "search_tool_bm25",
     "search_skill_bm25",
   ]));
   assert.deepEqual(JSON.parse(await readFile(configPath, "utf8")), {

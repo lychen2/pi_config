@@ -78,6 +78,11 @@ export function ensureEmbeddingModel(): void {
     } catch {
       // not downloaded yet
     }
+    try {
+      await mkdir(MODEL_CACHE_ROOT, { recursive: true });
+    } catch {
+      return;
+    }
     if (await lockIsStale()) await rm(DOWNLOAD_LOCK, { recursive: true, force: true });
     try {
       await mkdir(DOWNLOAD_LOCK); // atomic: a second pi instance loses the race
@@ -90,11 +95,9 @@ export function ensureEmbeddingModel(): void {
     const { spawn } = await import("node:child_process");
     const script = fileURLToPath(new URL("scripts/fetch-embedding-model.mjs", import.meta.url));
     const child = spawn(process.execPath, [script], { detached: true, stdio: "ignore" });
-    const unlock = () => rm(DOWNLOAD_LOCK, { recursive: true, force: true });
+    const unlock = () => rm(DOWNLOAD_LOCK, { recursive: true, force: true }).catch(() => undefined);
     child.once("error", unlock);
-    child.once("exit", (code) => {
-      if (code !== 0) void unlock(); // retry next session
-    });
+    child.once("exit", unlock);
     child.unref();
   })().catch(() => undefined);
 }

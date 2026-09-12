@@ -37,10 +37,11 @@ export const TOOL_CAPABILITY_GROUPS = {
     "todo",
     "ask_user_question",
     "search_skill_bm25",
+    "bash_bg",
   ],
   web: ["source_check", "fetch_content", "get_search_content"],
   memory: ["ctx_search", "ctx_memory", "ctx_note", "ctx_expand", "ctx_reduce"],
-  ops: ["bash_bg", "conflict"],
+  ops: ["conflict"],
   preview: ["preview_export"],
   workflow: ["execute_command"],
 } as const;
@@ -48,34 +49,12 @@ export const TOOL_CAPABILITY_GROUPS = {
 export const FAST_TOOL_NAMES: readonly string[] = TOOL_CAPABILITY_GROUPS.core;
 const ADAPTIVE_DEFAULT_TOOL_NAMES = new Set<string>(TOOL_CAPABILITY_GROUPS.memory);
 
-const TOOL_CAPABILITY_BY_NAME = new Map<string, keyof typeof TOOL_CAPABILITY_GROUPS>();
-for (const [capability, names] of Object.entries(TOOL_CAPABILITY_GROUPS) as Array<[
-  keyof typeof TOOL_CAPABILITY_GROUPS,
-  readonly string[],
-]>) {
-  for (const name of names) {
-    const existing = TOOL_CAPABILITY_BY_NAME.get(name);
-    if (existing) throw new Error(`tool ${name} belongs to multiple capability groups: ${existing}, ${capability}`);
-    TOOL_CAPABILITY_BY_NAME.set(name, capability);
-  }
-}
-
 export function capabilityToolsForMatches(
   matchedNames: readonly string[],
   registeredNames: readonly string[],
 ): string[] {
   const registered = new Set(registeredNames);
-  const selected = new Set<string>();
-
-  for (const matchedName of matchedNames) {
-    const capability = TOOL_CAPABILITY_BY_NAME.get(matchedName);
-    const names = capability ? TOOL_CAPABILITY_GROUPS[capability] : [matchedName];
-    for (const name of names) {
-      if (registered.has(name)) selected.add(name);
-    }
-  }
-
-  return [...selected];
+  return [...new Set(matchedNames)].filter((name) => registered.has(name));
 }
 
 export function missingCoreToolNames(registeredNames: readonly string[]): string[] {
@@ -276,15 +255,20 @@ export function activeToolsForMode(
     if (config.disabledTools.includes(name)) continue;
     if (config.disabledExtensions.includes(group.id) && !core.has(name)) continue;
     const enabled = config.toolMode === "full"
-      || (config.toolMode === "fast" && core.has(name))
+      || (config.toolMode === "fast" && (core.has(name) || name === "update_plan" || name === "obs_recall"))
       || (config.toolMode === "adaptive" && (
         core.has(name)
         || ADAPTIVE_DEFAULT_TOOL_NAMES.has(name)
+        || name === "update_plan"
+        || name === "obs_recall"
         || name === SEARCH_TOOL_NAME
         || activatedTools.has(name)
       ));
     if (enabled && !desired.includes(name)) desired.push(name);
   }
 
-  return desired.filter((name) => !config.disabledTools.includes(name));
+  const solPlanActive = desired.includes("update_plan") && !config.disabledTools.includes("update_plan");
+  return desired.filter((name) => !config.disabledTools.includes(name)
+    && (config.toolMode === "adaptive" || name !== SEARCH_TOOL_NAME)
+    && (!solPlanActive || (name !== "todo" && name !== "todowrite")));
 }

@@ -16,19 +16,47 @@ async function loadExtension(specifier: string): Promise<ExtensionFactory> {
 }
 
 export default function contextBridge(pi: ExtensionAPI): void {
-  let initialized = false;
-  pi.on("session_start", async (_event, ctx) => {
-    if (initialized) return;
-    initialized = true;
+  let webAccessInitialized = false;
+  let managerModelsInitialized = false;
+  let continuityInitialized = false;
 
-    try {
-      const registerWebAccess = await loadExtension("pi-web-access");
-      await registerWebAccess(pi);
-      await managerModels(pi);
-      registerContinuity(pi);
-    } catch (error) {
-      initialized = false;
-      ctx.ui.notify(`pi-context-bridge initialization failed (${(error as Error).message}). Web access and continuity will retry next session.`, "error");
+  pi.on("session_start", async (_event, ctx) => {
+    const failures: string[] = [];
+
+    if (!webAccessInitialized) {
+      try {
+        const registerWebAccess = await loadExtension("pi-web-access");
+        await registerWebAccess(pi);
+        webAccessInitialized = true;
+      } catch (error) {
+        failures.push(`web access: ${errorMessage(error)}`);
+      }
+    }
+
+    if (!managerModelsInitialized) {
+      try {
+        await managerModels(pi);
+        managerModelsInitialized = true;
+      } catch (error) {
+        failures.push(`manager models: ${errorMessage(error)}`);
+      }
+    }
+
+    if (!continuityInitialized) {
+      try {
+        registerContinuity(pi);
+        continuityInitialized = true;
+      } catch (error) {
+        failures.push(`continuity: ${errorMessage(error)}`);
+      }
+    }
+
+    if (failures.length > 0 && ctx.hasUI) {
+      ctx.ui.notify(`pi-context-bridge initialization failed: ${failures.join("; ")}`, "error");
     }
   });
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }

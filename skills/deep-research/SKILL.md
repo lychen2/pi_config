@@ -249,10 +249,12 @@ User: "Research [topic]"
 
 ### Checkpoint Rules
 
+These checkpoints apply only to the corresponding multi-phase research workflow. Single-phase requests, explicitly supplied research configuration, explicit skip/continue instructions, and outputs that do not cross the guarded phase boundary do not require a second confirmation.
+
 1. ⚠️ **IRON RULE**: **Devil's Advocate** has 3 mandatory checkpoints; **Critical-severity** issues block progression
 2. Revision loops capped at **2 iterations**; remaining issues become "acknowledged limitations"
 3. ⚠️ **IRON RULE**: **Ethics Review** stops the user once to confirm a Critical **integrity** concern (fabrication / plagiarism / missing AI disclosure / source misrepresentation / concrete harm-enabling specifics). Overridable with recorded reasoning — it confirms, it does not veto. Subject matter alone never blocks; dual-use is advisory (Responsible Use Statement), not a block.
-4. User confirmation required after Phase 1 before proceeding
+4. User confirmation is required after Phase 1 before Phase 2 only when the research question, scope, methodology, or evidence strategy remains materially unresolved or changes.
 
 ---
 

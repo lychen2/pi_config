@@ -12,7 +12,7 @@ import {
   type ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
 import { Text, type Component } from "@earendil-works/pi-tui";
-import { installThinkingMessageStyle } from "./thinking-message.ts";
+import { installThinkingMessageStyle, installThinkingTimingTracker } from "./thinking-message.ts";
 import { installThinkingShimmer } from "./thinking-shimmer.ts";
 import { installUserMessageStyle } from "./user-message.ts";
 
@@ -87,7 +87,7 @@ function withReasoning(parameters: any): any {
   return {
     ...(parameters ?? { type: "object", properties: {} }),
     properties: { reasoning, ...(parameters?.properties ?? {}) },
-    required: Array.from(new Set(["reasoning", ...(parameters?.required ?? [])])),
+    required: parameters?.required ?? [],
   };
 }
 
@@ -439,6 +439,7 @@ export default function toolRails(pi: ExtensionAPI): void {
   }
 
   installThinkingShimmer(pi);
+  installThinkingTimingTracker(pi);
   pi.on("session_start", (_event, ctx) => {
     disposeSessionPresentation();
     if (ctx.mode !== "tui") return;

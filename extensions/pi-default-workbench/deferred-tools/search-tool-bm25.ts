@@ -5,7 +5,7 @@ import { buildToolSearchIndex, searchTools, toDiscoverableTool } from "./tool-di
 import { fuseWithSemanticRanking } from "../embedding-search.ts";
 import { capabilityToolsForMatches } from "./tool-selection-state.ts";
 
-const DEFAULT_LIMIT = 8;
+const DEFAULT_LIMIT = 3;
 
 export const SearchToolBm25Params = Type.Object({
   query: Type.String({ minLength: 1, description: "Natural-language tool capability query" }),
@@ -62,7 +62,7 @@ export function createSearchToolBm25(
     name: "search_tool_bm25",
     label: "Search Tools",
     description: "Search registered tools by capability using weighted BM25 ranking fused with local semantic embeddings. Describe the missing capability in natural language; matching inactive tools become callable on the next request.",
-    promptSnippet: "Before claiming a capability is unavailable, answering what capabilities exist, or proceeding without a suitable active tool, call search_tool_bm25 once with a natural-language description of the needed capability. Use the activated tools on the next request.",
+    promptSnippet: "Use active tools directly. When a needed capability is missing, call search_tool_bm25 once to discover and activate a match before declaring it unavailable.",
     parameters: SearchToolBm25Params,
     async execute(_id, params, signal) {
       if (signal?.aborted) throw abortError();
@@ -114,7 +114,7 @@ export function createSearchToolBm25(
             activated_tools: activated,
             match_count: details.tools.length,
             total_tools: catalog.length,
-            tools: details.tools,
+            tools: details.tools.map(({ name, summary, score }) => ({ name, summary, score })),
           }),
         }],
         details,

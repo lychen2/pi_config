@@ -22,7 +22,6 @@ Ten package directories are maintained in this repository; the installer enables
 
 | Extension | Purpose | Source |
 | --- | --- | --- |
-| `adhd-mode` | Session-persistent ADHD response mode, sticky notes, side-chat, and reminders | `adhd-mode.ts` + `pi-adhd/src/` |
 | `matugen-chrome` | Matugen footer with live context, Git operation state, and sanitized extension statuses | `matugen-chrome.ts` + `matugen-footer-core.mjs` |
 
 ## Locally Wrapped Runtime Dependencies

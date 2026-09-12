@@ -112,6 +112,24 @@ test("bash_bg run promotes a long command to the background", async () => {
   await Promise.all(pi.handlers.get("session_shutdown").map((handler) => handler()));
 });
 
+test("bash_bg resolves relative cwd from the session workspace", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "pi-maestro-tools-cwd-test-"));
+  const nested = join(cwd, "nested");
+  await mkdir(nested);
+  const pi = fakePi();
+  register(pi);
+  const tool = pi.tools.get("bash_bg");
+  const command = process.platform === "win32" ? "ver" : "true";
+  const result = await tool.execute("id", {
+    action: "run",
+    command,
+    cwd: "nested",
+    timeout: 2,
+  }, undefined, undefined, { cwd });
+  assert.match(result.content[0].text, new RegExp(`cwd: ${nested.replace(/[\\^$.*+?()[\\]{}|]/g, "\\\\$&")}`));
+  await Promise.all(pi.handlers.get("session_shutdown").map((handler) => handler()));
+});
+
 test("conflict schema requires a numbered handle for diff", () => {
   const pi = fakePi();
   register(pi);

@@ -10,7 +10,7 @@
 | 大型模式 | `/large on` 在当前会话加载固定上游 Flow、teammate 与 Cockpit，恢复 GUI、MCP、LSP、browser/web search、FFF、conflict、root `bash_bg`、Goal、Todo、Plan、Loop 与 Maestro skills。 |
 | 项目实际工具数 | 会随 `pi list`、`/tools`、启动参数、信任状态和已安装 package 变化；用 `/tools list` 核对。 |
 
-`multi_tool_use.parallel` 是外层并行调用包装器。`pi-default-workbench` 默认使用 `adaptive`：首轮严格保留 read/bash/write/edit/grep/fffind/ffgrep/todo/ask_user_question 和 `search_tool_bm25`，不包含原生 `ls/find`；缺少能力时按 capability group 追加注册工具。`/tools fast` 固定最小集合，`/tools full` 恢复全部未显式禁用的注册工具，`/tools reset` 清空禁用规则后进入 full。
+`multi_tool_use.parallel` 是外层并行调用包装器。`pi-default-workbench` 默认使用 `adaptive`：首轮严格保留 read/bash/write/edit/grep/fffind/ffgrep/todo/ask_user_question/bash_bg 和 `search_tool_bm25`，不包含原生 `ls/find`；缺少能力时按 capability group 追加注册工具。`/tools fast` 固定最小集合，`/tools full` 恢复全部未显式禁用的注册工具，`/tools reset` 清空禁用规则后进入 full。
 
 ## 文件、搜索与执行（6）
 

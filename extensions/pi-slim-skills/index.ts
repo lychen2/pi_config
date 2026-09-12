@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import {
   getAgentDir,
+  formatSkillsForPrompt,
   type ExtensionAPI,
   type ExtensionCommandContext,
 } from "@earendil-works/pi-coding-agent";
@@ -70,21 +71,6 @@ function saveConfig(config: Config): void {
   }
 }
 
-function escapeXml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/\"/g, "&quot;")
-    .replace(/'/g, "&apos;");
-}
-
-function parent(path: string): string {
-  const normalized = path.replace(/\\/g, "/");
-  const index = normalized.lastIndexOf("/");
-  return index <= 0 ? normalized : normalized.slice(0, index);
-}
-
 const skillBodyCache = new Map<string, string>();
 
 async function loadSkillBody(filePath: string): Promise<string> {
@@ -96,56 +82,13 @@ async function loadSkillBody(filePath: string): Promise<string> {
   return body;
 }
 
-function verboseBlock(skills: SkillLike[]): string {
-  const visible = skills.filter((skill) => !skill.disableModelInvocation);
-  if (!visible.length) return "";
-  const lines = [
-    "\n\nThe following skills provide specialized instructions for specific tasks.",
-    "Use the read tool to load a skill's file when the task matches its description.",
-    "When a skill file references a relative path, resolve it against the skill directory (parent of SKILL.md / dirname of the path) and use that absolute path in tool commands.",
-    "",
-    "<available_skills>",
-  ];
-  for (const skill of visible) {
-    lines.push(
-      "  <skill>",
-      `    <name>${escapeXml(skill.name)}</name>`,
-      `    <description>${escapeXml(skill.description)}</description>`,
-      `    <location>${escapeXml(skill.filePath)}</location>`,
-      "  </skill>",
-    );
-  }
-  lines.push("</available_skills>");
-  return lines.join("\n");
-}
-
-function compactBlock(skills: SkillLike[]): string {
-  if (!skills.length) return "";
-  const groups = new Map<string, string[]>();
-  for (const skill of skills) {
-    const root = parent(parent(skill.filePath));
-    const names = groups.get(root) ?? [];
-    names.push(skill.name);
-    groups.set(root, names);
-  }
-
-  const lines = [
-    "\n\nThe following skills provide specialized instructions for specific tasks. When a skill name matches the task, read the SKILL.md at its location to load full instructions. Resolve relative SKILL.md paths against that skill directory. Other installed skills are available on demand via /skill:<name>.",
-  ];
-  for (const [root, names] of [...groups.entries()].sort(([left], [right]) => left.localeCompare(right))) {
-    names.sort();
-    lines.push("", `Skills under ${root}/<name>/SKILL.md:`);
-    let current = "  ";
-    for (const name of names) {
-      const addition = `${current === "  " ? "" : ", "}${name}`;
-      if (current.length > 2 && current.length + addition.length > 80) {
-        lines.push(`${current},`);
-        current = `  ${name}`;
-      } else {
-        current += addition;
-      }
-    }
-    if (current.length > 2) lines.push(current);
+export function compactBlock(skills: SkillLike[], searchable = false): string {
+  const lines = [searchable
+    ? "\n\nSkills: use search_skill_bm25 to discover specialized guidance and load a relevant result. Load only what the task needs; user commands remain available via /skill:<name>."
+    : "\n\nSkills: read the matching file for specialized guidance. User commands are available via /skill:<name>."];
+  if (skills.length) lines.push("Resolve relative references against the loaded skill's directory.");
+  for (const skill of [...skills].sort((left, right) => left.name.localeCompare(right.name))) {
+    lines.push(`- ${skill.name}: ${skill.description.replace(/\s+/g, " ").trim()} (${skill.filePath})`);
   }
   return lines.join("\n");
 }
@@ -183,17 +126,18 @@ export default function slimSkills(pi: ExtensionAPI): void {
 
   pi.on("before_agent_start", async (event) => {
     const skills = (event.systemPromptOptions?.skills ?? []) as SkillLike[];
-    if (skills.length) knownSkills = skills;
+    knownSkills = skills;
     if (process.env[DISABLE_ENV] === "1") return;
 
     let prompt = event.systemPrompt;
 
     // Compact the skill index.
     const visible = skills.filter((skill) => !skill.disableModelInvocation);
-    const verbose = verboseBlock(skills);
+    const verbose = formatSkillsForPrompt(skills as Parameters<typeof formatSkillsForPrompt>[0]);
     if (verbose && prompt.includes(verbose)) {
       const allowed = config.mode === "all" ? visible : visible.filter((skill) => allowedSet().has(skill.name));
-      const compact = compactBlock(allowed);
+      const searchable = pi.getActiveTools().includes("search_skill_bm25");
+      const compact = compactBlock(searchable ? allowed : visible, searchable);
       if (compact.length < verbose.length) {
         prompt = prompt.replace(verbose, compact);
       }
@@ -238,7 +182,7 @@ export default function slimSkills(pi: ExtensionAPI): void {
       "",
       `auto-discover (${allowed.length}): ${allowed.join(", ") || "(none)"}`,
       "",
-      `skill-command only (${hidden.length}): ${hidden.join(", ") || "(none)"}`,
+      `on-demand (${hidden.length}): ${hidden.join(", ") || "(none)"}`,
       "",
       `injected (${injected.length}): ${injected.join(", ") || "(none)"}`,
       "",
@@ -293,7 +237,7 @@ export default function slimSkills(pi: ExtensionAPI): void {
       if (command === "none") {
         config = { mode: "allowlist", whitelist: [], inject: config.inject };
         saveConfig(config);
-        return notify(ctx, "All skills are now available only through /skill:<name>.");
+        return notify(ctx, "Skills are available on demand through search_skill_bm25 or /skill:<name>.");
       }
       if ((command !== "add" && command !== "remove" && command !== "inject" && command !== "uninject") || !name) {
         return notify(ctx, "Usage: /slim-skills [list|add <name>|remove <name>|inject <name>|uninject <name>|reset|all|none]");

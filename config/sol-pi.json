@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "actionFusion": true,
+  "observationPack": true,
+  "evidencePreservingReducer": true,
+  "evidencePreservingReducerProvider": "manager",
+  "evidencePreservingReducerModel": "gpt-5.6-sol",
+  "onlineContextCompact": true,
+  "cacheWriteReadRatio": 12.5
+}

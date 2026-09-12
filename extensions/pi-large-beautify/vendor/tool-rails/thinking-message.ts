@@ -1,5 +1,9 @@
-import { AssistantMessageComponent, type Theme } from "@earendil-works/pi-coding-agent";
-import { type Component, truncateToWidth } from "@earendil-works/pi-tui";
+import {
+  AssistantMessageComponent,
+  type ExtensionAPI,
+  type Theme,
+} from "@earendil-works/pi-coding-agent";
+import { type Component, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 import { installPrototypePatch } from "./prototype-patch-registry.ts";
 
 type Cleanup = () => void;
@@ -11,14 +15,70 @@ type AssistantContent = {
 type AssistantMessageRuntime = {
   contentContainer?: { children?: Component[] };
   hideThinkingBlock?: boolean;
+  thinkingVisibilityOverrides?: Map<number, boolean>;
 };
 type AssistantMessageLike = {
   content?: AssistantContent[];
+  timestamp?: number;
 };
+type ThinkingRun = {
+  blockIndices: number[];
+  text: string;
+};
+type ThinkingTimingEvent = {
+  assistantMessageEvent?: { type?: string; contentIndex?: number };
+  message?: { timestamp?: number };
+};
+type MouseRegionLike = Component & { child?: Component };
 
 const MAX_BODY_WIDTH = 100;
 const MAX_PREVIEW_LINES = 16;
-const HIDDEN_LABEL_PLAIN = "✦ 思考轨迹";
+const HIDDEN_LABEL_PLAIN = "✦ 思考";
+const TIMING_KEYS_TO_KEEP = 400;
+/** Left margin shared by the collapsed row and the expanded trail header. */
+const TRAIL_INDENT = "  ";
+
+/**
+ * Wall-clock thinking timing per provider content block, keyed by
+ * `${message timestamp}:${block index}` so cloned messages still match.
+ */
+const thinkingTimings = new Map<string, { startMs: number; endMs?: number }>();
+
+export function clearThinkingTimings(): void {
+  thinkingTimings.clear();
+}
+
+export function thinkingTimingKey(message: AssistantMessageLike | undefined, blockIndex: number): string {
+  return `${message?.timestamp ?? 0}:${blockIndex}`;
+}
+
+/**
+ * Remembers when each thinking block opened and closed. The transcript only
+ * carries the text, so this is the sole source for "思考了多久".
+ */
+export function recordThinkingTiming(event: ThinkingTimingEvent, now = Date.now()): void {
+  const evt = event.assistantMessageEvent;
+  if (!evt || typeof evt.contentIndex !== "number") return;
+  const key = thinkingTimingKey(event.message, evt.contentIndex);
+  if (evt.type === "thinking_start") {
+    thinkingTimings.set(key, { startMs: now });
+    while (thinkingTimings.size > TIMING_KEYS_TO_KEEP) {
+      const oldest = thinkingTimings.keys().next().value;
+      if (oldest === undefined) break;
+      thinkingTimings.delete(oldest);
+    }
+  } else if (evt.type === "thinking_end") {
+    const timing = thinkingTimings.get(key);
+    if (timing) timing.endMs = now;
+    else thinkingTimings.set(key, { startMs: now, endMs: now });
+  }
+}
+
+export function formatThinkingDuration(ms: number): string {
+  const total = Math.max(0, Math.round(ms / 1000));
+  if (total < 60) return `${total}s`;
+  return `${Math.floor(total / 60)}m${String(total % 60).padStart(2, "0")}s`;
+}
 
 function stripAnsi(line: string): string {
   return line
@@ -69,6 +129,54 @@ function isVisibleContent(content: AssistantContent): boolean {
 /** Pi adds a Spacer before all visible assistant content, including thinking-only messages. */
 export function hasLeadingThinkingBlock(message: AssistantMessageLike): boolean {
   return message.content?.find(isVisibleContent)?.type === "thinking";
+}
+
+/**
+ * Groups thinking blocks into the runs Pi renders as a single child, in the
+ * order Pi numbers its per-run visibility overrides. The text is read from the
+ * live message object, so a streaming run reports what exists so far.
+ */
+export function thinkingRuns(message: AssistantMessageLike): ThinkingRun[] {
+  const content = message.content ?? [];
+  const runs: ThinkingRun[] = [];
+  let current: number[] = [];
+
+  const flush = (): void => {
+    const parts = current
+      .map((index) => content[index]?.thinking?.trim() ?? "")
+      .filter((part) => part.length > 0);
+    if (parts.length > 0) runs.push({ blockIndices: [...current], text: parts.join("\n\n") });
+    current = [];
+  };
+
+  for (let index = 0; index < content.length; index++) {
+    if (content[index]!.type === "thinking") current.push(index);
+    else flush();
+  }
+  flush();
+  return runs;
+}
+
+/**
+ * True while a run is still being thought: its final block opened on this
+ * session's stream and has not closed yet. Used to keep a live run on a single
+ * status row instead of streaming the whole chain down the terminal.
+ */
+export function thinkingRunIsLive(
+  message: AssistantMessageLike,
+  run: ThinkingRun,
+  streaming: boolean,
+): boolean {
+  if (!streaming) return false;
+  const last = run.blockIndices[run.blockIndices.length - 1];
+  if (last === undefined) return false;
+  const timing = thinkingTimings.get(thinkingTimingKey(message, last));
+  return timing !== undefined && timing.endMs === undefined;
+}
+
+/** Pi's own per-run decision, including its click-time visibility overrides. */
+export function thinkingRunIsHidden(runtime: AssistantMessageRuntime, runIndex: number): boolean {
+  return runtime.thinkingVisibilityOverrides?.get(runIndex) ?? runtime.hideThinkingBlock === true;
 }
 
 /** Maps protocol content blocks onto Pi's rendered assistant child components. */
@@ -166,6 +274,92 @@ function branch(theme: Theme, text: string): string {
   return theme.fg("borderMuted", text);
 }
 
+/** Blank-line separated paragraphs of a thinking run, i.e. its steps. */
+export function thinkingSteps(text: string): string[] {
+  return text.split(/\n[ \t]*\n/).filter((part) => part.trim().length > 0);
+}
+
+/**
+ * Elapsed thinking time for a run. Runs that never streamed through this
+ * session (history reloaded from a session file) have no timing, so the row
+ * shows steps only.
+ */
+export function thinkingRunDuration(
+  message: AssistantMessageLike,
+  blockIndices: number[],
+  streaming: boolean,
+  now = Date.now(),
+): { ms: number; live: boolean } | undefined {
+  let startMs: number | undefined;
+  let endMs: number | undefined;
+  let open = false;
+  for (const index of blockIndices) {
+    const timing = thinkingTimings.get(thinkingTimingKey(message, index));
+    if (!timing) continue;
+    if (startMs === undefined || timing.startMs < startMs) startMs = timing.startMs;
+    if (timing.endMs === undefined) open = true;
+    else if (endMs === undefined || timing.endMs > endMs) endMs = timing.endMs;
+  }
+  if (startMs === undefined) return undefined;
+  const live = streaming && open;
+  const stopMs = endMs ?? (live ? now : undefined);
+  if (stopMs === undefined) return undefined;
+  return { ms: Math.max(0, stopMs - startMs), live };
+}
+
+/**
+ * What the collapsed row reports: the step count, plus the elapsed thinking
+ * time once it is at least a second. `18s` grows live while the run streams.
+ */
+export function thinkingRunStats(
+  message: AssistantMessageLike,
+  run: ThinkingRun,
+  streaming = false,
+  now = Date.now(),
+): string[] {
+  const stats = [`${thinkingSteps(run.text).length} 步`];
+  const duration = thinkingRunDuration(message, run.blockIndices, streaming, now);
+  if (duration !== undefined && duration.ms >= 1000) stats.push(formatThinkingDuration(duration.ms));
+  return stats;
+}
+
+/**
+ * The collapsed form of a thinking run: one quiet row that says how much
+ * thinking happened, replacing Pi's content-free `Thinking...` label. Pi's
+ * MouseRegion stays around it, so a click still toggles this run only.
+ *
+ * Pi rebuilds assistant content on every streamed token, so a live run needs no
+ * timer of its own to keep its step count and elapsed time fresh.
+ */
+export class ThinkingSummaryComponent implements Component {
+  private readonly getStats: () => string[];
+  private readonly getTheme: () => Theme | undefined;
+  private lastWidth = 0;
+  private cached: string[] | undefined;
+
+  constructor(getStats: () => string[], getTheme: () => Theme | undefined) {
+    this.getStats = getStats;
+    this.getTheme = getTheme;
+  }
+
+  render(width: number): string[] {
+    if (width === this.lastWidth && this.cached) return this.cached;
+    this.lastWidth = width;
+    const label = `思考 · ${this.getStats().join(" · ")}`;
+    const theme = this.getTheme();
+    const line = theme
+      ? `${TRAIL_INDENT}${theme.fg("accent", "✦")}${theme.fg("toolTitle", ` ${label}`)}`
+      : `${TRAIL_INDENT}✦ ${label}`;
+    const clipped = truncateToWidth(line, Math.max(1, width), "");
+    this.cached = [`${clipped}${" ".repeat(Math.max(0, width - visibleWidth(clipped)))}`];
+    return this.cached;
+  }
+
+  invalidate(): void {
+    this.cached = undefined;
+  }
+}
+
 /**
  * Reframes Pi's native thinking lines as readable steps while leaving
  * collapse state and the original message content under Pi's control.
@@ -173,10 +367,16 @@ function branch(theme: Theme, text: string): string {
 export class ThinkingTrailComponent implements Component {
   private readonly inner: Component;
   private readonly getTheme: () => Theme | undefined;
+  private readonly getStats: (() => string[]) | undefined;
 
-  constructor(inner: Component, getTheme: () => Theme | undefined) {
+  constructor(
+    inner: Component,
+    getTheme: () => Theme | undefined,
+    getStats?: () => string[],
+  ) {
     this.inner = inner;
     this.getTheme = getTheme;
+    this.getStats = getStats;
   }
 
   invalidate(): void {
@@ -204,8 +404,9 @@ export class ThinkingTrailComponent implements Component {
     if (current.length > 0) steps.push(current);
     if (steps.length === 0) return [];
 
+    const stats = this.getStats?.() ?? [`${steps.length} 步`];
     const header = truncateToWidth(
-      `  ${theme.fg("accent", "✦")}${theme.fg("toolTitle", ` 思考轨迹 · ${steps.length} 步`)}`,
+      `${TRAIL_INDENT}${theme.fg("accent", "✦")}${theme.fg("toolTitle", ` 思考 · ${stats.join(" · ")}`)}`,
       width,
       "",
     );
@@ -216,15 +417,15 @@ export class ThinkingTrailComponent implements Component {
       const connector = last ? "╰─" : "├─";
       const bodyConnector = last ? "   " : `${theme.fg("borderMuted", "│")}  `;
       const title = truncateToWidth(
-        `  ${branch(theme, connector)} ${theme.fg(style.color, style.icon)} ${themeBold(theme, theme.fg("thinkingText", summary))}`,
+        `${TRAIL_INDENT}${branch(theme, connector)} ${theme.fg(style.color, style.icon)} ${themeBold(theme, theme.fg("thinkingText", summary))}`,
         width,
         "",
       );
       const body = lines.slice(1).map((line) => {
         const plain = stripAnsi(line).trim();
-        if (!plain) return `  ${bodyConnector}`;
+        if (!plain) return `${TRAIL_INDENT}${bodyConnector}`;
         const styled = line.includes("\x1b[") ? line : softBody(theme, plain);
-        return truncateToWidth(`  ${bodyConnector}${styled}`, width, "");
+        return truncateToWidth(`${TRAIL_INDENT}${bodyConnector}${styled}`, width, "");
       });
       return [title, ...body];
     });
@@ -248,7 +449,14 @@ export class ThinkingTrailComponent implements Component {
 
     const visibleRows = selectedSteps.flat();
     const body = omittedRows > 0
-      ? [truncateToWidth(`  ${branch(theme, "├─")} ${theme.fg("dim", `… 省略 ${omittedRows} 行 · Ctrl+T 显示/隐藏轨迹`)}`, width, ""), ...visibleRows]
+      ? [
+          truncateToWidth(
+            `${TRAIL_INDENT}${branch(theme, "├─")} ${theme.fg("dim", `… 省略 ${omittedRows} 行 · Ctrl+T 显示/隐藏轨迹`)}`,
+            width,
+            "",
+          ),
+          ...visibleRows,
+        ]
       : visibleRows;
     return [header, ...body];
   }
@@ -264,7 +472,7 @@ export function recolorHiddenThinkingLines(lines: string[], theme: Theme, hidden
       label = HIDDEN_LABEL_PLAIN;
     } else if (
       plain === HIDDEN_LABEL_PLAIN ||
-      /^✦\s*(?:Thinking|Thought|思考中|思考轨迹)(?:\s*(?:trail)?(?:\s*·\s*\d+(?:\s*steps)?)?)?$/.test(plain)
+      /^✦\s*(?:Thinking|Thought|思考)(?:\s*(?:trail)?(?:\s*·\s*\d+(?:\s*steps)?)?)?$/.test(plain)
     ) {
       label = plain.startsWith("✦") ? plain : `✦ ${plain}`;
     }
@@ -273,6 +481,23 @@ export function recolorHiddenThinkingLines(lines: string[], theme: Theme, hidden
     if (visibleIndex < 0) return line;
     return `${line.slice(0, visibleIndex)}${theme.fg("accent", label)}${line.slice(visibleIndex + plain.length)}`;
   });
+}
+
+/**
+ * Returns the component Pi renders for a thinking run with its click region
+ * unwrapped, so a wrapper never ends up rendering the region that holds it.
+ */
+export function thinkingRegion(child: Component): { region?: MouseRegionLike; content: Component } {
+  const region = child as MouseRegionLike;
+  const content = region?.child;
+  return content && content !== child ? { region, content } : { content: child };
+}
+
+/** Swap the content inside Pi's click region, or the child itself when unframed. */
+export function replaceThinkingChild(child: Component, index: number, replacement: Component, children: Component[]): void {
+  const { region } = thinkingRegion(child);
+  if (region) region.child = replacement;
+  else children[index] = replacement;
 }
 
 export function installThinkingMessageStyle(getTheme: () => Theme | undefined): Cleanup {
@@ -285,15 +510,30 @@ export function installThinkingMessageStyle(getTheme: () => Theme | undefined): 
       const runtime = receiver as AssistantMessageRuntime;
       const children = runtime.contentContainer?.children;
       const message = args[0] as AssistantMessageLike | undefined;
-      if (!children || !message || runtime.hideThinkingBlock) return result;
+      if (!children || !message) return result;
 
       const leadingSpacerRemoved = hasLeadingThinkingBlock(message) ? 1 : 0;
       if (leadingSpacerRemoved) children.shift();
 
-      for (const index of thinkingChildIndices(message)) {
-        const childIndex = index - leadingSpacerRemoved;
+      const runs = thinkingRuns(message);
+      const childIndices = thinkingChildIndices(message);
+      const streaming = args[1] === true;
+      for (let runIndex = 0; runIndex < childIndices.length; runIndex++) {
+        const run = runs[runIndex];
+        const childIndex = childIndices[runIndex]! - leadingSpacerRemoved;
         const child = children[childIndex];
-        if (child) children[childIndex] = new ThinkingTrailComponent(child, getTheme);
+        if (!run || !child) continue;
+
+        // Keep Pi's MouseRegion outermost so a click still toggles this run only.
+        const live = thinkingRunIsLive(message, run, streaming);
+        const replacement: Component = live || thinkingRunIsHidden(runtime, runIndex)
+          ? new ThinkingSummaryComponent(() => thinkingRunStats(message, run, streaming), getTheme)
+          : new ThinkingTrailComponent(
+              thinkingRegion(child).content,
+              getTheme,
+              () => thinkingRunStats(message, run, streaming),
+            );
+        replaceThinkingChild(child, childIndex, replacement, children);
       }
       return result;
     },
@@ -316,4 +556,17 @@ export function installThinkingMessageStyle(getTheme: () => Theme | undefined): 
     cleanupRender();
     cleanupContent();
   };
+}
+
+/** Starts the clock every provider opens a thinking block, for the collapsed row. */
+export function installThinkingTimingTracker(pi: ExtensionAPI): void {
+  pi.on("message_update", async (event) => {
+    recordThinkingTiming(event as unknown as ThinkingTimingEvent);
+  });
+  pi.on("session_start", async () => {
+    clearThinkingTimings();
+  });
+  pi.on("session_shutdown", () => {
+    clearThinkingTimings();
+  });
 }

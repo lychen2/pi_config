@@ -73,6 +73,22 @@ test("search tool activates only allowed inactive matches", async () => {
   assert.deepEqual(repeated.details.activatedTools, []);
 });
 
+test("default discovery is bounded and keeps verbose metadata outside model content", async () => {
+  const tools = Array.from({ length: 6 }, (_, i) => tool(`tool_${i}`, "Review workspace records", { workspace: {} }));
+  let active = ["read"];
+  const search = createSearchToolBm25({
+    getAllTools: () => tools,
+    getActiveTools: () => active,
+    setActiveTools: (names) => { active = names; },
+  });
+  const result = await search.execute("id", { query: "workspace records" });
+  assert.equal(result.details.tools.length, 3);
+  const receipt = JSON.parse(result.content[0].text);
+  assert.equal(receipt.tools.length, 3);
+  assert.deepEqual(Object.keys(receipt.tools[0]), ["name", "summary", "score"]);
+  assert.equal(active.length, 4);
+});
+
 test("concurrent searches merge activations without dropping earlier tools", async () => {
   const tools = [
     tool("web_search", "Search the web for current information", { query: {} }),

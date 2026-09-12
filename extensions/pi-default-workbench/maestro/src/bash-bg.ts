@@ -213,7 +213,7 @@ export function registerBashBg(pi: ExtensionAPI): void {
         if (!params.command) {
           return toolFailure("INVALID_ARGUMENT", `bash_bg ${params.action} requires command.`, { field: "command" });
         }
-        const job = start(params.command, params.cwd ? resolve(params.cwd, ctx.cwd) : ctx.cwd, params.action === "start");
+        const job = start(params.command, params.cwd ? resolve(ctx.cwd, params.cwd) : ctx.cwd, params.action === "start");
         if (params.action === "start") {
           return { content: [{ type: "text", text: `Started ${job.id} (pid ${job.pid}). Completion will send a notification.` }], details: { jobId: job.id } } as AgentToolResult<unknown>;
         }

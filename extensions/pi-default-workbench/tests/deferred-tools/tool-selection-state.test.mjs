@@ -129,9 +129,9 @@ test("fast preset keeps core tools including default web search", () => {
   assert.deepEqual(config, {
     toolMode: "fast",
     disabledExtensions: [],
-    disabledTools: ["bash_bg", "conflict"],
+    disabledTools: ["conflict"],
   });
-  for (const name of ["write", "edit", "grep", "fffind", "web_search"]) {
+  for (const name of ["write", "edit", "grep", "fffind", "web_search", "bash_bg"]) {
     assert.equal(isToolDisabled(config, "local:pi-context-bridge", name), false);
     assert.equal(config.disabledTools.includes(name), false);
   }
@@ -150,6 +150,7 @@ test("fast core registration rejects silent tool-name drift", () => {
     "todo",
     "ask_user_question",
     "search_skill_bm25",
+    "bash_bg",
   ];
   assert.doesNotThrow(() => assertCoreToolsRegistered(registered));
   assert.throws(
@@ -170,8 +171,9 @@ test("adaptive selects only the matched additional tool", () => {
   assert.deepEqual(capabilityToolsForMatches(["project_search"], registered), ["project_search"]);
   assert.deepEqual(
     capabilityToolsForMatches(["edit"], registered),
-    ["write", "edit", "grep", "web_search"],
+    ["edit"],
   );
+  assert.deepEqual(capabilityToolsForMatches(["edit", "edit", "missing"], registered), ["edit"]);
 });
 
 test("adaptive starts with core and loader, then preserves activated tools", () => {
@@ -235,6 +237,24 @@ test("full preserves existing active tools while adding the registered set", () 
     ["legacy_host_tool", "web_search"],
   );
   assert.deepEqual(full, ["read", "project_search", "web_search", "legacy_host_tool"]);
+});
+
+test("full removes discovery even from preserved tools and adaptive restores it", () => {
+  const groups = [{ id: "selector", tools: [{ name: SEARCH_TOOL_NAME }, { name: "search_skill_bm25" }] }];
+  const full = activeToolsForMode(["read"], groups, { ...empty, toolMode: "full" }, new Set(), ["read", SEARCH_TOOL_NAME], [SEARCH_TOOL_NAME]);
+  assert.deepEqual(full, ["read", "search_skill_bm25"]);
+  const adaptive = activeToolsForMode(["read"], groups, empty);
+  assert.ok(adaptive.includes(SEARCH_TOOL_NAME));
+});
+
+test("SoL plan and observation recall stay active without duplicate task tools", () => {
+  const groups = [{ id: "sol", tools: [{ name: "update_plan" }, { name: "obs_recall" }] }];
+  for (const toolMode of ["adaptive", "fast", "full"]) {
+    const active = activeToolsForMode(["read", "todo", "todowrite"], groups, { ...empty, toolMode });
+    assert.deepEqual(active, ["read", "update_plan", "obs_recall"]);
+  }
+  const disabled = activeToolsForMode(["read", "todo"], groups, { ...empty, disabledTools: ["update_plan"] });
+  assert.deepEqual(disabled, ["read", "todo", "obs_recall"]);
 });
 
 test("disabling an extension does not remove same-named core tools", () => {

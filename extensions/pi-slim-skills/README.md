@@ -1,27 +1,27 @@
 # pi-slim-skills
 
-Compresses Pi's model-visible skill block into a deterministic name-and-path index. Every installed skill remains callable through `/skill:<name>`.
+Replaces Pi's verbose skill block with a bounded discovery router or a compact description-and-path index. Skill metadata stays available to the workbench search tool; `/skill:<name>` commands remain available to the user.
 
-The default is lossless: all skills remain auto-discoverable. Use `/slim-skills remove <name>` to make one skill command-only, `/slim-skills none` to hide all skills from automatic discovery, and `/slim-skills reset` to restore the default.
+The repository default (`config/slim-skills-whitelist.json`) uses an empty allowlist and no injected bodies. With `search_skill_bm25` active, the model receives only a short discovery route. Search returns metadata; loading a chosen skill returns its instructions and reference directory.
 
-Use `/slim-skills inject <name>` to append a skill's full body to every system prompt, and `/slim-skills uninject <name>` to stop. Before appending, the extension checks both the current prompt and the current injection batch so the same body is not added twice.
+Without the search tool, visible skill descriptions and exact file paths remain in the prompt. Standalone installations without a config default to the complete compact index. Skills marked `disableModelInvocation` are excluded from automatic discovery.
 
-For the nine high-risk skills `mineru-file-processing`, `mineru`, `scientific-visualization`, `literature-search-openalex`, `deep-research`, `academic-paper`, `academic-paper-reviewer`, `citation-management`, and `sympy`, the extension also borrows viktomas' skill-nudge pattern: a clear matching request preloads the skill once per session, and a matching `bash` command is blocked once until the skill is loaded. The rules are intentionally limited to explicit document processing, scientific research, academic writing/review, citation verification, and symbolic-math workflows.
+## Controls
 
-## Install
+- `/slim-skills add <name>`: pin metadata in the visible index.
+- `/slim-skills remove <name>`: leave metadata available on demand.
+- `/slim-skills none`: use discovery only when the search tool is available.
+- `/slim-skills all` or `reset`: show the complete compact index.
+- `/slim-skills inject <name>` and `uninject <name>`: explicitly manage always-loaded bodies. The default injects none.
 
-```bash
-pi install "$(realpath extensions/pi-slim-skills)"
-```
+State lives in Pi's agent directory as `slim-skills-whitelist.json`. `SLIM_SKILLS_DISABLE=1` disables rewriting and injection for one process.
 
-State is stored in Pi's official agent directory as `slim-skills-whitelist.json`; it contains the discovery allowlist and the always-injected skill list. Set `SLIM_SKILLS_DISABLE=1` to disable rewriting and injection for one process.
-
-The extension uses Pi's documented `before_agent_start` event and structured skill metadata. Skill-index replacement is fail-closed: if Pi's verbose block does not match, the index is left untouched while configured body injection can still run.
+The extension uses `before_agent_start` and Pi's public `formatSkillsForPrompt` helper. If the generated block is absent from the prompt, replacement leaves the prompt intact. No keyword-triggered preloading or tool blocking is performed.
 
 ## Development
 
 ```bash
-npm install
+npm test
 npm run typecheck
 npm pack --dry-run
 ```

@@ -22,6 +22,11 @@ test("localizes configured third-party slash command descriptions", () => {
   });
 });
 
+test("leaves incomplete slash suggestions unchanged", () => {
+  const suggestions = { prefix: "/", items: undefined };
+  assert.equal(localizeSlashSuggestions(suggestions), suggestions);
+});
+
 test("leaves non-slash completion results unchanged", () => {
   const suggestions = { prefix: "read", items: [{ value: "read", label: "read" }] };
   assert.equal(localizeSlashSuggestions(suggestions), suggestions);

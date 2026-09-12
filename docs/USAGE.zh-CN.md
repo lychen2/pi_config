@@ -105,7 +105,7 @@ pi
 /tools reset    # 清空显式禁用规则并进入 full
 ```
 
-adaptive/fast 的严格 core 是 `read`、`bash`、`write`、`edit`、`grep`、`fffind`、`ffgrep`、`todo`、`ask_user_question`；原生 `ls/find` 和其他能力工具只在 adaptive 按需激活或 full 中出现。
+adaptive/fast 的严格 core 是 `read`、`bash`、`write`、`edit`、`grep`、`fffind`、`ffgrep`、`todo`、`ask_user_question`、`bash_bg`；原生 `ls/find` 和其他能力工具只在 adaptive 按需激活或 full 中出现。
 
 ```json
 {

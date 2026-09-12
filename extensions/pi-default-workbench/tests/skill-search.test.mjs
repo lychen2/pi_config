@@ -74,6 +74,8 @@ test("search_skill_bm25 returns metadata before explicitly loading a candidate",
 
     const loaded = await search.execute("test", { action: "load", name: skill.name });
     assert.match(loaded.content[0].text, new RegExp(`INSTRUCTIONS FOR ${skill.name}`));
+    assert.ok(loaded.content[0].text.includes(`Source: ${skill.filePath}`));
+    assert.ok(loaded.content[0].text.includes(`Resolve relative references from: ${root}`));
   }
 
   const repeated = await search.execute("test", { action: "load", name: selected[0].name });
@@ -83,4 +85,27 @@ test("search_skill_bm25 returns metadata before explicitly loading a candidate",
   await writeFile(selected[0].filePath, `---\ndescription: ${selected[0].description}\n---\nUPDATED INSTRUCTIONS FOR ${selected[0].name}`, "utf8");
   const refreshed = await search.execute("test", { action: "load", name: selected[0].name });
   assert.match(refreshed.content[0].text, new RegExp(`UPDATED INSTRUCTIONS FOR ${selected[0].name}`));
+
+  for (const event of ["session_start", "session_tree", "session_compact"]) {
+    for (const handler of pi.handlers.get(event)) await handler({});
+    await beforeAgentStart({ systemPromptOptions: { skills } });
+    await search.execute("test", { action: "search", query: selected[0].name, limit: 1 });
+    const reloaded = await search.execute("test", { action: "load", name: selected[0].name });
+    assert.equal(reloaded.details.alreadyLoaded, false, event);
+    assert.match(reloaded.content[0].text, /UPDATED INSTRUCTIONS/);
+  }
+});
+
+test("catalog contains only installed model-invocable skills", async () => {
+  const pi = fakePi();
+  registerSkillSearch(pi);
+  const before = pi.handlers.get("before_agent_start")[0];
+  const search = pi.tools.get("search_skill_bm25");
+  await before({ systemPromptOptions: { skills: [
+    { name: "private", description: "private workflow", filePath: "/not-readable", disableModelInvocation: true },
+  ] } });
+  const result = await search.execute("test", { action: "search", query: "private workflow grill" });
+  assert.equal(result.details.totalSkills, 0);
+  assert.deepEqual(result.details.skills, []);
+  await assert.rejects(search.execute("test", { action: "load", name: "private" }), /must be returned/);
 });

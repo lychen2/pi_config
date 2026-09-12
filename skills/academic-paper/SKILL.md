@@ -132,8 +132,10 @@ Phase 7: FORMAT        -> [formatter]                  -> Final Output Package
 
 ### Checkpoint Rules
 
-1. ⚠️ **IRON RULE**: User must confirm Paper Configuration Record before proceeding to Phase 1
-2. **Phase 2 -> 3**: User must approve outline (can request restructuring)
+These checkpoints apply only to the corresponding multi-phase workflow. Single-phase requests, explicitly supplied configuration, explicit skip/continue instructions, and outputs that do not cross the guarded phase boundary do not require a second confirmation.
+
+1. ⚠️ **IRON RULE**: User must confirm the Paper Configuration Record before Phase 1 only when it contains unresolved or newly inferred high-impact fields.
+2. **Phase 2 -> 3**: User must approve the outline when it changes the research question, scope, method, or other material paper behavior; otherwise explicit continue instructions are sufficient.
 3. ⚠️ **IRON RULE**: Max 2 revision loops; unresolved items -> "Acknowledged Limitations"
 4. **Peer Review** Critical-severity issues block progression to Phase 7
 5. User can skip Phase 1 (literature) if providing own sources
@@ -235,8 +237,8 @@ Lint count summary across the three modes:
 
 When a writer or evaluator phase becomes unusable (Phase Na lint twice fail OR Phase Nb lint fail), `academic-paper` emits a phase-level abort tag and routes to user intervention:
 
-- **Writer Phase 4 unusable** → `[GENERATOR-PHASE-ABORTED: role=writer, contract=<id>, reason=<lint_failure_kind>]` → abort `academic-paper` Phase 4 → user intervention decides retry / fallback / regression to Phase 3 (Argument Blueprint).
-- **Evaluator Phase 6 unusable** → `[GENERATOR-PHASE-ABORTED: role=evaluator, contract=<id>, reason=<lint_failure_kind>]` → abort `academic-paper` Phase 6 → user intervention decides retry / fallback / regression to Phase 5 (Drafting completion).
+- **Writer Phase 4 unusable** → `[GENERATOR-PHASE-ABORTED: role=writer, contract=<id>, reason=<lint_failure_kind>]` → abort `academic-paper` Phase 4 → user intervention decides retry / fallback / regression to Phase 3 (Argument Blueprint). A bounded repair that preserves the same contract and objective may be performed automatically within the retry budget; do not silently switch phase or fallback mode.
+- **Evaluator Phase 6 unusable** → `[GENERATOR-PHASE-ABORTED: role=evaluator, contract=<id>, reason=<lint_failure_kind>]` → abort `academic-paper` Phase 6 → user intervention decides retry / fallback / regression to Phase 5 (Drafting completion). A bounded repair that preserves the same contract and objective may be performed automatically within the retry budget; do not silently switch phase or fallback mode.
 
 `[GENERATOR-PHASE-ABORTED]` does **not** constitute a valid Phase 6b emission and cannot enter Stage 3 reviewer dispatch. Two valid Stage 3 entry paths exist (per design doc §5.1):
 

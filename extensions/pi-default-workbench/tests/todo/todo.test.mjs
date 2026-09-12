@@ -58,6 +58,17 @@ test("preserves task transitions and rejects dependency cycles", () => {
   assert.equal(invalid.error, "illegal transition completed -> in_progress");
 });
 
+test("prevents more than one task from running at once", () => {
+  let state = cloneState({ tasks: [], nextId: 1 });
+  state = applyMutation(state, "create", { subject: "first" }).state;
+  state = applyMutation(state, "create", { subject: "second" }).state;
+  state = applyMutation(state, "update", { id: 1, status: "in_progress" }).state;
+
+  const outcome = applyMutation(state, "update", { id: 2, status: "in_progress" });
+  assert.equal(outcome.error, "only one task may be in_progress at a time");
+  assert.deepEqual(outcome.state, state);
+});
+
 test("renders Maestro-style compact and expanded widgets within width", () => {
   const tasks = [
     { id: 1, subject: "Inspect implementation", status: "completed" },

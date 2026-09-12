@@ -487,6 +487,8 @@ async function restoreFiles() {
     await copyPath(path.join(repoDir, "config", file), path.join(agentDir, file));
   }
 
+  console.log("  SoL migration: run node scripts/configure-default-sol.mjs --approve-shared-memory after installing external packages (add --tun for Fake-IP proxies).");
+
   for (const file of ["matugen-chrome.ts", "matugen-footer-core.mjs"]) {
     await copyPath(
       path.join(repoDir, "extensions", file),
