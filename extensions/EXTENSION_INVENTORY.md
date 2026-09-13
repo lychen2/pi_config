@@ -31,18 +31,18 @@ These packages are pinned production dependencies of local compatibility entries
 
 | Package | Pinned version | Registration entry |
 | --- | ---: | --- |
-| `pi-markdown-preview` | latest | `pi-default-workbench` |
-| `pi-web-access` | latest | `pi-context-bridge` |
+| `pi-markdown-preview` | 0.16.0 | `pi-default-workbench` |
+| `pi-web-access` | 0.29.0 | `pi-context-bridge` |
 
 ## Configured Third-Party Extensions
 
 | Package | Installed version | Purpose |
 | --- | ---: | --- |
-| `@cortexkit/pi-magic-context` | 0.41.1 | Persistent memory, conversation-history search, and `ctx_*` tools |
-| `@narumitw/pi-plan-mode` | 0.31.0 | Read-only planning mode |
-| `@juicesharp/rpiv-ask-user-question` | 2.1.0 | Structured user questions |
+| `@cortexkit/pi-magic-context` | 0.42.1 | Persistent memory, conversation-history search, and `ctx_*` tools |
+| `@narumitw/pi-plan-mode` | 0.58.0 | Read-only planning mode |
+| `@juicesharp/rpiv-ask-user-question` | 2.10.1 | Structured user questions |
 | `pi-slopchop` | 0.10.1 | Terminal code review and annotations |
-| `pi-workspace-history` | 0.2.2 | Workspace undo/redo history |
+| `pi-workspace-history` | 0.4.2 | Workspace undo/redo history |
 | `pi-rtk-optimizer` | 0.9.0 | RTK command rewriting and generic output compaction |
 | `pi-provider` | 1.3.1 | Interactive custom-provider configuration and capability checks |
 | `@dietrichgebert/ponytail` | 4.9.0 | Lazy senior developer mode, mode persistence, and focused review/audit skills |
