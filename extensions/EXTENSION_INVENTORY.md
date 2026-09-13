@@ -1,13 +1,13 @@
 # Pi Extension Inventory
 
-Audited against Pi 0.84.1 extension, package, TUI, keybinding, provider, and lifecycle documentation.
+Audited against Pi 0.85.1 extension, package, TUI, keybinding, provider, and lifecycle documentation.
 
 ## Hand-Crafted Distributable Packages
 
 | Package | Purpose | Source |
 | --- | --- | --- |
 | `pi-default-workbench` | Unified Default functional workbench: adaptive tool selection, bash-to-tool guard, Puppeteer browser control, persistent Todo, Todo guard, FFF/background shell/conflict tools, Markdown Preview, and `/large` profile switching | `pi-default-workbench/index.ts`, `pi-default-workbench/{bash-guard,deferred-tools,browser,todo,maestro,preview,large-mode}.ts` |
-| `pi-context-bridge` | Sole Default registration entry for Web Access, configurable provider model refresh, and bounded checkpoint context continuity | `pi-context-bridge/index.ts`, `pi-context-bridge/{manager-models,continuity}.ts` |
+| `pi-context-bridge` | Sole Default registration entry for Web Access, configurable provider model refresh, bounded checkpoint context continuity, and last-mile empty-content wire sanitizing | `pi-context-bridge/index.ts`, `pi-context-bridge/{manager-models,continuity,wire-guard}.ts` |
 | `pi-large-mode` | Large profile switching implementation, aggregated by `pi-default-workbench` | `pi-default-workbench/large-mode.ts`, `pi-default-workbench/large-mode-core.ts` |
 | `pi-brand-header` | Responsive themed startup header, aggregated by `pi-tool-rails` | `pi-tool-rails/brand-header.ts` |
 | `pi-deepseek-anchored-standard` | DeepSeek V4 Pro/Flash bootstrap, anchoring, and progressive promotion; source-only specialist package | `pi-deepseek-anchored-standard/{index,core,minimal-editor}.ts` |
@@ -54,7 +54,7 @@ These packages are pinned production dependencies of local compatibility entries
 ## Distribution Checks
 
 - Every hand-crafted package has a `pi.extensions` manifest and `pi-package` keyword.
-- Pi core imports are declared as `peerDependencies` with `"*"` ranges.
+- Pi core imports are declared as `peerDependencies` with the explicit range `>=0.85.0 <0.86.0`, which `scripts/verify-repository.mjs` enforces.
 - Runtime package contents are constrained with `files`; development dependencies are excluded.
 - Global config paths use Pi's exported `getAgentDir()`.
 - TUI-only behavior is mode-guarded; dialogs are UI-guarded.

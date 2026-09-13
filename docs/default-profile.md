@@ -56,7 +56,7 @@ The normal installer copies `config/APPEND_SYSTEM.md` and the slim-skills config
 
 ## Verification and references
 
-- SoL source checks: 139 tests, typecheck and package inspection passed against both pinned Pi 0.84.2 and installed Pi 0.85.1. npm 11 is required for the upstream package tests' array-shaped `npm pack --json` expectation; npm 12 changes that output shape.
+- SoL source checks: 139 tests, typecheck and package inspection passed against the pinned Pi 0.85.1 matrix. npm 11 is required for the upstream package tests' array-shaped `npm pack --json` expectation; npm 12 changes that output shape.
 - Upstream audit: no high-severity findings; two moderate development-test dependency advisories remain (`vitest` / `@vitest/mocker`).
 - Default regression tests cover exact tool activation, mode switching, SoL control availability, single task ownership, skill lifecycle, TUN exception boundaries and configuration preservation.
 - Real offline startup verified SoL-owned edit/write schemas contain `then_run`, `obs_recall`/`update_plan` are active, the configured reducer model exists, and full omits tool search and duplicate Todo. No end-to-end remote reducer cost/latency benchmark is claimed.

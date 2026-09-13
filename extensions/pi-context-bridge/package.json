@@ -18,6 +18,7 @@
     "continuity.ts",
     "rtk.ts",
     "rtk-compat.ts",
+    "wire-guard.ts",
     "README.md"
   ],
   "pi": {
@@ -36,10 +37,10 @@
     "pi-rtk-optimizer": "0.9.0"
   },
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": ">=0.82.0 <0.85.0"
+    "@earendil-works/pi-coding-agent": ">=0.85.0 <0.86.0"
   },
   "devDependencies": {
-    "@earendil-works/pi-coding-agent": "^0.84.0",
+    "@earendil-works/pi-coding-agent": "^0.85.1",
     "@types/node": "^24.0.0",
     "typescript": "^5.9.0"
   }

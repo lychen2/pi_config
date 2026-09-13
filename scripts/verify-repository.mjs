@@ -10,7 +10,7 @@ const repoRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const extensionsDir = path.join(repoRoot, "extensions");
 const skipInstall = process.argv.includes("--skip-install");
 const skipPack = process.argv.includes("--skip-pack");
-const piRange = ">=0.82.0 <0.85.0";
+const piRange = ">=0.85.0 <0.86.0";
 const nodeRange = ">=22.19.0";
 const piVersion = process.argv.find((argument) => argument.startsWith("--pi-version="))?.slice("--pi-version=".length);
 
