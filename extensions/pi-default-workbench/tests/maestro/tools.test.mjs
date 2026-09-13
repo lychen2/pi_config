@@ -104,7 +104,7 @@ test("bash_bg run promotes a long command to the background", async () => {
   const tool = pi.tools.get("bash_bg");
   const result = await tool.execute("id", {
     action: "run",
-    command: "sleep 1",
+    command: "sleep 5",
     timeout: 1,
     cwd: process.cwd(),
   }, undefined, undefined, { cwd: process.cwd() });

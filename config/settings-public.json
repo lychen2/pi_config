@@ -1,6 +1,6 @@
 {
   "defaultProvider": "manager",
-  "defaultModel": "gpt-5.6-sol",
+  "defaultModel": "deepseek-v4-flash",
   "defaultThinkingLevel": "high",
   "compaction": {
     "enabled": true
@@ -70,8 +70,9 @@
     "name:seaborn": false
   },
   "enabledModels": [
-    "manager/gpt-5.6-sol",
-    "manager/gpt-5.6-luna",
-    "manager/gpt-5.6-terra"
+    "manager/deepseek-v4-flash",
+    "manager/Qwen3.8-Flash",
+    "manager/gpt-6-astra",
+    "manager/glm-5.3-flash"
   ]
 }

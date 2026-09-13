@@ -7,7 +7,12 @@ import { compactBashBody, compactToolBody } from "../tool-body-polish.ts";
 
 import {
   backgroundLine,
+  mutationBody,
+  planBody,
+  withoutBackground,
   isInternalToolDiagnosticLine,
+  filterSoLStaticSavingsLines,
+  isSoLStaticSavingsLine,
   isStandaloneToolNameLine,
   toolBoxBottom,
   toolBoxLine,
@@ -26,6 +31,28 @@ const identityTheme = {
     return text;
   },
 };
+
+test("mutation previews remove backgrounds, retain foregrounds, and count omitted rows", () => {
+  assert.equal(withoutBackground("\x1b[1;31;48;2;40;49;100m+code\x1b[49m"), "\x1b[1;31m+code");
+  assert.equal(withoutBackground("\x1b[42mgreen\x1b[0m\x1b[48;5;22mindexed"), "green\x1b[0mindexed");
+  assert.equal(withoutBackground("\x1b[48:2::1:2:3mcolon"), "colon");
+  const lines = Array.from({ length: 45 }, (_, i) => `\x1b[48;2;1;2;3mline ${i}\x1b[49m`);
+  const collapsed = mutationBody(lines, false, identityTheme);
+  assert.equal(collapsed.length, 13);
+  assert.equal(collapsed.at(-1), "… +33 行 · 展开");
+  assert.ok(collapsed.every((line) => !line.includes("\x1b[48")));
+  assert.equal(mutationBody(lines, true, identityTheme).length, 45);
+});
+
+test("plans show actual goals and keep the active step visible in long plans", () => {
+  const steps = Array.from({ length: 20 }, (_, i) => ({ goal: `step ${i}`, status: i === 19 ? "in_progress" : "completed" }));
+  const collapsed = planBody(steps);
+  assert.equal(collapsed[0], "计划 · 19/20 完成");
+  assert.equal(collapsed[1], "◐ step 19");
+  assert.equal(collapsed.at(-1), "… +9 步 · 展开");
+  assert.equal(planBody(steps, true).length, 21);
+  assert.equal(planBody([{ goal: "bad", status: "unknown" }]), undefined);
+});
 
 test("renders reference-style tool box chrome without putting emoji on the rail", () => {
   const theme = {
@@ -156,6 +183,33 @@ test("hides RTK rewrite diagnostics until a tool body is expanded", () => {
     ["run project scan", "exit 0"],
   );
   assert.deepEqual(visibleToolContentLines(lines, true, { toolName: "bash" }), lines);
+});
+
+test("drops SoL-Pi static savings slogans while keeping measured savings", () => {
+  assert.equal(isSoLStaticSavingsLine("Money saved · compacts only when projected savings are positive"), true);
+  assert.equal(isSoLStaticSavingsLine("┃ Money saved · 1 model round-trip avoided"), true);
+  assert.equal(isSoLStaticSavingsLine("Money saved · full observation replay avoided"), true);
+  assert.equal(isSoLStaticSavingsLine("Money saved · 12,345 context tokens removed"), false);
+  assert.equal(isSoLStaticSavingsLine("Money saved · 4 KiB removed from future prompts"), false);
+  assert.equal(isSoLStaticSavingsLine("⚡ SoL-Pi · Online Context Compact"), false);
+
+  // The tool box wraps a slogan once it is wider than the box.
+  assert.deepEqual(
+    filterSoLStaticSavingsLines([
+      "⚡ SoL-Pi · Online Context Compact",
+      "Money saved · compacts only when projected savings are",
+      "positive",
+      "Plan: 5 steps, 2 completed",
+    ]),
+    ["⚡ SoL-Pi · Online Context Compact", "Plan: 5 steps, 2 completed"],
+  );
+  assert.deepEqual(
+    filterSoLStaticSavingsLines([
+      "Money saved · 12,345 context tokens removed",
+      "Plan: 5 steps, 2 completed",
+    ]),
+    ["Money saved · 12,345 context tokens removed", "Plan: 5 steps, 2 completed"],
+  );
 });
 
 test("uses reference-style body compression instead of a two-line collapse", () => {

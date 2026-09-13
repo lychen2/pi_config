@@ -23,9 +23,6 @@ function guard(toolName, command, active) {
 test("blocks commands a base tool reproduces", () => {
   for (const command of [
     "cat foo.ts",
-    "head -50 foo.ts",
-    "tail -n 20 foo.ts",
-    "tail -25 foo.ts",
     "ls -la src",
     "grep -rn TODO src",
     "rg needle .",
@@ -53,6 +50,14 @@ test("allows shell work the tools cannot do", () => {
     "find . -name *.ts",
     "ls /tmp && pwd",
     "head -c 100 bin",
+    "head -50 evidence.txt",
+    "tail -n 20 evidence.txt",
+    "tail -25 evidence.txt",
+    "head -n20 evidence.txt",
+    "tail --lines=20 evidence.txt",
+    "ls --unknown src",
+    "cat --show-ends file",
+    "rg --unknown needle .",
   ]) {
     assert.equal(guard("bash", command), undefined, `expected allow: ${command}`);
   }

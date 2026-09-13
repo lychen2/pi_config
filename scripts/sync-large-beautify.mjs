@@ -14,6 +14,7 @@ const TOOL_RAILS_FILES = [
   "index.ts",
   "result-bridge.ts",
   "prompt-frame.ts",
+  "plan-widget.ts",
   "thinking-message.ts",
   "thinking-shimmer.ts",
   "user-message.ts",

@@ -7,9 +7,12 @@ Quiet TUI styling for Pi:
 - a theme `text` separator with full-block pending, success, and error backgrounds from the active Pi theme
 - reason-first built-in tool calls that show `goal → concrete target` on one line and a useful result on the next
 - collapsed generic third-party output limited to two semantic lines, while task tools keep their own bounded task rows; `Ctrl+O` still reveals complete renderer detail
+- SoL-Pi's mechanism banners are silent: the `⚡ SoL-Pi · <mechanism>` chat notice, its `Money saved · <slogan>` row (in tool boxes and in the notice), and the transient `sol-pi-savings` footer status are all dropped; measured savings stay visible inside tool boxes
 - short, icon-specific labels for known core, Readseek, FFF, Web, context, and task tool names instead of truncated raw identifiers; the registry is broader than the current active tool surface
 - structured output colors for headings, success, active, pending, error, and task identifiers
 - numbered `read` views that show source line numbers in the TUI while preserving hash anchors for the model
+- `edit` and `write` collapse to a path plus `+added -removed` and a proportional add/remove bar; expanded calls show one diff, with fused `then_run` output retained
+- a pinned `Plan` panel above the editor follows successful `update_plan` calls and restores from the current session branch; its heading counts steps, and `Alt+T` collapses it to that one line or expands up to eight steps around the current step, without registering another task tool and without letting Pi's working-status line cover the plan
 - numbered, side-by-side `replace` diffs with old lines on the left, new lines on the right, multiple change groups, and shared indentation removed from each visible hunk
 - one blank line between tool blocks
 - a persistent framed `prompt` editor (frame + left rail, model/provider/thinking meta) and reference-style framed user messages with Markdown re-rendering and a `▐` rail marker

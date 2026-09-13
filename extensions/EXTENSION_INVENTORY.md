@@ -15,8 +15,9 @@ Audited against Pi 0.84.1 extension, package, TUI, keybinding, provider, and lif
 | `pi-slim-skills` | Compressed skill index and deduplicated full-body injection | `pi-slim-skills/index.ts` |
 | `pi-todo-guard` | Continue settled runs while Todo tasks remain; aggregated by `pi-default-workbench` | `pi-default-workbench/todo/guard.ts` |
 | `pi-tool-rails` | Soft tool rails, verified 41-tool emoji/label registry, semantic tool headers, user-message frame, persistent prompt frame, and brand header | `pi-tool-rails/compact-shell.ts`, `pi-tool-rails/tool-presentations.mjs`, `pi-tool-rails/index.ts`, `pi-tool-rails/brand-header.ts` |
+| `pi-compaction-model` | Pins context compaction to a chosen provider/model with bounded exponential backoff for transient upstream failures; opt-in package, not installed by the default installer | `pi-compaction-model/index.ts` |
 | `pi-large-beautify` | Large-only beautification bundle (tool rails, message/input framing, brand header, Matugen footer, Matugen theme) that also re-exports the Flow companion surface; not installed by the default installer, copied into the isolated Large profile | `pi-large-beautify/index.ts`, `pi-large-beautify/vendor/`, `pi-large-beautify/themes/` |
-Ten package directories are maintained in this repository; the installer enables four aggregate packages and keeps the other package sources available for Large profiles or explicit manual installation. `pi-zh-localizer` is run as an installer patcher rather than installed as a runtime extension.
+Eleven package directories are maintained in this repository; the installer enables four aggregate packages and keeps the other package sources available for Large profiles, opt-in installation, or explicit manual installation. `pi-zh-localizer` is run as an installer patcher rather than installed as a runtime extension.
 
 ## Standalone Extensions
 

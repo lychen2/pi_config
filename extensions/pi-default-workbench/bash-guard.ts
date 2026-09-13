@@ -130,6 +130,9 @@ export function classifyBashCommand(command: unknown): { tool: string; hint: str
   const [verb, ...args] = tokens;
   if (!verb || verb.includes("/")) return undefined;
 
+  // Explicit line windows are valid exact evidence readback, including SoL archives.
+  if (["head", "tail"].includes(verb) && args.some((arg) => /^-\d+$/.test(arg) || /^-n(?:[+-]?\d+)?$/.test(arg) || /^--lines(?:=|$)/.test(arg))) return undefined;
+
   const group = GROUPS.find((candidate) => candidate.verbs.has(verb));
   if (!group) return undefined;
 
@@ -147,10 +150,7 @@ export function classifyBashCommand(command: unknown): { tool: string; hint: str
     }
     if (arg === "--") continue;
     if (arg === "-") return undefined; // stdin
-    if (arg.startsWith("--")) {
-      if (arg.includes("=")) return undefined; // value inline, cannot tell it is not a pattern
-      continue;
-    }
+    if (arg.startsWith("--")) return undefined; // unknown long flags are not equivalent
     if (group.numeric && /^-\d+$/.test(arg)) continue;
     if (group.numeric && /^-\d*m$/.test(arg)) continue;
     // Bundled short flags count only when every letter is a safe cluster member.

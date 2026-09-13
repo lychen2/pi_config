@@ -1,8 +1,10 @@
 import { readFile } from "node:fs/promises";
+import { homedir } from "node:os";
 import { isAbsolute, resolve } from "node:path";
 import {
   ToolExecutionComponent,
   getLanguageFromPath,
+  generateDiffString,
   highlightCode,
   keyHint,
   type ExtensionAPI,
@@ -26,10 +28,14 @@ type ResultRenderer = (
   context: ResultContext,
 ) => Component;
 type GetResultRenderer = (this: ToolExecutionComponent) => ResultRenderer | undefined;
-type RendererPrototype = { getResultRenderer?: GetResultRenderer };
+type CallRenderer = (args: unknown, theme: Theme, context: ResultContext) => Component;
+type GetCallRenderer = (this: ToolExecutionComponent) => CallRenderer | undefined;
+type RendererPrototype = { getResultRenderer?: GetResultRenderer; getCallRenderer?: GetCallRenderer };
 type ResultPatch = {
   original: GetResultRenderer;
   patched: GetResultRenderer;
+  originalCall?: GetCallRenderer;
+  patchedCall: GetCallRenderer;
   owners: Set<symbol>;
 };
 type RecordLike = Record<string, unknown>;
@@ -811,6 +817,49 @@ function summaryWithChangeRatio(
   return `${summary} ${bar}`;
 }
 
+/** One-line `+added -removed` row that grows its ratio bar with the render width. */
+class CountsSummaryComponent implements Component {
+  private summary: string;
+  private additions: number;
+  private removals: number;
+  private theme: Theme;
+
+  constructor(summary: string, additions: number, removals: number, theme: Theme) {
+    this.summary = summary;
+    this.additions = additions;
+    this.removals = removals;
+    this.theme = theme;
+  }
+
+  update(summary: string, additions: number, removals: number, theme: Theme): void {
+    this.summary = summary;
+    this.additions = additions;
+    this.removals = removals;
+    this.theme = theme;
+  }
+
+  render(width: number): string[] {
+    return [summaryWithChangeRatio(this.summary, this.additions, this.removals, Math.max(0, width), this.theme)];
+  }
+
+  invalidate(): void {}
+}
+
+function renderCountsSummary(
+  summary: string,
+  additions: number,
+  removals: number,
+  theme: Theme,
+  context: ResultContext,
+): Component {
+  const existing = context.lastComponent;
+  if (existing instanceof CountsSummaryComponent) {
+    existing.update(summary, additions, removals, theme);
+    return existing;
+  }
+  return new CountsSummaryComponent(summary, additions, removals, theme);
+}
+
 function diffSummary(
   width: number,
   additions: number,
@@ -1016,7 +1065,7 @@ export function renderReplaceDiffResult(
     const additions = rawEntries.filter((entry) => entry.kind === "add").length;
     const removals = rawEntries.filter((entry) => entry.kind === "remove").length;
     const summary = `${theme.fg("toolDiffAdded", `+${additions}`)}${theme.fg("muted", "/")}${theme.fg("toolDiffRemoved", `-${removals}`)}`;
-    return reusableText(context, summary);
+    return renderCountsSummary(summary, additions, removals, theme, context);
   }
   const storedNumbers = Array.isArray(details[REPLACE_LINE_NUMBERS])
     ? details[REPLACE_LINE_NUMBERS].map((value) => typeof value === "number" ? value : null)
@@ -1027,54 +1076,6 @@ export function renderReplaceDiffResult(
     : undefined;
   const entries = numberedEntries(rawEntries, storedNumbers, firstChangedLine, finalLineCount);
   return renderDiffComponent(entries, options, theme, context, sourcePathFromContext(context), false);
-}
-
-class MutationSummaryComponent implements Component {
-  private summary: string;
-  private suffix: string;
-  private additions: number;
-  private removals: number;
-  private theme: Theme;
-
-  constructor(summary: string, suffix: string, additions: number, removals: number, theme: Theme) {
-    this.summary = summary;
-    this.suffix = suffix;
-    this.additions = additions;
-    this.removals = removals;
-    this.theme = theme;
-  }
-
-  update(summary: string, suffix: string, additions: number, removals: number, theme: Theme): void {
-    this.summary = summary;
-    this.suffix = suffix;
-    this.additions = additions;
-    this.removals = removals;
-    this.theme = theme;
-  }
-
-  render(width: number): string[] {
-    const bar = changeRatioBar(this.additions, this.removals, Math.max(0, width), this.theme);
-    const parts = [this.summary, bar ? ` ${bar}` : "", this.suffix ? ` ${this.suffix}` : ""];
-    return [truncateToWidth(parts.join(""), Math.max(0, width), "")];
-  }
-
-  invalidate(): void {}
-}
-
-function renderMutationSummary(
-  summary: string,
-  suffix: string,
-  additions: number,
-  removals: number,
-  theme: Theme,
-  context: ResultContext,
-): Component {
-  const existing = context.lastComponent;
-  if (existing instanceof MutationSummaryComponent) {
-    existing.update(summary, suffix, additions, removals, theme);
-    return existing;
-  }
-  return new MutationSummaryComponent(summary, suffix, additions, removals, theme);
 }
 
 function renderAftMutationResult(
@@ -1105,10 +1106,7 @@ function renderAftMutationResult(
   // readseek details carry structured stats and a semantic classification.
   const readSeekValue = record(details.readSeekValue);
   const readSeekStats = record(readSeekValue.diffData).stats as RecordLike | undefined ?? {};
-  const semanticSummary = record(readSeekValue.semanticSummary);
-  const readSeekSemantic = typeof semanticSummary.classification === "string"
-    ? semanticSummary.classification
-    : undefined;
+
   const additions = typeof details.additions === "number"
     ? details.additions
     : typeof readSeekStats.added === "number"
@@ -1119,7 +1117,7 @@ function renderAftMutationResult(
           ? Number(readseekCounts[1])
           : textCounts
             ? Number(textCounts[1])
-            : diffCounts && diffCounts.additions > 0
+            : diffCounts
               ? diffCounts.additions
               : undefined;
   const deletions = typeof details.deletions === "number"
@@ -1135,47 +1133,32 @@ function renderAftMutationResult(
             : diffCounts
               ? diffCounts.deletions
               : undefined;
-  const editsApplied = typeof details.editsApplied === "number"
-    ? details.editsApplied
-    : typeof details.edits_applied === "number"
-      ? details.edits_applied
-      : textCounts?.[3]
-        ? Number(textCounts[3])
-        : undefined;
-  const semanticMode = readSeekSemantic === "semantic"
-    || (typeof details.semanticClassification === "string" && details.semanticClassification === "semantic");
-  const verb = operation === "write" ? "wrote" : "edited";
+
   const counts = additions !== undefined && deletions !== undefined
     ? [
-        theme.fg("toolOutput", `↳ ${verb}`),
         theme.fg("toolDiffAdded", `+${additions}`),
         theme.fg("toolDiffRemoved", `-${deletions}`),
       ].join(" ")
     : undefined;
-  const suffix = additions !== undefined && deletions !== undefined
-    ? [
-        ...(semanticMode ? [theme.fg("muted", "• semantic")] : []),
-        `• ${keyHint("app.tools.expand", "to expand")}`,
-      ].join(" ")
-    : "";
   const summary = counts ?? theme.fg("muted", operation === "write" ? "wrote" : "updated");
-  if (!options.expanded) {
-    return counts !== undefined
-      ? renderMutationSummary(counts, suffix, additions!, deletions!, theme, context)
-      : reusableText(context, summary);
-  }
+  const summaryComponent = additions !== undefined && deletions !== undefined
+    ? renderCountsSummary(counts as string, additions, deletions, theme, context)
+    : reusableText(context, summary);
+  if (!options.expanded) return summaryComponent;
 
   const diffText = typeof details.diff === "string" ? details.diff : "";
   const entries = diffText ? parseAftEditDiff(diffText) : [];
   const hasChanges = entries.some((entry) => entry.kind === "add" || entry.kind === "remove");
-  if (hasChanges) {
-    return renderDiffComponent(entries, options, theme, context, sourcePathFromContext(context), true);
-  }
-  // No parseable line-numbered diff (e.g. readseek unified text) — show the
-  // single summary line, never a duplicated raw result line.
-  return counts !== undefined
-    ? renderMutationSummary(counts, suffix, additions!, deletions!, theme, context)
-    : reusableText(context, summary);
+  const body = hasChanges
+    ? renderDiffComponent(entries, options, theme, context, sourcePathFromContext(context), true)
+    : summaryComponent;
+  const commandStart = lines.findIndex(line => /^\[then_run:/.test(line));
+  if (commandStart < 0) return body;
+  const commandOutput = new Text(lines.slice(commandStart).join("\n"), 0, 0);
+  return {
+    render: width => [...body.render(width), ...commandOutput.render(width)],
+    invalidate: () => { body.invalidate(); commandOutput.invalidate(); },
+  };
 }
 
 export function renderAftEditResult(
@@ -1228,6 +1211,7 @@ function release(
   if (prototype.getResultRenderer === patch.patched) {
     prototype.getResultRenderer = patch.original;
   }
+  if (prototype.getCallRenderer === patch.patchedCall) prototype.getCallRenderer = patch.originalCall;
   if (shared[RESULT_PATCH] === patch) delete shared[RESULT_PATCH];
 }
 
@@ -1245,6 +1229,7 @@ function installResultBridge(): () => void {
 
   const state = {
     original: prototype.getResultRenderer,
+    originalCall: prototype.getCallRenderer,
     owners: new Set<symbol>([owner]),
   };
   const patched: GetResultRenderer = function (): ResultRenderer | undefined {
@@ -1276,9 +1261,22 @@ function installResultBridge(): () => void {
     return (result, options, theme, context) => compactResult(name, result, options, theme, context);
   };
 
-  const patch: ResultPatch = { ...state, patched };
+  const patchedCall: GetCallRenderer = function () {
+    const name = (this as unknown as { toolName?: string }).toolName;
+    if (name === "edit" || name === "write" || name === "readSeek_edit" || name === "readSeek_write") {
+      return (args, theme, context) => {
+        const path = sourcePathFromContext({ args }) ?? "…";
+        const home = homedir();
+        const display = path.startsWith(`${home}/`) ? `~${path.slice(home.length)}` : path;
+        return reusableText(context, theme.fg("accent", display));
+      };
+    }
+    return state.originalCall?.call(this);
+  };
+  const patch: ResultPatch = { ...state, patched, patchedCall };
   shared[RESULT_PATCH] = patch;
   prototype.getResultRenderer = patched;
+  prototype.getCallRenderer = patchedCall;
   return () => release(shared, prototype, patch, owner);
 }
 
@@ -1286,7 +1284,36 @@ export default function resultBridge(pi: ExtensionAPI): void {
   // Install immediately so extension reloads patch subsequent tool results too.
   const cleanup = installResultBridge();
 
+  // Built-in writes have no diff metadata. Capture before/after once so later
+  // renders never consult a file that may already have changed again.
+  const writeDiffs = new Map<string, ReturnType<typeof generateDiffString>>();
+  pi.on("tool_call", async (event, ctx) => {
+    if (event.toolName !== "write") return;
+    const input = record(event.input);
+    if (typeof input.path !== "string" || typeof input.content !== "string") return;
+    const rawPath = input.path.replace(/^@/, "").replace(/^~(?=\/)/, homedir());
+    try {
+      const oldContent = await readFile(resolve(ctx.cwd, rawPath), "utf8").catch((error) => {
+        if (error.code === "ENOENT") return "";
+        throw error;
+      });
+      writeDiffs.set(event.toolCallId, generateDiffString(oldContent, input.content));
+    } catch { /* Leave unavailable statistics to the tool's own result. */ }
+  });
   pi.on("tool_result", async (event, ctx) => {
+    if (event.toolName === "write") {
+      const diff = writeDiffs.get(event.toolCallId);
+      writeDiffs.delete(event.toolCallId);
+      const details = record(event.details);
+      if (!event.isError && diff && details.diff === undefined) {
+        const rows = diff.diff.split("\n");
+        return { details: { ...details, ...diff,
+          additions: rows.filter(line => line.startsWith("+")).length,
+          deletions: rows.filter(line => line.startsWith("-")).length,
+        } };
+      }
+      return;
+    }
     if (event.toolName !== "replace" || event.isError) return;
     const details = record(event.details);
     if (typeof details.diff !== "string" || !details.diff.trim()) return;

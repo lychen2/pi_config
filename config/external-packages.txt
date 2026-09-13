@@ -12,6 +12,6 @@ npm:@juicesharp/rpiv-ask-user-question
 # extensions/pi-context-bridge, its sole default-mode registration entry.
 npm:pi-slopchop
 npm:pi-workspace-history
-npm:pi-rtk-optimizer
+# RTK is loaded through extensions/pi-context-bridge/rtk.ts for evidence safety.
 npm:@victor-software-house/pi-curated-themes
 git:github.com/BevalZ/pi-provider

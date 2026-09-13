@@ -4,7 +4,7 @@
   "observationPack": true,
   "evidencePreservingReducer": true,
   "evidencePreservingReducerProvider": "manager",
-  "evidencePreservingReducerModel": "gpt-5.6-sol",
+  "evidencePreservingReducerModel": "deepseek-v4-flash",
   "onlineContextCompact": true,
   "cacheWriteReadRatio": 12.5
 }

@@ -6,7 +6,7 @@ import {
 import { truncateToWidth, visibleWidth, type Component } from "@earendil-works/pi-tui";
 import { shortToolName, toolIcon } from "./tool-presentations.mjs";
 import { installPrototypePatch } from "./prototype-patch-registry.ts";
-import { compactBashBody, compactToolBody } from "./tool-body-polish.ts";
+import { compactBashBody, compactToolBody, TOOL_COLLAPSED_MAX_LINES, TOOL_EXPANDED_MAX_LINES } from "./tool-body-polish.ts";
 
 type ShellMode = "default" | "self";
 type GetRenderShell = (this: ToolExecutionComponent) => ShellMode;
@@ -48,6 +48,7 @@ type ExecutionState = {
   result?: { isError?: boolean };
   selfRenderContainer?: Component;
   toolName?: string;
+  args?: { steps?: unknown };
   expanded?: boolean;
   showImages?: boolean;
 };
@@ -158,6 +159,55 @@ type ContentSelection = {
 
 export function isInternalToolDiagnosticLine(line: string): boolean {
   return /^\s*RTK rewrite:\s*/i.test(plain(line));
+}
+
+// SoL-Pi prints one unconditional `Money saved · <slogan>` row in every tool box it
+// renders (update_plan, Action Fusion edit/write, obs_recall). The row restates a
+// mechanism property instead of reporting a measurement, so it is dropped here. The
+// slogans are matched by prefix because the box wraps them across rows: numeric savings
+// such as `12,345 context tokens removed` or `4 KiB removed from future prompts` are real
+// measurements and stay visible.
+const SOL_PI_STATIC_SAVINGS = [
+  "Money saved · compacts only when projected savings are positive",
+  "Money saved · 1 model round-trip avoided",
+  "Money saved · full observation replay avoided",
+];
+
+function railStripped(line: string): string {
+  return plain(line).trim().replace(/^[┃│]\s*/u, "").trim();
+}
+
+export function isSoLStaticSavingsLine(line: string): boolean {
+  const value = railStripped(line);
+  return SOL_PI_STATIC_SAVINGS.includes(value);
+}
+
+/**
+ * Drops SoL-Pi's static savings rows, including the continuation rows the tool box
+ * produces when a slogan is wider than the box.
+ */
+export function filterSoLStaticSavingsLines(lines: readonly string[]): string[] {
+  const kept: string[] = [];
+  let pending: string | undefined;
+  for (const line of lines) {
+    const value = railStripped(line);
+    if (pending !== undefined) {
+      if (value.length > 0 && pending.startsWith(value)) {
+        pending = pending.slice(value.length).trimStart() || undefined;
+        continue;
+      }
+      pending = undefined;
+    }
+    const slogan = value.length > 0
+      ? SOL_PI_STATIC_SAVINGS.find((text) => text.startsWith(value))
+      : undefined;
+    if (slogan !== undefined) {
+      pending = slogan.slice(value.length).trimStart() || undefined;
+      continue;
+    }
+    kept.push(line);
+  }
+  return kept;
 }
 
 function isUsefulContentLine(line: string): boolean {
@@ -374,6 +424,60 @@ function installBashBox(theme: ToolTheme): () => void {
   );
 }
 
+// Strip only SGR backgrounds; keep syntax/diff foregrounds and text intact.
+export function withoutBackground(line: string): string {
+  return line.replace(/\x1b\[([0-9;:]*)m/g, (sequence, value: string) => {
+    const codes = value.split(";");
+    const kept: string[] = [];
+    for (let i = 0; i < codes.length; i++) {
+      const code = Number(codes[i]);
+      if (codes[i]?.startsWith("48:")) continue;
+      if (code === 38 || code === 58) {
+        const count = codes[i + 1] === "2" ? 5 : codes[i + 1] === "5" ? 3 : 1;
+        kept.push(...codes.slice(i, i + count));
+        i += count - 1;
+        continue;
+      }
+      if (code === 48) {
+        if (codes[i + 1] === "5") i += 2;
+        else if (codes[i + 1] === "2") i += 4;
+        continue;
+      }
+      if ((code >= 40 && code <= 49) || (code >= 100 && code <= 107)) continue;
+      kept.push(codes[i]!);
+    }
+    return kept.length ? `\x1b[${kept.join(";")}m` : "";
+  });
+}
+
+export function planBody(steps: unknown, expanded = false): string[] | undefined {
+  if (!Array.isArray(steps) || !steps.length) return undefined;
+  const valid = steps.filter((step) => step && typeof step.goal === "string" &&
+    ["pending", "in_progress", "completed"].includes(step.status));
+  if (valid.length !== steps.length) return undefined;
+  const completed = valid.filter((step) => step.status === "completed").length;
+  const limit = expanded ? TOOL_EXPANDED_MAX_LINES : TOOL_COLLAPSED_MAX_LINES - 1;
+  const shown = valid.length <= limit ? valid : [
+    ...valid.filter((step) => step.status === "in_progress"),
+    ...valid.filter((step) => step.status === "pending"),
+    ...valid.filter((step) => step.status === "completed"),
+  ].slice(0, limit);
+  return [
+    `计划 · ${completed}/${valid.length} 完成`,
+    ...shown.map((step) => `${step.status === "completed" ? "✓" : step.status === "in_progress" ? "◐" : "○"} ${step.goal.replace(/[\r\n\t]+/g, " ")}`),
+    ...(shown.length < valid.length ? [`… +${valid.length - shown.length} 步 · 展开`] : []),
+  ];
+}
+
+export function mutationBody(lines: readonly string[], expanded: boolean, theme: ToolTheme): string[] {
+  const clean = lines.map(withoutBackground);
+  const limit = expanded ? TOOL_EXPANDED_MAX_LINES : TOOL_COLLAPSED_MAX_LINES;
+  return clean.length <= limit ? clean : [
+    ...clean.slice(0, limit),
+    theme.fg("dim", `… +${clean.length - limit} 行 · 展开`),
+  ];
+}
+
 function installLabeledShell(theme: ToolTheme): () => void {
   const shared = globalThis as typeof globalThis & Record<symbol, unknown>;
   const prototype = ToolExecutionComponent.prototype as unknown as ShellPrototype;
@@ -436,7 +540,9 @@ function installLabeledShell(theme: ToolTheme): () => void {
     const contentLines = rendered.contentLines ?? execution.selfRenderContainer.render(innerWidth);
     if (contentLines.length === 0) return lines;
     const name = execution.toolName ?? "tool";
-    const framedBody = contentLines.filter((line) => !isFrameLine(line));
+    const framedBody = filterSoLStaticSavingsLines(
+      contentLines.filter((line) => !isFrameLine(line)),
+    );
     const withoutHeader = framedBody[0] && isStandaloneToolNameLine(framedBody[0], name)
       ? framedBody.slice(1)
       : framedBody;
@@ -447,11 +553,17 @@ function installLabeledShell(theme: ToolTheme): () => void {
     const bodySource = execution.expanded
       ? withoutHeader
       : withoutHeader.filter((line) => !isInternalToolDiagnosticLine(line));
-    const bodyLines = stabilizeToolBoxBody(name, compactToolBody(bodySource, {
-      expanded: Boolean(execution.expanded),
-      theme: state.theme,
-      formatLine: (content) => styleStructuredLine(content, state.theme, selection),
-    }));
+    const plan = name === "update_plan" && !execution.result?.isError
+      ? planBody(execution.args?.steps, Boolean(execution.expanded)) : undefined;
+    const bodyLines = stabilizeToolBoxBody(name, plan
+      ? plan.map((line) => styleStructuredLine(line, state.theme, selection))
+      : name === "edit" || name === "write"
+        ? mutationBody(bodySource, Boolean(execution.expanded), state.theme)
+        : compactToolBody(bodySource, {
+            expanded: Boolean(execution.expanded),
+            theme: state.theme,
+            formatLine: (content) => styleStructuredLine(content, state.theme, selection),
+          }));
     const body = (bodyLines.length > 0 ? bodyLines : [""]).map((content) => toolBoxLine(content, width, state.theme));
     const output = [
       toolBoxTop(execution, width, state.theme),

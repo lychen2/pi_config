@@ -15,6 +15,7 @@ import { Text, type Component } from "@earendil-works/pi-tui";
 import { installThinkingMessageStyle, installThinkingTimingTracker } from "./thinking-message.ts";
 import { installThinkingShimmer } from "./thinking-shimmer.ts";
 import { installUserMessageStyle } from "./user-message.ts";
+import { installPlanWidget } from "./plan-widget.ts";
 
 type Theme = Pick<PiTheme, "fg" | "bold">;
 type ActiveTheme = PiTheme;
@@ -48,6 +49,13 @@ const WORKSPACE_HISTORY_IGNORED_WARNINGS = [
   "Workspace history is disabled for this directory: current directory is the user home folder",
   "Workspace history is disabled for this directory: no project marker found",
 ];
+// SoL-Pi announces every mechanism with a transient banner in the chat and a footer status
+// entry (`sol-pi-savings`). Both are dropped: the row only restates a mechanism property, and
+// the footer timer clears itself so no empty slot is left behind.
+const SOL_PI_BANNER_PREFIX = "⚡ SoL-Pi · ";
+const SOL_PI_SAVINGS_ROW_PREFIX = "Money saved · ";
+const SOL_PI_SAVINGS_STATUS_KEY = "sol-pi-savings";
+type ExtensionStatusSetter = (key: string, text: string | undefined) => void;
 
 function addAssistantMarker(line: string, marker: string): string {
   const prefix = LEADING_ANSI_SPACE.exec(line)?.[0];
@@ -403,19 +411,34 @@ function isUnclaimedBuiltin(pi: ExtensionAPI, name: string): boolean {
 }
 
 export function shouldSuppressNotification(message: string): boolean {
-  return WORKSPACE_HISTORY_IGNORED_WARNINGS.some((warning) => message.startsWith(warning));
+  if (WORKSPACE_HISTORY_IGNORED_WARNINGS.some((warning) => message.startsWith(warning))) return true;
+  const [title = "", savings = ""] = message.split("\n");
+  return title.startsWith(SOL_PI_BANNER_PREFIX) && savings.startsWith(SOL_PI_SAVINGS_ROW_PREFIX);
+}
+
+export function shouldSuppressStatus(key: string): boolean {
+  return key === SOL_PI_SAVINGS_STATUS_KEY;
 }
 
 function installNotificationFilter(ui: {
   notify(message: string, type?: "info" | "warning" | "error"): void;
+  setStatus?: ExtensionStatusSetter;
 }): () => void {
   const originalNotify = ui.notify;
+  const originalSetStatus = ui.setStatus;
   const filteredNotify = (message: string, type?: "info" | "warning" | "error"): void => {
     if (!shouldSuppressNotification(message)) originalNotify.call(ui, message, type);
   };
+  const filteredSetStatus: ExtensionStatusSetter | undefined = originalSetStatus
+    ? (key, text) => {
+        if (!shouldSuppressStatus(key)) originalSetStatus.call(ui, key, text);
+      }
+    : undefined;
   ui.notify = filteredNotify;
+  if (filteredSetStatus) ui.setStatus = filteredSetStatus;
   return () => {
     if (ui.notify === filteredNotify) ui.notify = originalNotify;
+    if (filteredSetStatus && ui.setStatus === filteredSetStatus) ui.setStatus = originalSetStatus;
   };
 }
 
@@ -438,6 +461,7 @@ export default function toolRails(pi: ExtensionAPI): void {
     cleanupUserMessage = () => {};
   }
 
+  installPlanWidget(pi);
   installThinkingShimmer(pi);
   installThinkingTimingTracker(pi);
   pi.on("session_start", (_event, ctx) => {

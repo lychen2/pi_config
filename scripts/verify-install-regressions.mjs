@@ -61,6 +61,9 @@ try {
 
   const toolRailsManifest = JSON.parse(await readFile(path.join(repoRoot, "extensions", "pi-tool-rails", "package.json"), "utf8"));
   assert.ok(toolRailsManifest.files.includes("thinking-message.ts"), "pi-tool-rails omits thinking-message.ts from its package");
+  for (const entry of ["plan-widget.ts", "prototype-patch-registry.ts"]) {
+    assert.ok(toolRailsManifest.files.includes(entry), `pi-tool-rails omits ${entry} from its package`);
+  }
   const largeBeautifyManifest = JSON.parse(await readFile(path.join(repoRoot, "extensions", "pi-large-beautify", "package.json"), "utf8"));
   assert.ok(largeBeautifyManifest.files.includes("vendor"), "pi-large-beautify omits its vendored thinking implementation");
 

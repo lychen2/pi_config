@@ -28,6 +28,7 @@ function createPi() {
     },
     getAllTools() { return []; },
     registerTool() {},
+    registerShortcut() {},
     getThinkingLevel() { return "high"; },
   };
 }
@@ -39,14 +40,16 @@ async function emit(pi, event, payload, ctx) {
 function createContext() {
   let editor;
   const notices = [];
+  const statuses = [];
   const originalSetEditor = (factory) => { editor = factory; };
   const ui = {
     theme,
     notify(message, type) { notices.push({ message, type }); },
+    setStatus(key, text) { statuses.push({ key, text }); },
     setEditorComponent: originalSetEditor,
     getEditorComponent: () => editor,
   };
-  return { mode: "tui", cwd: process.cwd(), ui, notices, originalSetEditor };
+  return { mode: "tui", cwd: process.cwd(), ui, notices, statuses, originalSetEditor };
 }
 
 test("filters workspace home and marker warnings, preserves other warnings, and restores notify", async () => {
@@ -67,6 +70,27 @@ test("filters workspace home and marker warnings, preserves other warnings, and 
 
   await emit(pi, "session_shutdown", { reason: "test" }, ctx);
   assert.equal(ctx.ui.notify, originalNotify);
+});
+
+test("suppresses the SoL-Pi mechanism banner and its footer status, restoring both", async () => {
+  const pi = createPi();
+  const ctx = createContext();
+  const originalNotify = ctx.ui.notify;
+  const originalSetStatus = ctx.ui.setStatus;
+  toolRails(pi);
+
+  await emit(pi, "session_start", { reason: "startup" }, ctx);
+  ctx.ui.notify("⚡ SoL-Pi · Observation Pack\nMoney saved · 1,349 context tokens avoided", "info");
+  ctx.ui.setStatus("sol-pi-savings", "⚡ Observation Pack · 1,349 context tokens avoided");
+  ctx.ui.notify("⚡ SoL-Pi · Online Context Compact\nMoney saved · 4 KiB removed from future prompts", "info");
+  ctx.ui.notify("Some other extension notice", "info");
+
+  assert.deepEqual(ctx.notices, [{ message: "Some other extension notice", type: "info" }]);
+  assert.deepEqual(ctx.statuses, []);
+
+  await emit(pi, "session_shutdown", { reason: "test" }, ctx);
+  assert.equal(ctx.ui.notify, originalNotify);
+  assert.equal(ctx.ui.setStatus, originalSetStatus);
 });
 
 test("repeated session starts leave one cleanup owner for every presentation patch", async () => {

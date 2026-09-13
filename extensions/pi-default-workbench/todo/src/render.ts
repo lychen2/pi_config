@@ -3,8 +3,8 @@ import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 import { dependencyState, type Task } from "./state.ts";
 
 export const TODO_WIDGET_KEY = "todo-panel";
-export const TODO_TOGGLE_KEY = "alt+t";
-export const TODO_TOGGLE_LABEL = "Alt+T";
+export const TODO_TOGGLE_KEY = "alt+shift+t";
+export const TODO_TOGGLE_LABEL = "Alt+Shift+T";
 
 export type DisplayStatus = "pending" | "in_progress" | "blocked" | "completed" | "deleted";
 

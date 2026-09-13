@@ -18,6 +18,8 @@ import process from "node:process";
 import readline from "node:readline/promises";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
+import { configureRtkCompat } from "./scripts/configure-rtk-compat.mjs";
+import { deploySkills } from "./scripts/deploy-skills.mjs";
 
 const repoDir = path.dirname(fileURLToPath(import.meta.url));
 const isWindows = process.platform === "win32";
@@ -44,6 +46,11 @@ const retiredLocalPackageNames = new Set([
   "pi-manager-models",
   "pi-todo-guard",
   "pi-zh-localizer",
+]);
+// Local packages that ship in this repository but stay out of the default profile;
+// install them explicitly with `pi install <dir>` when the profile needs them.
+const optInLocalPackageNames = new Set([
+  "pi-compaction-model",
 ]);
 
 function normalizeChildPath() {
@@ -338,25 +345,6 @@ async function mergeSkillTree(source, destination, overwriteFiles = false) {
   }
 }
 
-async function mergeRepositorySkills() {
-  const source = path.join(repoDir, "skills");
-  const destination = path.join(agentDir, "skills");
-  if (!installerOptions.dryRun) {
-    await mkdir(destination, { recursive: true });
-  }
-
-  for (const entry of await readdir(source, { withFileTypes: true })) {
-    const externalRoot = entry.isDirectory()
-      ? await skillExistsInOtherRoot(entry.name)
-      : undefined;
-    if (externalRoot) {
-      console.log(`  preserve existing skill ${entry.name} from ${externalRoot}`);
-      continue;
-    }
-    await mergeSkillTree(path.join(repoDir, "skills", entry.name), path.join(destination, entry.name), true);
-  }
-}
-
 async function mergeMissingTree(source, destination) {
   if (!(await pathExists(destination))) {
     await copyPath(source, destination);
@@ -475,7 +463,7 @@ async function restoreFiles() {
     await mkdir(agentDir, { recursive: true });
   }
 
-  await mergeRepositorySkills();
+  await deploySkills({ repoDir, agentDir, otherRoots: externalSkillRoots(), dryRun: installerOptions.dryRun });
   await mergeMissingTree(path.join(repoDir, "themes"), path.join(agentDir, "themes"));
 
   const configFiles = [
@@ -620,7 +608,10 @@ async function installLocalPackages() {
 
   packageDirs.sort();
   console.log(`  discovered local packages: ${packageDirs.map((packageDir) => path.basename(packageDir)).join(", ") || "none"}`);
-  for (const packageDir of packageDirs.filter((entry) => !retiredLocalPackageNames.has(path.basename(entry)))) {
+  for (const packageDir of packageDirs.filter((entry) => {
+    const packageName = path.basename(entry);
+    return !retiredLocalPackageNames.has(packageName) && !optInLocalPackageNames.has(packageName);
+  })) {
     if (preserveSelection && !settings.packages.some((entry) => isLocalPackageSource(entry, path.basename(packageDir)))) {
       continue;
     }
@@ -750,6 +741,7 @@ async function main() {
   await mergePublicSettings(choices.modelDefaults);
   await installLocalPackages();
   await installExternalPackages(choices.external);
+  await configureRtkCompat(agentDir, { dryRun: installerOptions.dryRun });
   await installOptionalTools(choices);
   await securePrivateFiles(backupDir);
 

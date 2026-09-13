@@ -1,0 +1,21 @@
+{
+  "name": "pi-compaction-model",
+  "version": "0.1.0",
+  "description": "Pin context compaction to a chosen model and retry transient upstream failures",
+  "license": "MIT",
+  "type": "module",
+  "engines": { "node": ">=22.19.0" },
+  "keywords": ["pi-package", "pi", "compaction", "context", "retry"],
+  "files": ["index.ts", "README.md", "LICENSE"],
+  "pi": { "extensions": ["./index.ts"] },
+  "scripts": {
+    "test": "node --experimental-strip-types --test tests/*.test.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": { "@earendil-works/pi-coding-agent": ">=0.82.0 <0.85.0" },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "^0.84.0",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0"
+  }
+}

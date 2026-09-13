@@ -123,17 +123,17 @@ test("renders AFT edit counts from structured diff metadata", () => {
   };
   const collapsed = renderAftEditResult(aftResult, { expanded: false }, theme, {}).render(80);
   const collapsedLine = collapsed.map((line) => line.replace(/\x1b\[[0-9;]*m/g, "").replace(/\s+/g, " ").trim())[0];
-  assert.equal(collapsedLine, "↳ edited +3 -2 [━━━━━━━━] • to expand");
+  assert.equal(collapsedLine, "+3 -2 [━━━━━━━━]");
   const expanded = renderAftEditResult(aftResult, { expanded: true }, theme, {}).render(80);
   const expandedLine = expanded.map((line) => line.replace(/\x1b\[[0-9;]*m/g, "").replace(/\s+/g, " ").trim())[0];
-  assert.equal(expandedLine, "↳ edited +3 -2 [━━━━━━━━] • to expand");
+  assert.equal(expandedLine, "+3 -2 [━━━━━━━━]");
 
   const textOnlyResult = {
     content: [{ type: "text", text: "Edited (+16/-2, 2 edits)." }],
   };
   const textFallback = renderAftEditResult(textOnlyResult, { expanded: false }, theme, {}).render(80);
   const fallbackLine = textFallback.map((line) => line.replace(/\x1b\[[0-9;]*m/g, "").replace(/\s+/g, " ").trim())[0];
-  assert.equal(fallbackLine, "↳ edited +16 -2 [━━━━━━━━] • to expand");
+  assert.equal(fallbackLine, "+16 -2 [━━━━━━━━]");
 });
 
 test("renders AFT writes with the same collapsed and expanded diff as edits", () => {
@@ -154,7 +154,7 @@ test("renders AFT writes with the same collapsed and expanded diff as edits", ()
   const collapsedEdit = renderAftEditResult(mutationResult, { expanded: false }, theme, {}).render(80);
   const collapsedWrite = renderAftWriteResult(mutationResult, { expanded: false }, theme, {}).render(80);
   const writeLine = collapsedWrite.map((line) => line.replace(/\x1b\[[0-9;]*m/g, "").replace(/\s+/g, " ").trim())[0];
-  assert.equal(writeLine, "↳ wrote +2 -1 [━━━━━━━━] • to expand");
+  assert.equal(writeLine, "+2 -1 [━━━━━━━━]");
 
   const expandedEdit = renderAftEditBridgeResult(undefined, mutationResult, { expanded: true }, theme, {}).render(80);
   const expandedWrite = renderAftWriteBridgeResult(undefined, mutationResult, { expanded: true }, theme, {}).render(80);
@@ -247,7 +247,7 @@ test("renders expanded AFT edits as a de-indented split diff", () => {
     {},
   ).render(80);
   const collapsedLine = collapsed.map((line) => line.replace(/\x1b\[[0-9;]*m/g, "").replace(/\s+/g, " ").trim())[0];
-  assert.equal(collapsedLine, "↳ edited +2 -1 [━━━━━━━━] • to expand");
+  assert.equal(collapsedLine, "+2 -1 [━━━━━━━━]");
 
   const expanded = renderAftEditBridgeResult(
     nativeRenderer,
@@ -429,6 +429,16 @@ test("tints added and removed rows while coloring their line numbers", () => {
   assert.ok(addedUnifiedLine, "unified added row must start with the added tint");
 });
 
+test("collapses replace results to counts with a ratio bar", () => {
+  const result = {
+    content: [{ type: "text", text: "Successfully replaced." }],
+    details: { diff: [" 1 keep", "-2 old", "+2 new", "+3 extra"].join("\n") },
+  };
+  const collapsed = renderReplaceDiffResult(result, { expanded: false }, theme, {}).render(80);
+  const line = collapsed.map((entry) => entry.replace(/\x1b\[[0-9;]*m/g, "").replace(/\s+/g, " ").trim())[0];
+  assert.equal(line, "+2/-1 [━━━━━━━━]");
+});
+
 test("keeps empty split cells bordered and continuation indentation aligned", () => {
   const content = `    diff: [${"x".repeat(40)}]`;
   const additionResult = {
@@ -545,7 +555,7 @@ test("parses deletion entries whose hash is unavailable", () => {
 });
 
 
-test("renders a proportionate add/remove bar with semantic colors", () => {
+test("renders add/remove counts with semantic colors and a ratio bar",  () => {
   const colors = [];
   const coloredTheme = {
     fg(color, text) {
@@ -559,8 +569,14 @@ test("renders a proportionate add/remove bar with semantic colors", () => {
   };
   renderAftEditResult(result, { expanded: false }, coloredTheme, {}).render(80);
 
-  assert.ok(colors.some(([color, text]) => color === "toolDiffAdded" && text === "━━"));
-  assert.ok(colors.some(([color, text]) => color === "toolDiffRemoved" && text === "━━━━━━"));
+  assert.ok(colors.some(([color, text]) => color === "toolDiffAdded" && text === "+1"));
+  assert.ok(colors.some(([color, text]) => color === "toolDiffRemoved" && text === "-3"));
+  const bar = colors.filter(([, text]) => text.includes("━"));
+  assert.deepEqual(bar.map(([color]) => color), ["toolDiffAdded", "toolDiffRemoved"]);
+  assert.equal(bar[0][1].length + bar[1][1].length, 8);
+
+  const narrow = renderAftEditResult(result, { expanded: false }, coloredTheme, {}).render(19);
+  assert.ok(!narrow.some((line) => line.includes("━")), "narrow rows drop the ratio bar");
 });
 
 test("syntax highlights expanded AFT write and edit code using the target path", () => {
@@ -585,7 +601,7 @@ test("syntax highlights expanded AFT write and edit code using the target path",
   assert.deepEqual(writeLines, editLines);
 });
 
-test("renders readseek edit results with semantic badge from readSeekValue", () => {
+test("renders readseek edit results as minimal counts",  () => {
   const readSeekResult = {
     content: [{ type: "text", text: "Edited .tmp-demo/rs-demo.ts (1 change, +1 -1 lines)" }],
     details: {
@@ -598,7 +614,7 @@ test("renders readseek edit results with semantic badge from readSeekValue", () 
   };
   const collapsed = renderAftEditResult(readSeekResult, { expanded: false }, theme, {}).render(100);
   const line = collapsed.map((l) => l.replace(/\x1b\[[0-9;]*m/g, "").replace(/\s+/g, " ").trim())[0];
-  assert.equal(line, "↳ edited +1 -1 [━━━━━━━━] • semantic • to expand");
+  assert.equal(line, "+1 -1 [━━━━━━━━]");
 });
 
 test("renders readseek write results with stats from diffData", () => {
@@ -612,5 +628,5 @@ test("renders readseek write results with stats from diffData", () => {
   };
   const collapsed = renderAftWriteResult(readSeekWrite, { expanded: false }, theme, {}).render(100);
   const line = collapsed.map((l) => l.replace(/\x1b\[[0-9;]*m/g, "").replace(/\s+/g, " ").trim())[0];
-  assert.equal(line, "↳ wrote +2 -0 [━━━━━━━━] • to expand");
+  assert.equal(line, "+2 -0 [━━━━━━━━]");
 });

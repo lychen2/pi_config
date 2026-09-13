@@ -86,14 +86,14 @@ test("renders Maestro-style compact and expanded widgets within width", () => {
   assert.match(compact[0], /^Todo/);
   assert.ok(visibleWidth(compact[0]) <= 44);
 
-  const expanded = renderTodoWidget(plainTheme, tasks, true, 64);
+  const expanded = renderTodoWidget(plainTheme, tasks, true, 72);
   assert.match(expanded[0], /3 tasks · 1 done · 1 running · 1 blocked/);
   assert.match(expanded[1], /Implement replacement/);
   assert.match(expanded[2], /Verify behavior/);
   assert.match(expanded[2], /← ■ Implement replacement/);
   assert.match(expanded[1], /@worker/);
-  assert.match(expanded[0], /Alt\+T collapse/);
-  assert.ok(expanded.every((line) => visibleWidth(line) <= 64));
+  assert.match(expanded[0], /Alt\+Shift\+T collapse/);
+  assert.ok(expanded.every((line) => visibleWidth(line) <= 72));
 });
 
 test("keeps the Todo center inside narrow widths and preserves task priority", async () => {
@@ -138,7 +138,7 @@ test("registers one todo tool, both commands, shortcut, and session hooks", asyn
   register(pi);
   assert.deepEqual(tools.map((tool) => tool.name), ["todo"]);
   assert.deepEqual([...commands.keys()], ["todos", "maestro-todo"]);
-  assert.deepEqual([...shortcuts.keys()], ["alt+t"]);
+  assert.deepEqual([...shortcuts.keys()], ["alt+shift+t"]);
   assert.ok(handlers.has("session_start"));
   assert.ok(handlers.has("session_tree"));
   assert.ok(handlers.has("session_compact"));
