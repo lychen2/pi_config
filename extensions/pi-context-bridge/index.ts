@@ -1,6 +1,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import managerModels from "./manager-models.ts";
 import { registerContinuity } from "./continuity.ts";
+import { registerWireGuard } from "./wire-guard.ts";
 
 type ExtensionFactory = (pi: ExtensionAPI) => void | Promise<void>;
 
@@ -19,6 +20,7 @@ export default function contextBridge(pi: ExtensionAPI): void {
   let webAccessInitialized = false;
   let managerModelsInitialized = false;
   let continuityInitialized = false;
+  let wireGuardInitialized = false;
 
   pi.on("session_start", async (_event, ctx) => {
     const failures: string[] = [];
@@ -48,6 +50,15 @@ export default function contextBridge(pi: ExtensionAPI): void {
         continuityInitialized = true;
       } catch (error) {
         failures.push(`continuity: ${errorMessage(error)}`);
+      }
+    }
+
+    if (!wireGuardInitialized) {
+      try {
+        registerWireGuard(pi);
+        wireGuardInitialized = true;
+      } catch (error) {
+        failures.push(`wire guard: ${errorMessage(error)}`);
       }
     }
 

@@ -12,13 +12,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        pi-version: ["0.85.1"]
+        # 22.19.0 is the engines floor every package declares; 26 tracks the
+        # Node/npm pair the maintained profile actually runs.
+        node-version: ["22.19.0", "26"]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
-          node-version: 22.19.0
+          node-version: ${{ matrix.node-version }}
       - name: Verify all extension packages
-        run: node scripts/verify-repository.mjs --pi-version=${{ matrix.pi-version }}
+        run: node scripts/verify-repository.mjs --pi-version=0.85.1
