@@ -18,7 +18,14 @@ burning tokens.
   | 继续任务（本次忽略，稍后仍会提醒） | Nothing persisted; counting restarts, so the next streak asks again |
   | 查看状态（缓存与上游诊断） | Prints the report below, then asks again |
   | 继续，并保留后续掉缓存提醒（我已换上游） | Persists `mode=ask` and records the acknowledgement |
-  | 不再提醒（不在乎成本，尽快完成） | Persists `mode=never` until `/cache-guard ask` |
+  | 不再提醒（不在乎成本，尽快完成） | Silences the guard for the **current session only**, until `/cache-guard ask` |
+
+The silent switch never outlives the session that chose it:
+
+- A new session, a resumed session, a fork, or a cold start always begins in `ask` mode. If the previous
+  session had muted the guard, the new one says so once and starts counting from zero.
+- `/reload` inside the same session keeps the silence, because reloading re-instantiates the extension
+  and would otherwise silently lose the choice.
 
 - Any unobvious turn (a healthy cache read or a small miss) clears the counter, and the first healthy
   turn after a dialog reports `缓存已恢复正常` once.
@@ -39,10 +46,11 @@ the cache), and the output of the optional upstream probe command.
 
 - `/cache-guard status` — show the report.
 - `/cache-guard ask` — reminders on (the default).
-- `/cache-guard never` — permanent silence.
+- `/cache-guard never` — silence for the rest of this session.
 - `/cache-guard reset` — clear counters and statistics, reminders on.
 
-State lives in Pi's agent directory as `cache-drop-guard.json`.
+State lives in Pi's agent directory as `cache-drop-guard.json`. The file records the latest choice together
+with the session that made it; it is never inherited by a new or resumed session.
 
 ## Environment
 

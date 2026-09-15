@@ -13,7 +13,7 @@ Audited against Pi 0.85.1 extension, package, TUI, keybinding, provider, and lif
 | `pi-deepseek-anchored-standard` | DeepSeek V4 Pro/Flash bootstrap, anchoring, and progressive promotion; source-only specialist package | `pi-deepseek-anchored-standard/{index,core,minimal-editor}.ts` |
 | `pi-manager-models` | Configurable provider model-catalog refresh, aggregated by `pi-context-bridge` | `pi-context-bridge/manager-models.ts` |
 | `pi-slim-skills` | Compressed skill index and deduplicated full-body injection | `pi-slim-skills/index.ts` |
-| `pi-cache-drop-guard` | Detects consecutive prompt-cache drops, asks whether to continue or inspect status, and persists keep-alerting or permanent-silence modes | `pi-cache-drop-guard/index.ts` |
+| `pi-cache-drop-guard` | Detects consecutive prompt-cache drops, asks whether to continue or inspect status, and scopes the silent mode to the session that chose it | `pi-cache-drop-guard/index.ts` |
 | `pi-todo-guard` | Continue settled runs while Todo tasks remain; aggregated by `pi-default-workbench` | `pi-default-workbench/todo/guard.ts` |
 | `pi-tool-rails` | Soft tool rails, verified 41-tool emoji/label registry, semantic tool headers, user-message frame, persistent prompt frame, and brand header | `pi-tool-rails/compact-shell.ts`, `pi-tool-rails/tool-presentations.mjs`, `pi-tool-rails/index.ts`, `pi-tool-rails/brand-header.ts` |
 | `pi-compaction-model` | Pins context compaction to a chosen provider/model with bounded exponential backoff for transient upstream failures; opt-in package, not installed by the default installer | `pi-compaction-model/index.ts` |

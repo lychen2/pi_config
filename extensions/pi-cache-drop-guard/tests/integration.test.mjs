@@ -38,7 +38,7 @@ function turn({ input = 0, cacheRead = 0, cacheWrite = 0, provider = "litellm", 
   };
 }
 
-async function createHarness({ answers = [], agentDir, seed = [] } = {}) {
+async function createHarness({ answers = [], agentDir, seed = [], sessionId = "session-1" } = {}) {
   const dir = agentDir ?? (await mkdtemp(join(tmpdir(), "pi-cache-guard-")));
   process.env.PI_CODING_AGENT_DIR = dir;
 
@@ -67,7 +67,7 @@ async function createHarness({ answers = [], agentDir, seed = [] } = {}) {
       notify: (message, type) => notifications.push({ message, type }),
       setStatus: (key, text) => statuses.push({ key, text }),
     },
-    sessionManager: { getEntries: () => entries },
+    sessionManager: { getEntries: () => entries, getSessionId: () => sessionId },
   };
 
   const pi = {
@@ -86,8 +86,8 @@ async function createHarness({ answers = [], agentDir, seed = [] } = {}) {
   register(pi);
 
   const messageEnd = handlers.get("message_end");
-  const start = async () => {
-    await handlers.get("session_start")({ type: "session_start" }, ctx);
+  const start = async (reason = "startup") => {
+    await handlers.get("session_start")({ type: "session_start", reason }, ctx);
   };
   const feed = async (message) => {
     await messageEnd({ type: "message_end", message }, ctx);
@@ -212,10 +212,10 @@ test("status choice shows the report and then asks again without the status row"
   }
 });
 
-test("choosing never persists silence across sessions", async () => {
-  const harness = await createHarness({ answers: [CHOICE_NEVER] });
+test("a silenced guard is re-armed by a resume, because the switch only belongs to one session", async () => {
+  const harness = await createHarness({ answers: [CHOICE_NEVER], sessionId: "session-a" });
   try {
-    await harness.start();
+    await harness.start("startup");
     await harness.warmUp();
     await harness.drop(1);
     await harness.drop(2);
@@ -223,24 +223,73 @@ test("choosing never persists silence across sessions", async () => {
 
     const saved = JSON.parse(await readFile(join(harness.dir, "cache-drop-guard.json"), "utf8"));
     assert.equal(saved.mode, "never");
+    assert.equal(saved.sessionId, "session-a", "记录里应带上做出选择的会话");
 
-    const resumed = await createHarness({ answers: [undefined], agentDir: harness.dir });
-    await resumed.start();
-    const statusText = resumed.statuses.at(-1);
-    assert.equal(statusText.key, "cache-drop-guard");
-    assert.match(statusText.text, /已关闭/);
+    await harness.drop(3);
+    await harness.drop(4);
+    assert.equal(harness.selectCalls.length, 1, "关闭后本会话内不再弹窗");
+
+    const resumed = await createHarness({
+      answers: [CHOICE_CONTINUE],
+      agentDir: harness.dir,
+      sessionId: "session-a",
+    });
+    await resumed.start("resume");
+    assert.equal(resumed.statuses.at(-1).text, undefined, "resume 后状态栏不再是已关闭");
+    assert.ok(
+      resumed.notifications.some((entry) => /恢复默认开启/.test(entry.message)),
+      "resume 恢复提醒时应说明原因",
+    );
+    assert.equal(
+      JSON.parse(await readFile(join(harness.dir, "cache-drop-guard.json"), "utf8")).mode,
+      "ask",
+      "resume 后落盘记录回到 ask",
+    );
 
     await resumed.warmUp();
     await resumed.drop(1);
+    assert.equal(resumed.selectCalls.length, 0, "先等连续两次");
     await resumed.drop(2);
-    await resumed.drop(3);
-    assert.equal(resumed.selectCalls.length, 0, "关闭后不再弹窗");
+    assert.equal(resumed.selectCalls.length, 1, "resume 后重新计数并弹窗");
 
-    // 重新打开后恢复提醒（never 期间累计的次数仍然算数，下一次掉缓存就会问）
+    // 重新打开后恢复提醒
     await resumed.commands.get("cache-guard").handler("ask", resumed.ctx);
     assert.equal(JSON.parse(await readFile(join(harness.dir, "cache-drop-guard.json"), "utf8")).mode, "ask");
-    await resumed.drop(4);
-    assert.equal(resumed.selectCalls.length, 1);
+  } finally {
+    await harness.cleanup();
+  }
+});
+
+test("a reload of the silenced session keeps it silenced, while a new session starts armed", async () => {
+  const harness = await createHarness({ answers: [CHOICE_NEVER], sessionId: "session-a" });
+  try {
+    await harness.start("startup");
+    await harness.warmUp();
+    await harness.drop(1);
+    await harness.drop(2);
+    assert.equal(harness.selectCalls.length, 1);
+
+    const reloaded = await createHarness({ answers: [undefined], agentDir: harness.dir, sessionId: "session-a" });
+    await reloaded.start("reload");
+    assert.match(reloaded.statuses.at(-1).text, /已关闭/, "/reload 属于同一次会话，开关保持不变");
+    assert.equal(
+      reloaded.notifications.filter((entry) => /恢复默认开启/.test(entry.message)).length,
+      0,
+      "同会话 /reload 不该提示恢复",
+    );
+
+    await reloaded.warmUp();
+    await reloaded.drop(1);
+    await reloaded.drop(2);
+    assert.equal(reloaded.selectCalls.length, 0, "同会话 /reload 后仍然静默");
+
+    const fresh = await createHarness({ answers: [CHOICE_CONTINUE], agentDir: harness.dir, sessionId: "session-b" });
+    await fresh.start("new");
+    assert.equal(fresh.statuses.at(-1).text, undefined, "新会话回到默认提醒");
+    await fresh.warmUp();
+    await fresh.drop(1);
+    await fresh.drop(2);
+    assert.equal(fresh.selectCalls.length, 1, "新会话重新开始计数并弹窗");
   } finally {
     await harness.cleanup();
   }

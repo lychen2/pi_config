@@ -6,6 +6,7 @@ import {
   baselineFrom,
   buildReportLines,
   collectCacheHistory,
+  decideSessionMode,
   describeMissingCache,
   formatDuration,
   formatPercent,
@@ -329,4 +330,57 @@ test("report lines describe mode, totals, and the latest drop", () => {
   assert.match(clean, /已关闭（不再提醒）/);
   assert.match(clean, /本会话未发现异常掉缓存/);
   assert.match(clean, /模型: 未知/);
+});
+
+/* ------------------------------------------------------------------ *
+ * 开关作用域
+ * ------------------------------------------------------------------ */
+
+test("the silent switch belongs to the session that chose it", () => {
+  const silenced = { mode: "never", sessionId: "session-a" };
+
+  // 新会话 / resume / fork / 冷启动：都回到默认提醒。
+  for (const reason of ["startup", "new", "resume", "fork", undefined]) {
+    assert.deepEqual(
+      decideSessionMode({ previous: silenced, reason, sessionId: "session-a" }),
+      { mode: "ask", inherited: false, rearmed: true },
+      `${reason} 不继承关闭状态`,
+    );
+  }
+
+  // 换一个会话同样是默认提醒，但无需提示“恢复”。
+  assert.deepEqual(decideSessionMode({ previous: silenced, reason: "new", sessionId: "session-b" }), {
+    mode: "ask",
+    inherited: false,
+    rearmed: true,
+  });
+
+  // 同一次会话里的 /reload 会重新实例化扩展，必须继承关闭状态。
+  assert.deepEqual(decideSessionMode({ previous: silenced, reason: "reload", sessionId: "session-a" }), {
+    mode: "never",
+    inherited: true,
+    rearmed: false,
+  });
+  assert.deepEqual(decideSessionMode({ previous: silenced, reason: "reload", sessionId: "session-b" }), {
+    mode: "ask",
+    inherited: false,
+    rearmed: true,
+  });
+  assert.deepEqual(decideSessionMode({ previous: { mode: "never" }, reason: "reload", sessionId: "session-a" }), {
+    mode: "ask",
+    inherited: false,
+    rearmed: true,
+  });
+
+  // 已经是提醒状态时，session_start 不需要提示也不需要重写文件。
+  assert.deepEqual(decideSessionMode({ previous: { mode: "ask" }, reason: "startup", sessionId: "session-a" }), {
+    mode: "ask",
+    inherited: false,
+    rearmed: false,
+  });
+  assert.deepEqual(decideSessionMode({ reason: "startup", sessionId: "session-a" }), {
+    mode: "ask",
+    inherited: false,
+    rearmed: false,
+  });
 });

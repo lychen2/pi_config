@@ -7,7 +7,10 @@
  *   1. 继续任务（本次忽略，稍后仍会提醒）
  *   2. 查看状态（缓存与上游诊断）
  *   3. 继续，并保留后续掉缓存提醒（我已换上游）  → 持久化 mode=ask
- *   4. 不再提醒（不在乎成本，尽快完成）          → 持久化 mode=never
+ *   4. 不再提醒（不在乎成本，尽快完成）          → 仅本次会话静默（不跨会话继承）
+ *
+ * 「不再提醒」只属于做出选择的那个会话：新会话、resume、fork、冷启动都会回到默认的
+ * ask；只有同一次会话内的 /reload 会继承关闭状态（扩展被重新实例化）。
  *
  * 判定口径对齐 pi 内建的 cache-stats：missedTokens = min(上一轮 promptTokens, 本轮 promptTokens)
  * - cacheRead，忽略 1024 tokens 以下的噪声，compaction / branch summary 之后重置基线。
@@ -468,6 +471,42 @@ export interface GuardState {
   updatedAt?: string;
   /** 用户确认「我已换上游，继续提醒」的时间。 */
   acknowledgedAt?: string;
+  /** 做出该选择的 pi 会话 id。开关只对做出选择的会话有效。 */
+  sessionId?: string;
+}
+
+/** 一次会话开始时的模式判定结果。 */
+export interface SessionModeDecision {
+  /** 本次会话生效的模式。 */
+  mode: GuardMode;
+  /** true 表示这是同一次会话内的 /reload 继承下来的关闭状态。 */
+  inherited: boolean;
+  /** true 表示上一个会话关掉了提醒，本次已回到默认的 ask。 */
+  rearmed: boolean;
+}
+
+/**
+ * 决定一次 session_start 之后看门狗用哪个模式。
+ *
+ * 「不再提醒」只属于做出选择的那个会话：新会话、resume、fork、冷启动一律回到默认的
+ * ask（resume 也要重新开起来）；只有同一次会话内的 /reload 会继承关闭状态，因为那会
+ * 重新实例化扩展、丢掉内存里的开关。
+ */
+export function decideSessionMode(input: {
+  previous?: GuardState;
+  reason?: string;
+  sessionId?: string;
+}): SessionModeDecision {
+  const previous = input.previous;
+  if (
+    previous?.mode === "never" &&
+    input.reason === "reload" &&
+    previous.sessionId !== undefined &&
+    previous.sessionId === input.sessionId
+  ) {
+    return { mode: "never", inherited: true, rearmed: false };
+  }
+  return { mode: "ask", inherited: false, rearmed: previous?.mode === "never" };
 }
 
 export function guardStatePath(): string {
@@ -478,13 +517,18 @@ export async function loadGuardState(file = guardStatePath()): Promise<GuardStat
   try {
     const parsed: unknown = JSON.parse(await readFile(file, "utf8"));
     if (isRecord(parsed) && parsed.mode === "never") {
-      return { mode: "never", updatedAt: str(parsed.updatedAt) || undefined };
+      return {
+        mode: "never",
+        updatedAt: str(parsed.updatedAt) || undefined,
+        sessionId: str(parsed.sessionId) || undefined,
+      };
     }
     if (isRecord(parsed) && parsed.mode === "ask") {
       return {
         mode: "ask",
         updatedAt: str(parsed.updatedAt) || undefined,
         acknowledgedAt: str(parsed.acknowledgedAt) || undefined,
+        sessionId: str(parsed.sessionId) || undefined,
       };
     }
   } catch {
@@ -527,8 +571,9 @@ export interface ReportView {
 export function buildReportLines(input: ReportInput): string[] {
   const lines: string[] = [];
   lines.push(
-    `看门狗: ${input.mode === "never" ? "已关闭（不再提醒）" : `提醒开启（连续 ${input.settings.streak} 次明显掉缓存弹窗）`}`,
+    `看门狗: ${input.mode === "never" ? "本次会话已关闭（不再提醒）" : `提醒开启（连续 ${input.settings.streak} 次明显掉缓存弹窗）`}`,
   );
+  lines.push("作用域: 每个会话独立；新会话与 resume 都从默认提醒开始");
   lines.push(`模型: ${input.modelLabel || "未知"}`);
 
   const samples = input.records.slice(-(input.samples ?? 8));
@@ -601,6 +646,29 @@ export default function cacheDropGuard(pi: ExtensionAPI): void {
   let totals: CacheTotals = emptyTotals();
   let recent: CacheTurnRecord[] = [];
   let lastMessageKey = "";
+
+  const sessionIdOf = (ctx: ExtensionContext): string | undefined => {
+    try {
+      return ctx.sessionManager.getSessionId();
+    } catch {
+      return undefined;
+    }
+  };
+
+  /** 更新内存开关并落盘：只记录当前会话的选择，不供其他会话继承。 */
+  const persistState = async (
+    mode: GuardMode,
+    ctx: ExtensionContext,
+    extra: Pick<GuardState, "acknowledgedAt"> | undefined = undefined,
+  ): Promise<void> => {
+    state = {
+      mode,
+      updatedAt: new Date().toISOString(),
+      sessionId: sessionIdOf(ctx),
+      ...(extra ?? {}),
+    };
+    await saveGuardState(state);
+  };
 
   const fallbackReadPrice = (ctx: ExtensionContext) => (provider: string, model: string): number => {
     try {
@@ -687,19 +755,16 @@ export default function cacheDropGuard(pi: ExtensionAPI): void {
         continue;
       }
       if (choice === CHOICE_NEVER) {
-        state = { mode: "never", updatedAt: new Date().toISOString() };
-        await saveGuardState(state);
+        await persistState("never", ctx);
         applyStatus(ctx);
-        ctx.ui.notify("已关闭掉缓存提醒；/cache-guard ask 可以重新打开。", "info");
+        ctx.ui.notify(
+          "已关闭掉缓存提醒（仅本次会话）；新会话或 resume 会恢复默认提醒，/cache-guard ask 可立即重开。",
+          "info",
+        );
         return;
       }
       if (choice === CHOICE_KEEP_ASKING) {
-        state = {
-          mode: "ask",
-          updatedAt: new Date().toISOString(),
-          acknowledgedAt: new Date().toISOString(),
-        };
-        await saveGuardState(state);
+        await persistState("ask", ctx, { acknowledgedAt: new Date().toISOString() });
         ctx.ui.notify("保持提醒：后续再次连续掉缓存时仍会弹窗。", "info");
         return;
       }
@@ -707,8 +772,19 @@ export default function cacheDropGuard(pi: ExtensionAPI): void {
     }
   };
 
-  pi.on("session_start", async (_event, ctx) => {
-    state = await loadGuardState();
+  pi.on("session_start", async (event, ctx) => {
+    // 开关不跨会话：新会话 / resume / fork / 冷启动一律回到默认的 ask，
+    // 只有同一次会话里的 /reload 继承关闭状态。
+    const previous = await loadGuardState();
+    const decision = decideSessionMode({
+      previous,
+      reason: event.reason,
+      sessionId: sessionIdOf(ctx),
+    });
+    state = decision.inherited
+      ? previous
+      : { mode: "ask", updatedAt: new Date().toISOString(), sessionId: sessionIdOf(ctx) };
+
     streak = 0;
     alerted = false;
     lastMessageKey = "";
@@ -718,7 +794,23 @@ export default function cacheDropGuard(pi: ExtensionAPI): void {
     reportedModels = new Set(history.reportedModels);
     totals = history.totals;
     recent = history.records.slice(-RECENT_LIMIT);
+
+    if (decision.rearmed) {
+      // 上个会话关掉的提醒已重新打开：更新记录，免得每次启动都提示一遍。
+      try {
+        await saveGuardState(state);
+      } catch (error) {
+        console.error("[cache-drop-guard]", error);
+      }
+    }
+
     applyStatus(ctx);
+    if (decision.rearmed && ctx.hasUI) {
+      ctx.ui.notify(
+        "掉缓存提醒已恢复默认开启：「不再提醒」只对单个会话有效，新会话与 resume 都会重新开启。",
+        "info",
+      );
+    }
   });
 
   pi.on("message_end", async (event, ctx) => {
@@ -785,16 +877,14 @@ export default function cacheDropGuard(pi: ExtensionAPI): void {
     }
 
     if (action === "never" || action === "off") {
-      state = { mode: "never", updatedAt: new Date().toISOString() };
-      await saveGuardState(state);
+      await persistState("never", ctx);
       applyStatus(ctx);
-      ctx.ui.notify("掉缓存提醒已关闭（不在乎成本，尽快完成）。", "info");
+      ctx.ui.notify("掉缓存提醒已关闭（仅本次会话；新会话或 resume 会重新开启）。", "info");
       return;
     }
 
     if (action === "ask" || action === "on") {
-      state = { mode: "ask", updatedAt: new Date().toISOString() };
-      await saveGuardState(state);
+      await persistState("ask", ctx);
       applyStatus(ctx);
       ctx.ui.notify(`掉缓存提醒已开启：连续 ${settings.streak} 次明显掉缓存时弹窗。`, "info");
       return;
@@ -805,8 +895,7 @@ export default function cacheDropGuard(pi: ExtensionAPI): void {
       alerted = false;
       totals = emptyTotals();
       recent = [];
-      state = { mode: "ask", updatedAt: new Date().toISOString() };
-      await saveGuardState(state);
+      await persistState("ask", ctx);
       applyStatus(ctx);
       ctx.ui.notify("计数与统计已重置。", "info");
       return;
@@ -816,12 +905,12 @@ export default function cacheDropGuard(pi: ExtensionAPI): void {
   };
 
   pi.registerCommand("cache-guard", {
-    description: "掉缓存看门狗：查看缓存状态，切换提醒模式（status | ask | never | reset）",
+    description: "掉缓存看门狗：查看缓存状态，切换提醒模式（status | ask | never | reset；开关仅对当前会话有效）",
     getArgumentCompletions: (prefix: string) => {
       const items = [
         { value: "status", label: "status", description: "显示缓存命中与上游诊断报告" },
         { value: "ask", label: "ask", description: "恢复提醒（连续掉缓存时弹窗）" },
-        { value: "never", label: "never", description: "永久关闭提醒" },
+        { value: "never", label: "never", description: "关闭本次会话的提醒（新会话恢复默认）" },
         { value: "reset", label: "reset", description: "清零计数与统计" },
       ];
       const filtered = items.filter((item) => item.value.startsWith(prefix.trim()));
