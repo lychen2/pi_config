@@ -56,13 +56,14 @@ pi --version
 pi list
 ```
 
-确认 `pi list` 输出包含四个仓库聚合入口：
+确认 `pi list` 输出包含五个仓库默认入口：
 
 ```text
 extensions/pi-context-bridge
 extensions/pi-default-workbench
 extensions/pi-slim-skills
 extensions/pi-tool-rails
+extensions/pi-cache-drop-guard
 ```
 
 启动 Pi：

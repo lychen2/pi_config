@@ -6,7 +6,7 @@
 
 ## 本仓库 package
 
-安装器会扫描 `extensions/` 下带 `pi-*/package.json` 的 package，但默认只安装四个聚合入口：`pi-context-bridge`、`pi-default-workbench`、`pi-slim-skills` 和 `pi-tool-rails`。其他 package 保留源码，供 Large profile 或明确的手动安装使用；`pi-zh-localizer` 只作为安装器补丁脚本运行。
+安装器会扫描 `extensions/` 下带 `pi-*/package.json` 的 package，默认安装四个聚合入口（`pi-context-bridge`、`pi-default-workbench`、`pi-slim-skills`、`pi-tool-rails`）和 `pi-cache-drop-guard`。其他 package 保留源码，供 Large profile 或明确的手动安装使用；`pi-zh-localizer` 只作为安装器补丁脚本运行。
 
 | 扩展 | 解决的问题 | 使用入口 | 配置或开关 |
 | --- | --- | --- | --- |
@@ -15,6 +15,7 @@
 | `pi-default-workbench` | Default 功能工作台：adaptive/fast/full 工具模式、Puppeteer 浏览器、Todo、Todo guard、FFF/后台 Shell/冲突处理、Markdown Preview 和 `/large` | `/tools`、`/todos`、模型调用工具、`/large on|off|status|update` | 四类工作流共用一个根入口 |
 | `pi-manager-models` | 从 OpenAI-compatible `/models` 刷新 `manager` 模型目录 | 启动时自动刷新 | `PI_MANAGER_MODELS_PROVIDER`、`PI_MANAGER_MODELS_CONFIG` |
 | `pi-slim-skills` | 压缩模型可见的技能索引，降低提示词体积 | `/slim-skills remove <名称>`、`none`、`reset`、`inject <名称>` | `slim-skills-whitelist.json`；`SLIM_SKILLS_DISABLE=1` 禁用 |
+| `pi-cache-drop-guard` | 连续两次「明显掉缓存」时弹窗询问是否继续，并记住「已换上游继续提醒」或「不再提醒」 | `/cache-guard status\|ask\|never\|reset`；弹窗中的「查看状态」 | `cache-drop-guard.json`；`PI_CACHE_DROP_GUARD_*` 调阈值与超时 |
 | `pi-todo-guard` | Todo 仍有未完成项目时，提醒代理继续当前任务 | 自动处理 | `PI_TODO_GUARD_DISABLE=1`；默认兼容 `todo` 工具 |
 | `pi-context-bridge` | 将锁定的 Web Access、manager 模型目录和 continuity 统一接入 Default profile | 模型调用联网工具；启动时注册 manager provider | 不替换 Pi 原生文件工具 |
 | `pi-large-mode` | Large profile 的实现源码，已由 `pi-default-workbench` 聚合；默认不单独安装 | `/large on|off|status|update` | 手动安装旧入口时不要与工作台重复加载 |

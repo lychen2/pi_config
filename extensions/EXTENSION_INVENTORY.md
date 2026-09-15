@@ -13,11 +13,12 @@ Audited against Pi 0.85.1 extension, package, TUI, keybinding, provider, and lif
 | `pi-deepseek-anchored-standard` | DeepSeek V4 Pro/Flash bootstrap, anchoring, and progressive promotion; source-only specialist package | `pi-deepseek-anchored-standard/{index,core,minimal-editor}.ts` |
 | `pi-manager-models` | Configurable provider model-catalog refresh, aggregated by `pi-context-bridge` | `pi-context-bridge/manager-models.ts` |
 | `pi-slim-skills` | Compressed skill index and deduplicated full-body injection | `pi-slim-skills/index.ts` |
+| `pi-cache-drop-guard` | Detects consecutive prompt-cache drops, asks whether to continue or inspect status, and persists keep-alerting or permanent-silence modes | `pi-cache-drop-guard/index.ts` |
 | `pi-todo-guard` | Continue settled runs while Todo tasks remain; aggregated by `pi-default-workbench` | `pi-default-workbench/todo/guard.ts` |
 | `pi-tool-rails` | Soft tool rails, verified 41-tool emoji/label registry, semantic tool headers, user-message frame, persistent prompt frame, and brand header | `pi-tool-rails/compact-shell.ts`, `pi-tool-rails/tool-presentations.mjs`, `pi-tool-rails/index.ts`, `pi-tool-rails/brand-header.ts` |
 | `pi-compaction-model` | Pins context compaction to a chosen provider/model with bounded exponential backoff for transient upstream failures; opt-in package, not installed by the default installer | `pi-compaction-model/index.ts` |
 | `pi-large-beautify` | Large-only beautification bundle (tool rails, message/input framing, brand header, Matugen footer, Matugen theme) that also re-exports the Flow companion surface; not installed by the default installer, copied into the isolated Large profile | `pi-large-beautify/index.ts`, `pi-large-beautify/vendor/`, `pi-large-beautify/themes/` |
-Eleven package directories are maintained in this repository; the installer enables four aggregate packages and keeps the other package sources available for Large profiles, opt-in installation, or explicit manual installation. `pi-zh-localizer` is run as an installer patcher rather than installed as a runtime extension.
+Twelve package directories are maintained in this repository; the installer enables five of them by default (`pi-context-bridge`, `pi-default-workbench`, `pi-slim-skills`, `pi-tool-rails`, `pi-cache-drop-guard`) and keeps the other package sources available for Large profiles, opt-in installation, or explicit manual installation. `pi-zh-localizer` is run as an installer patcher rather than installed as a runtime extension.
 
 ## Standalone Extensions
 
@@ -63,4 +64,4 @@ These packages are pinned production dependencies of local compatibility entries
 - Long generic tool output is bounded and uses the configured expansion key hint.
 - The installer verifies compact labels and dedicated emoji for 41 known registry entries; optional and compatibility entries are included, so this is not the active-tool count.
 - Session-scoped compatibility patches restore original methods on shutdown.
-- The installer enables exactly four aggregate local packages: `pi-context-bridge`, `pi-default-workbench`, `pi-slim-skills`, and `pi-tool-rails`. Duplicate or profile-specific packages remain source-only unless explicitly installed.
+- The installer enables exactly five local packages by default: `pi-context-bridge`, `pi-default-workbench`, `pi-slim-skills`, `pi-tool-rails`, and `pi-cache-drop-guard`. Duplicate or profile-specific packages remain source-only unless explicitly installed.
