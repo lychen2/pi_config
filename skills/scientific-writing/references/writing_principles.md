@@ -45,7 +45,7 @@ and linked to the affected version [SW-S01, SW-S27].
 
 ## Numbers and units
 
-Every reported number needs:
+For reported numbers, check the applicable scientific context:
 
 - a stable concept name;
 - unit and scale;
@@ -53,12 +53,14 @@ Every reported number needs:
 - analysis population and sample size;
 - time point;
 - estimate and uncertainty where applicable;
-- method or result ID;
-- evidence ID.
+- supporting method, result, or source.
+
+In an audited workspace, record method, result, and evidence IDs in the working records;
+these IDs are not required in reader-facing sentences.
 
 Keep precision justified by measurement and analysis. Distinguish zero from missing,
-below detection, not measured, and not applicable. Run the consistency checker after
-every substantive edit.
+below detection, not measured, and not applicable. Reconcile repeated values after
+substantive edits; use the consistency checker when a manifest is maintained.
 
 ## Methods and results
 
@@ -66,7 +68,7 @@ Methods describe what was actually done, not what would have been ideal. Results
 not introduce an undeclared method. For each result, verify:
 
 - the outcome was defined;
-- the analysis method exists in the methods registry;
+- the analysis method is described (and recorded in the registry when one is maintained);
 - the analysis intent agrees;
 - exclusions and analysis populations agree;
 - transformations, covariates, multiplicity handling, and missing-data methods agree;
@@ -88,6 +90,18 @@ encourage unsupported content and vary by field and venue.
 Use person-centered or identity-affirming language according to community preference,
 study context, and current venue policy. Preserve participant self-description when
 appropriate. Define abbreviations and use one term for one concept.
+
+## Reader-facing prose
+
+Organize around the question and evidence, not the history of revisions. Apply a
+correction as a current statement; explain the correction history only in a formal
+correction notice, reviewer response, or another explicitly requested record.
+
+State shared assumptions and definitions once at the point of use. Retain a repeated
+qualification only when a later claim would otherwise mislead. Keep source paths,
+audit IDs, validation logs, and production issues outside the narrative unless they
+are necessary methods or the subject of the document. Normal scholarly citations
+remain part of the text.
 
 ## Draft status
 

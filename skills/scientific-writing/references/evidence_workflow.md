@@ -1,5 +1,12 @@
 # Evidence and Provenance Workflow
 
+## Scope
+
+Use these registries and gates for an explicitly requested audited manuscript workspace
+or submission-readiness review, not ordinary prose editing. Human verification status
+must reflect an actual human check. Keep machine-readable markers in the internal audit
+copy; audience-facing text uses normal citations with the mapping retained separately.
+
 ## Core separation
 
 Drafting and evidence verification are different activities.
@@ -33,7 +40,7 @@ documents into them.
 
 ## Claim markers
 
-Append machine-readable markers to every factual or numeric assertion while drafting:
+In the internal audit copy, append machine-readable markers to factual or numeric assertions:
 
 ```text
 [claim:C001] [evidence:E001,E002]

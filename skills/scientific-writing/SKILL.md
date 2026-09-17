@@ -54,14 +54,16 @@ Never invent or complete:
 Use an explicit missing, unverified, or not-applicable state. Do not substitute plausible
 boilerplate.
 
-### Evidence binding
+### Evidence support
 
-Every factual or numeric manuscript claim must map to verified evidence IDs. A human
-verifier must open the source, confirm the proposition and locator, verify bibliographic
-metadata, and record who verified it and when.
+Support factual and numeric claims with the supplied study record or sources you have
+actually checked. Preserve citations and distinguish author-supplied results from
+independently verified evidence. Do not present search snippets, generated summaries,
+or memory as source verification.
 
-Search snippets, generated summaries, memory, and another work's bibliography may aid
-discovery but do not verify a claim. See `references/evidence_workflow.md`.
+Evidence IDs and named human verification records belong to the optional audited
+manuscript workflow below, not to every writing task. Never claim human approval on
+a human's behalf.
 
 ### Scientific fidelity
 
@@ -74,9 +76,47 @@ discovery but do not verify a claim. See `references/evidence_workflow.md`.
 - State concrete limitations and bound generalizability.
 - Do not convert association into causation or non-significance into equivalence.
 
-## Intake
+## Default: draft or revise the requested text
 
-Before drafting, obtain or mark unresolved:
+1. Use the available context to identify the audience, document type, scope, and main
+   claim. Ask only for missing information that blocks the requested work.
+2. Read the relevant supplied material. Preserve scientific meaning, numbers, units,
+   citations, and meaningful uncertainty; flag a factual conflict rather than guessing.
+3. Organize the text around the research question, evidence, and interpretation. Use
+   the document's natural structure, not the editing conversation's chronology.
+4. Apply corrections as current facts. Remove rebuttals to earlier drafts, repeated
+   caveats, and statements of compliance. Keep a qualification where omitting it would
+   change interpretation; a limitations section should explain concrete consequences.
+5. Return the requested prose. Keep editorial questions and unresolved factual issues
+   outside it. Do not add an audit appendix, draft banner, evidence tags, revision
+   summary, or self-rating unless the chosen workflow or user requires them.
+
+Apply the user's expression preferences throughout drafting and revision. State findings,
+actions, and limitations directly. Avoid rhetorical reversals, imagined objections, and
+unneeded definitions. Use comparisons with real referents when the argument requires
+them. In Chinese, use complete words and concrete action-object phrasing; preserve
+English code identifiers. Keep abstracts and conclusions required by the manuscript
+structure, and omit extra opening previews or closing recaps around the deliverable.
+
+For language and argumentation, read `references/writing_principles.md`; for article
+structure, read `references/imrad_structure.md`. For talks and speaker notes, use
+scientific-slides instead of imposing manuscript submission procedures.
+
+## Optional: audited manuscript and submission workflow
+
+Use the remainder of this skill for an explicitly requested evidence audit, structured
+manuscript workspace, or submission-readiness review. Ordinary drafting and copyediting
+do not require registries, declaration forms, or a full policy review. Existing audited
+workspaces retain their evidence mappings and approval gates.
+
+Keep working records separate from reader-facing prose. Evidence markers belong in the
+internal audit copy; render normal citations for the audience while preserving the
+mapping in the audit records. Formal correction notices and reviewer-response letters
+may describe revision history because that is their purpose.
+
+### Intake for the audited workflow
+
+Obtain or mark unresolved as needed for the audit:
 
 - document type, study design, stage, audience, and target venue;
 - current author instructions and policy access date;
@@ -91,7 +131,7 @@ Before drafting, obtain or mark unresolved:
 Do not ask for restricted source material if metadata or a local user-run audit is
 sufficient.
 
-## Workflow
+### Audit steps
 
 ### 1. Establish the local workspace
 
@@ -279,12 +319,12 @@ Only accountable humans may:
 - remove the draft banner;
 - authorize submission.
 
-## Revision and peer review
+## Formal revision and peer review
 
 Treat reviewer material as confidential. Do not upload it to an external service without
 the required authorization and policy review [SW-S01, SW-S24].
 
-For each requested change:
+For each formal reviewer request in this workflow:
 
 1. record the comment without exposing it outside the approved boundary;
 2. classify it as editorial, scientific, statistical, policy, or unresolved;
