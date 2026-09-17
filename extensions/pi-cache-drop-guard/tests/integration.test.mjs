@@ -366,6 +366,46 @@ test("a resumed session keeps its cache baseline and totals", async () => {
   }
 });
 
+test("a compaction between turns does not count the unavoidable re-bill as a drop", async () => {
+  for (const marker of ["compaction", "branch_summary"]) {
+    const harness = await createHarness({ answers: [CHOICE_CONTINUE] });
+    try {
+      await harness.start();
+      await harness.warmUp();
+
+      // Pi 在两次请求之间写入 compaction / branch summary 条目
+      harness.entries.push({
+        type: marker,
+        id: `e${harness.entries.length}`,
+        parentId: "e1",
+        timestamp: new Date(2500).toISOString(),
+        summary: "summary",
+        ...(marker === "compaction"
+          ? { firstKeptEntryId: "e0", tokensBefore: 20_000 }
+          : { fromId: "e0", details: {} }),
+      });
+
+      // 压缩后第一次请求：上下文前缀变了，重新计费属于正常行为
+      await harness.feed(turn({ input: 20_500, timestamp: 3000 }));
+      assert.equal(harness.selectCalls.length, 0);
+
+      // 之后一次真实掉缓存只算作第一次，不该立刻弹窗
+      await harness.feed(turn({ input: 21_000, timestamp: 4000 }));
+      assert.equal(
+        harness.selectCalls.length,
+        0,
+        `${marker} 之后不能把压缩引起的重新计费也计入连续掉缓存`,
+      );
+
+      await harness.commands.get("cache-guard").handler("status", harness.ctx);
+      const report = harness.appended.at(-1).data.lines.join("\n");
+      assert.match(report, /计费 1 次/);
+    } finally {
+      await harness.cleanup();
+    }
+  }
+});
+
 test("the disable env var keeps the extension from registering anything", async () => {
   process.env.PI_CACHE_DROP_GUARD_DISABLE = "1";
   try {

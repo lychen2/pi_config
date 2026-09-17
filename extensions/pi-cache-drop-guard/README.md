@@ -10,6 +10,9 @@ burning tokens.
 
 - Judges every assistant turn with Pi's own cache-miss yardstick: `missedTokens = min(previous promptTokens, promptTokens) - cacheRead`,
   ignoring misses under 1024 tokens (noise floor) and resetting the baseline after compaction or a branch summary.
+  The baseline is re-read from the persisted transcript on every turn, exactly like Pi's own `detectCacheMiss`, so a
+  compaction or branch summary that lands between two requests resets the comparison right away: the first re-billed
+  request after it is never counted as a drop, and live counting cannot disagree with what a resumed session recomputes.
 - Adds an "obvious" gate on top (4096 missed tokens by default), so only drops worth reacting to are counted.
 - Counts **consecutive** obvious drops. On the second one it asks:
 

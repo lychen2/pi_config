@@ -14,6 +14,8 @@
  *
  * 判定口径对齐 pi 内建的 cache-stats：missedTokens = min(上一轮 promptTokens, 本轮 promptTokens)
  * - cacheRead，忽略 1024 tokens 以下的噪声，compaction / branch summary 之后重置基线。
+ * 基线每轮都从已落盘的会话条目现算（与 pi 的 detectCacheMiss 同一做法），所以压缩以后
+ * 第一次重新计费不会被算成掉缓存，实时统计与重启扫描也不会互相矛盾。
  * 在此之上再加一层「明显」门槛（默认 4096 tokens），只有明显的掉缓存才计入连续计数。
  */
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
@@ -641,8 +643,6 @@ export default function cacheDropGuard(pi: ExtensionAPI): void {
   let state: GuardState = { mode: "ask" };
   let streak = 0;
   let alerted = false;
-  let baseline: CacheBaseline | undefined;
-  let reportedModels = new Set<string>();
   let totals: CacheTotals = emptyTotals();
   let recent: CacheTurnRecord[] = [];
   let lastMessageKey = "";
@@ -788,10 +788,9 @@ export default function cacheDropGuard(pi: ExtensionAPI): void {
     streak = 0;
     alerted = false;
     lastMessageKey = "";
-    // 恢复会话时从已有记录里接上基线，避免恢复后前几轮无法识别掉缓存。
+    // 恢复会话时从已有记录里接上统计，避免恢复后前几轮无法识别掉缓存。
+    // 基线不在这里留存：每轮都从落盘条目现算（见 message_end）。
     const history = collect(ctx, ctx.sessionManager.getEntries());
-    baseline = history.lastBaseline;
-    reportedModels = new Set(history.reportedModels);
     totals = history.totals;
     recent = history.records.slice(-RECENT_LIMIT);
 
@@ -824,15 +823,18 @@ export default function cacheDropGuard(pi: ExtensionAPI): void {
 
       const modelKey = `${usage.provider}/${usage.model}`;
       const reportsCache = usage.cacheRead > 0 || usage.cacheWrite > 0;
+      // 基线每轮从已落盘条目现算，而不是留在内存里递推：compaction 与
+      // branch summary 会写入条目并打断基线，现算才能让压缩后的第一次
+      // 重新计费不算掉缓存（口径与 pi 内建的 detectCacheMiss 一致）。
+      const history = collect(ctx, ctx.sessionManager.getEntries());
+      const baseline = history.lastBaseline;
       const assessment = assessCacheMiss(baseline, usage, {
         minMissedTokens: settings.minMissedTokens,
         fallbackCacheReadPerToken: fallbackReadPrice(ctx)(usage.provider, usage.model),
-        expectCache: reportedModels.has(modelKey) || reportsCache,
+        expectCache: history.reportedModels.includes(modelKey) || reportsCache,
       });
 
       recent = [...recent, cacheTurnRecord(baseline, usage, assessment)].slice(-RECENT_LIMIT);
-      if (reportsCache) reportedModels.add(modelKey);
-      baseline = baselineFrom(usage) ?? baseline;
       streak = advanceStreak(streak, assessment);
       if (assessment) totals = accumulateTotals(totals, assessment);
 
