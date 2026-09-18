@@ -34,6 +34,12 @@ try {
   assert.doesNotMatch(f01.stdout, /upstream setup wizard/);
   assert.doesNotMatch(f01.stdout, /raw\.githubusercontent\.com\/cortexkit/);
   assert.match(f01.stdout, /sync-large-beautify\.mjs --check/);
+  assert.match(f01.stdout, /i-have-adhd\.json/);
+  const adhdConfig = JSON.parse(await readFile(path.join(repoRoot, "config", "i-have-adhd.json"), "utf8"));
+  assert.deepEqual(adhdConfig, { alwaysOn: true, hideStatus: false });
+  const externalPackages = (await readFile(path.join(repoRoot, "config", "external-packages.txt"), "utf8"))
+    .split(/\r?\n/).map((line) => line.trim()).filter((line) => line && !line.startsWith("#"));
+  assert.equal(externalPackages.filter((entry) => entry === "git:github.com/ayghri/i-have-adhd").length, 1);
 
   // F-02: a hanging command must fail on deadline instead of blocking.
   const { run } = await import(pathToFileURL(installMjs).href);

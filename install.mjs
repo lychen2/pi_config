@@ -470,6 +470,7 @@ async function restoreFiles() {
     "APPEND_SYSTEM.md",
     "slim-skills-whitelist.json",
     "pi-plan-mode.json",
+    "i-have-adhd.json",
   ];
   for (const file of configFiles) {
     await copyPath(path.join(repoDir, "config", file), path.join(agentDir, file));

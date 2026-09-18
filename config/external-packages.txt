@@ -15,3 +15,5 @@ npm:pi-workspace-history
 # RTK is loaded through extensions/pi-context-bridge/rtk.ts for evidence safety.
 npm:@victor-software-house/pi-curated-themes
 git:github.com/BevalZ/pi-provider
+# ADHD-friendly responses; enabled by config/i-have-adhd.json.
+git:github.com/ayghri/i-have-adhd

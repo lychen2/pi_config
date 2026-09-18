@@ -54,6 +54,14 @@ Web Access's actual config location is `$PI_CODING_AGENT_DIR/web-search.json`, o
 
 The normal installer copies `config/APPEND_SYSTEM.md` and the slim-skills configuration. Running only the migration script does not install these prompt files.
 
+## ADHD-friendly responses
+
+The external package list includes [i-have-adhd](https://github.com/ayghri/i-have-adhd). The installer copies `config/i-have-adhd.json` to the agent directory with `alwaysOn: true` and `hideStatus: false`. Install external packages to load its extension and skill; `--skip-external` copies the configuration without installing the package.
+
+New sessions enable the mode automatically and show `ADHD ON`. Use `/i-have-adhd off` or `/i-have-adhd on` to change it for the current session. A saved session choice takes precedence over the default. Restart Pi after installation to load the package and configuration.
+
+The extension injects its bundled skill rules for action-first, numbered multi-step answers. `APPEND_SYSTEM.md` continues to request everyday language, concrete explanations and useful qualifications. No separate copy of the upstream skill is maintained in this repository.
+
 ## Verification and references
 
 - SoL source checks: 139 tests, typecheck and package inspection passed against the pinned Pi 0.85.1 matrix. npm 11 is required for the upstream package tests' array-shaped `npm pack --json` expectation; npm 12 changes that output shape.
