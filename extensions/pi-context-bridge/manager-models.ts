@@ -22,6 +22,7 @@ type ProviderConfig = {
   headers?: Record<string, string>;
   authHeader?: boolean;
   modelsEndpoint?: string;
+  compat?: ProviderModelConfig["compat"];
   models?: ConfiguredModel[];
 };
 type ModelsFile = { providers?: Record<string, ProviderConfig | undefined> };
@@ -106,9 +107,10 @@ async function loadProviderConfig(optional: boolean): Promise<ProviderConfig | u
   return config;
 }
 
-function completeModel(model: ConfiguredModel): ProviderModelConfig {
+function completeModel(model: ConfiguredModel, compat?: ProviderModelConfig["compat"]): ProviderModelConfig {
   return {
     ...model,
+    ...(compat || model.compat ? { compat: { ...compat, ...model.compat } } : {}),
     id: model.id,
     name: model.name ?? model.id,
     reasoning: model.reasoning ?? true,
@@ -166,14 +168,14 @@ export async function discoverModels(config: ProviderConfig, apiKey?: string, si
   const models = payload.data.flatMap((entry) => {
     if (typeof entry.id !== "string" || !entry.id || seen.has(entry.id)) return [];
     seen.add(entry.id);
-    return [completeModel(configured.get(entry.id) ?? { id: entry.id })];
+    return [completeModel(configured.get(entry.id) ?? { id: entry.id }, config.compat)];
   });
   if (!models.length) throw new Error(`${providerId} returned an empty model list (endpoint ${safeEndpoint(url)})`);
   return models;
 }
 
 export function configuredModels(config: ProviderConfig): ProviderModelConfig[] {
-  return (config.models ?? []).map(completeModel);
+  return (config.models ?? []).map((model) => completeModel(model, config.compat));
 }
 
 export async function loadModels(config: ProviderConfig, apiKey?: string): Promise<ProviderModelConfig[]> {
