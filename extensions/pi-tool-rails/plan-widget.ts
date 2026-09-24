@@ -85,6 +85,7 @@ type AnyRecord = Record<string, unknown>;
 type LayoutNode = { container: AnyRecord; children: unknown[]; entries?: unknown[] };
 export type PlanLayoutMemory = { status?: unknown };
 const SWAP_TAG = Symbol.for("pi.toolRails.planStatusSwap");
+export const AGENTS_PANEL_TAG = Symbol.for("pi.toolRails.agentsPanel");
 type SwapTag = { widget: unknown; status: unknown };
 
 const isObject = (value: unknown): value is AnyRecord => typeof value === "object" && value !== null;
@@ -170,14 +171,15 @@ export function syncPlanLayout(tui: unknown, self: unknown, memory: PlanLayoutMe
   const nodes = layoutNodes(tui);
   const home = nodes.find(node => node.children.includes(self));
   if (!home) return false;
+  const agents = home.children.find(child => isObject(child) && (child as Record<symbol, unknown>)[AGENTS_PANEL_TAG]);
+  let changed = agents !== undefined && moveBefore(home, agents, self);
   const widget = home.container;
   const parent = nodes.find(node => node.children.includes(widget));
-  if (!parent) return false;
+  if (!parent) return changed;
   if (memory.status === undefined || !parent.children.includes(memory.status)) {
     memory.status = undefined;
-    if (!learnStatus(parent, widget, memory)) return false;
+    if (!learnStatus(parent, widget, memory)) return changed;
   }
-  let changed = false;
   for (const node of nodes) {
     if (moveBefore(node, widget, memory.status)) changed = true;
   }
@@ -186,7 +188,7 @@ export function syncPlanLayout(tui: unknown, self: unknown, memory: PlanLayoutMe
 
 export function installPlanWidget(pi: ExtensionAPI): void {
   let steps: Step[] = [];
-  let expanded = true;
+  let expanded = false;
   // Survives widget remounts and renderer switches; container identities do too.
   const memory: PlanLayoutMemory = {};
   let mountedContext: ExtensionContext | undefined;
@@ -219,7 +221,7 @@ export function installPlanWidget(pi: ExtensionAPI): void {
     refresh(ctx);
   }
   function restoreNewSession(event: unknown, ctx: ExtensionContext): void {
-    expanded = true;
+    expanded = false;
     restore(event, ctx);
   }
   pi.registerShortcut(PLAN_TOGGLE_KEY, {

@@ -40,7 +40,7 @@ export const TOOL_CAPABILITY_GROUPS = {
     "bash_bg",
   ],
   web: ["source_check", "fetch_content", "get_search_content"],
-  memory: ["ctx_search", "ctx_memory", "ctx_note", "ctx_expand", "ctx_reduce"],
+  memory: ["ctx_search", "ctx_memory", "ctx_note", "ctx_expand"],
   ops: ["conflict"],
   preview: ["preview_export"],
   workflow: ["execute_command"],

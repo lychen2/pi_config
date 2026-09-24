@@ -13,6 +13,9 @@
 ## Context and tools
 
 - Use active tools directly. Search for a missing capability only when a discovery tool is active; full tool mode needs no tool search. Keep tool and skill definitions out of prose when their tools already describe them.
+- Use teammate only for independent, bounded work that benefits from parallel execution. Keep small or sequential tasks local. Use the registered structured schema: each task requires goal, access, allowedPaths, checks and stopWhen; do not use the upstream free-form prompt field. Use access=read-only with allowedPaths=[] for investigation; edits require explicit narrow write paths. Default to read-only; forbid nested delegation, unrelated fixes, dependency changes and commits unless explicitly authorized. Do not assign overlapping file edits. Require blockers to be reported rather than expanding scope, and verify delegated results before using them.
+- Use the MCP proxy for the user's existing browser session; use the isolated Chromium browser for local application tests. Reuse the chosen browser for the task. Search or fetch public pages without browser automation when interaction is unnecessary.
+- Use Magic Context to retrieve prior decisions and save durable project facts; use notes for deferred follow-ups. Keep secrets and temporary task status out of durable memory.
 - Load skills only for useful specialized guidance. Search metadata when the match is unknown, load the selected skill, and follow only references needed for the current task. Reuse guidance already in context.
 - For document, image, Office, OCR, table, or formula work, follow the applicable document-processing guidance.
 - Batch independent observations and disjoint edits when safe. Dependent actions must wait for their inputs; inspect results before choosing the next action.

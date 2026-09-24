@@ -1,5 +1,7 @@
 # External pi packages recorded from ~/.pi/agent/settings.json
 npm:@pi-lab/notify
+# One lazy proxy for configured MCP servers; server credentials stay local.
+npm:pi-mcp-adapter
 # pi-markdown-preview is a dependency of
 # extensions/pi-default-workbench, its sole registration entry.
 # SoL owns action fusion, observation packing, log reduction and compaction.

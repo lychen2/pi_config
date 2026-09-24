@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { Container, Text, visibleWidth } from "@earendil-works/pi-tui";
 import {
+  AGENTS_PANEL_TAG,
   PLAN_TOGGLE_KEY,
   PLAN_WIDGET_KEY,
   installPlanWidget,
@@ -54,9 +55,11 @@ function mount(options = {}) {
   };
 }
 
-test("renders plan contents and progress above the editor", () => {
+test("renders plan contents and progress above the editor when expanded", () => {
   const app = mount();
   const widget = app.latest();
+  assert.deepEqual(widget.render(80), [header(1, 3, 1, "expand")]);
+  app.shortcuts.get(PLAN_TOGGLE_KEY).handler(app.ctx);
   assert.equal(app.widgets.at(-1).key, PLAN_WIDGET_KEY);
   assert.equal(app.widgets.at(-1).options.placement, "aboveEditor");
   assert.deepEqual(widget.render(80), [
@@ -77,30 +80,32 @@ test("renders plan contents and progress above the editor", () => {
   assert.equal(app.widgets.at(-1).factory, undefined);
   app.setBranch([state(steps)]);
   app.hooks.get("session_tree")({}, app.ctx);
-  assert.equal(app.latest().render(80)[0], header(1, 3, 1, "collapse"));
+  assert.equal(app.latest().render(80)[0], header(1, 3, 1, "expand"));
   app.hooks.get("session_compact")({}, app.ctx);
-  assert.equal(app.latest().render(80)[0], header(1, 3, 1, "collapse"));
+  assert.equal(app.latest().render(80)[0], header(1, 3, 1, "expand"));
   app.hooks.get("session_shutdown")({}, app.ctx);
   assert.equal(app.widgets.at(-1).factory, undefined);
 });
 
-test("collapses to the heading and expands again from the toggle shortcut", () => {
+test("starts collapsed, toggles, preserves state across updates and resets on session start", () => {
   const app = mount();
   const widget = app.latest();
   assert.equal(app.shortcuts.get(PLAN_TOGGLE_KEY).description, "Toggle the Plan panel (Alt+T)");
-  assert.equal(widget.render(80).length, 4);
-  app.shortcuts.get(PLAN_TOGGLE_KEY).handler(app.ctx);
-  assert.deepEqual(app.renders, [true]);
   assert.deepEqual(widget.render(80), [header(1, 3, 1, "expand")]);
   app.shortcuts.get(PLAN_TOGGLE_KEY).handler(app.ctx);
+  assert.deepEqual(app.renders, [true]);
   assert.equal(widget.render(80).length, 4);
   assert.equal(widget.render(80)[0], header(1, 3, 1, "collapse"));
-  // A compaction keeps the reader's fold state, a fresh session resets it.
   app.shortcuts.get(PLAN_TOGGLE_KEY).handler(app.ctx);
-  app.hooks.get("session_compact")({}, app.ctx);
+  assert.deepEqual(widget.render(80), [header(1, 3, 1, "expand")]);
+  app.hooks.get("tool_result")({ toolName: "update_plan", input: { steps }, isError: false }, app.ctx);
   assert.deepEqual(app.latest().render(80), [header(1, 3, 1, "expand")]);
-  app.hooks.get("session_start")({ reason: "new" }, app.ctx);
+  app.shortcuts.get(PLAN_TOGGLE_KEY).handler(app.ctx);
+  // A compaction keeps the reader's fold state, a fresh session resets it.
+  app.hooks.get("session_compact")({}, app.ctx);
   assert.equal(app.latest().render(80).length, 4);
+  app.hooks.get("session_start")({ reason: "new" }, app.ctx);
+  assert.deepEqual(app.latest().render(80), [header(1, 3, 1, "expand")]);
 });
 
 test("ignores the toggle when no plan is mounted", () => {
@@ -136,6 +141,32 @@ test("keeps the plan container ahead of Pi's working status line", () => {
   assert.equal(syncPlanLayout(split, self, {}), false);
   assert.equal(syncPlanLayout({ children: [document] }, self, {}), false);
   assert.equal(syncPlanLayout({}, self, {}), false);
+});
+
+test("keeps Agents above Plan across panel mount orders and remounts", () => {
+  const spacer = {};
+  const plan = { render: () => [] };
+  const agents = { [AGENTS_PANEL_TAG]: true, render: () => [] };
+  const unrelated = {};
+  const status = {};
+  const widgets = { children: [] };
+  const tui = { children: [status, widgets] };
+  const memory = {};
+  for (const order of [[spacer, plan, unrelated, agents], [spacer, agents, plan, unrelated]]) {
+    widgets.children = order;
+    widgets.entries = order.map(component => ({ component }));
+    syncPlanLayout(tui, plan, memory);
+    assert.deepEqual(widgets.children, [spacer, agents, plan, unrelated]);
+    assert.deepEqual(widgets.entries.map(entry => entry.component), widgets.children);
+    assert.deepEqual(tui.children, [widgets, status]);
+    assert.equal(syncPlanLayout(tui, plan, memory), false);
+  }
+  const remounted = { [AGENTS_PANEL_TAG]: true };
+  widgets.children = [spacer, plan, unrelated, remounted];
+  widgets.entries = widgets.children.map(component => ({ component }));
+  assert.equal(syncPlanLayout(tui, plan, memory), true);
+  assert.deepEqual(widgets.children, [spacer, remounted, plan, unrelated]);
+  assert.equal(syncPlanLayout(tui, plan, {}), false);
 });
 
 test("reorders the layout tree that Pi's VStack renders", () => {

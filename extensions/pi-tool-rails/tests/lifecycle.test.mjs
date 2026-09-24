@@ -21,6 +21,8 @@ function createPi() {
   const handlers = new Map();
   return {
     handlers,
+    events: { on() { return () => {}; }, emit() {} },
+    registerCommand() {},
     on(event, handler) {
       const registered = handlers.get(event) ?? [];
       registered.push(handler);

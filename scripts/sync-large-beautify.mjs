@@ -12,9 +12,11 @@ const checkOnly = process.argv.includes("--check");
 const TOOL_RAILS_FILES = [
   "compact-shell.ts",
   "index.ts",
+  "sleep-progress.ts",
   "result-bridge.ts",
   "prompt-frame.ts",
   "plan-widget.ts",
+  "teammate-panel.ts",
   "thinking-message.ts",
   "thinking-shimmer.ts",
   "user-message.ts",

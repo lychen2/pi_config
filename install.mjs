@@ -19,6 +19,8 @@ import readline from "node:readline/promises";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { configureRtkCompat } from "./scripts/configure-rtk-compat.mjs";
+import { configureTeammate } from "./scripts/configure-teammate.mjs";
+import { configureMcpProxy } from "./scripts/configure-mcp-proxy.mjs";
 import { deploySkills } from "./scripts/deploy-skills.mjs";
 
 const repoDir = path.dirname(fileURLToPath(import.meta.url));
@@ -743,6 +745,8 @@ async function main() {
   await installLocalPackages();
   await installExternalPackages(choices.external);
   await configureRtkCompat(agentDir, { dryRun: installerOptions.dryRun });
+  configureTeammate(agentDir, { dryRun: installerOptions.dryRun });
+  configureMcpProxy(agentDir, { dryRun: installerOptions.dryRun });
   await installOptionalTools(choices);
   await securePrivateFiles(backupDir);
 

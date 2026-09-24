@@ -1,6 +1,5 @@
 import { homedir } from "node:os";
 import {
-  createBashToolDefinition,
   createEditToolDefinition,
   createGrepToolDefinition,
   createReadToolDefinition,
@@ -16,6 +15,8 @@ import { installThinkingMessageStyle, installThinkingTimingTracker } from "./thi
 import { installThinkingShimmer } from "./thinking-shimmer.ts";
 import { installUserMessageStyle } from "./user-message.ts";
 import { installPlanWidget } from "./plan-widget.ts";
+import { installTeammatePanel } from "./teammate-panel.ts";
+import { createSleepProgressBash, SleepProgress } from "./sleep-progress.ts";
 
 type Theme = Pick<PiTheme, "fg" | "bold">;
 type ActiveTheme = PiTheme;
@@ -443,6 +444,7 @@ function installNotificationFilter(ui: {
 }
 
 export default function toolRails(pi: ExtensionAPI): void {
+  const sleepProgress = new SleepProgress();
   let activeTheme: ActiveTheme | undefined;
   let cleanupAssistantMarker = () => {};
   let cleanupNotificationFilter = () => {};
@@ -450,6 +452,7 @@ export default function toolRails(pi: ExtensionAPI): void {
   let cleanupUserMessage = () => {};
 
   function disposeSessionPresentation(): void {
+    sleepProgress.dispose();
     activeTheme = undefined;
     cleanupNotificationFilter();
     cleanupThinkingMessage();
@@ -462,6 +465,7 @@ export default function toolRails(pi: ExtensionAPI): void {
   }
 
   installPlanWidget(pi);
+  installTeammatePanel(pi);
   installThinkingShimmer(pi);
   installThinkingTimingTracker(pi);
   pi.on("session_start", (_event, ctx) => {
@@ -471,14 +475,14 @@ export default function toolRails(pi: ExtensionAPI): void {
     cleanupNotificationFilter = installNotificationFilter(ctx.ui);
     const builtins = [
       createReadToolDefinition(ctx.cwd),
-      createBashToolDefinition(ctx.cwd),
+      createSleepProgressBash(ctx.cwd, sleepProgress, decorateTool),
       createWriteToolDefinition(ctx.cwd),
       createEditToolDefinition(ctx.cwd),
       createGrepToolDefinition(ctx.cwd),
     ];
     for (const tool of builtins) {
       if (STYLED_BUILTINS.has(tool.name) && isUnclaimedBuiltin(pi, tool.name)) {
-        pi.registerTool(decorateTool(tool));
+        pi.registerTool(tool.name === "bash" ? tool : decorateTool(tool));
       }
     }
     const theme = ctx.ui.theme;

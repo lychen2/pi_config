@@ -12,13 +12,31 @@ Quiet TUI styling for Pi:
 - structured output colors for headings, success, active, pending, error, and task identifiers
 - numbered `read` views that show source line numbers in the TUI while preserving hash anchors for the model
 - `edit` and `write` collapse to a path plus `+added -removed` and a proportional add/remove bar; expanded calls show one diff, with fused `then_run` output retained
-- a pinned `Plan` panel above the editor follows successful `update_plan` calls and restores from the current session branch; its heading counts steps, and `Alt+T` collapses it to that one line or expands up to eight steps around the current step, without registering another task tool and without letting Pi's working-status line cover the plan
+- a pinned `Plan` panel above the editor follows successful `update_plan` calls and restores from the current session branch; it starts collapsed to a heading that counts steps, and `Alt+T` expands up to eight steps around the current step or collapses it again, without registering another task tool and without letting Pi's working-status line cover the plan
 - numbered, side-by-side `replace` diffs with old lines on the left, new lines on the right, multiple change groups, and shared indentation removed from each visible hunk
 - one blank line between tool blocks
 - a persistent framed `prompt` editor (frame + left rail, model/provider/thinking meta) and reference-style framed user messages with Markdown re-rendering and a `▐` rail marker
 - a native-compatible `✦ 思考` fold that stays on one row while the model thinks and after it settles, reporting `N 步 · 18s` (step count plus measured thinking time); expanding it reveals the step tree with semantic titles, role-colored markers, and bounded detail, with unchanged `Ctrl+T` show/hide behavior, plus a theme-colored animated working HUD
 - cached settled tool rows so the working HUD does not repeatedly re-render completed tool output
 Tool ownership is conservative. The extension presents registered tools but does not claim `find` or `ls`; those remain under Pi or another search owner. Guarded presentation bridges apply the common label column and result formatting at the exported `ToolExecutionComponent` layer. Diff markers and gutters remain aligned while shared code indentation is removed per visible hunk and relative indentation is retained.
+
+## Teammate dashboard
+
+`teammate-panel.ts` shows a live, theme-colored `Agents` widget above the Plan panel and editor when `pi-maestro-teammate` emits task events. It lists up to five tasks, prioritizes active work, and shows status, elapsed time, tool calls, token counts and the latest progress/result. Narrow terminals omit the second line and truncate safely. Completed history is bounded to 50 entries; active tasks are retained.
+
+- `Ctrl+Alt+A` or `/agents-panel` toggles the one-line summary.
+- `/agents-panel open` selects an agent and opens its task, model, status and latest result/error; use arrow keys to scroll and Escape to close.
+- Full session/agent navigation remains available through teammate's native `Alt+R` interface.
+
+The widget claims only teammate's agent-widget ownership so the native widget is not duplicated. It does not replace the footer, editor, thinking view or session list. State starts fresh on session activation and updates from subsequent lifecycle events; this panel does not persist or reconstruct historical transcripts. Nested child processes do not mount it. `scripts/sync-large-beautify.mjs` keeps the Large profile's vendor copy identical.
+
+## Sleep progress
+
+On Linux, the locally owned built-in `bash` tool shows an in-place progress row while an actual descendant `sleep` process is running, including compound commands such as `cd /tmp && sleep 240 && tail -3 results.log`. No countdown appears during preceding commands or skipped branches. Later commands execute normally.
+
+The observer passes a per-call environment marker (`PI_TOOL_RAILS_SLEEP_ID`) through Pi's native spawn hook and reads descendant process metadata from `/proc` every 250 ms while calls are active. It does not rewrite commands or add output to tool results. Elapsed time starts at the first observation, so remaining time is approximate and may lag by a polling interval or scheduling delay. A live process never displays completed progress; its row disappears after process exit, cancellation, timeout, or session cleanup.
+
+Supported operands include positive decimal seconds, `s`/`m`/`h`/`d` suffixes, and additive durations. Multiple observed waits share one row showing their count and the longest remaining wait. Unsupported durations, inaccessible process metadata, remote/container waits, cleared environments, and non-Linux hosts retain normal Bash behavior without a countdown. Very short sleeps may finish between polls. This does not instrument third-party Bash owners, `bash_bg`, user `!` commands, or fused `then_run` execution.
 
 ## Tool labels
 

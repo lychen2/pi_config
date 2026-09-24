@@ -18,6 +18,23 @@ When SoL's `update_plan` is active, the selector hides `todo`/`todowrite` from e
 
 SoL must precede presentation overrides in the package list: Pi's duplicate tool registrations otherwise let the existing edit/write definitions hide Action Fusion. The selector refreshes after resource discovery as well as before turns so dynamically registered tools receive the correct mode selection.
 
+## Delegation and browser access
+
+Adaptive mode keeps Magic Context's four knowledge tools active when registered. Teammate, its lifecycle controls, the single `mcp` proxy and isolated Chromium are discovered only when needed; they do not add startup schemas. Explicit tool/package disables still win. Fast intentionally excludes these integrations, while full exposes all enabled tools. Discovered tools remain active for the session until the selection is reset or changed.
+
+Use teammate for independent bounded work with distinct write ownership. Small sequential tasks stay in the parent agent. The single-model teammate policy pins every task to `manager/glm-5.3-flash` with no fallbacks.
+
+The external manifest installs `pi-mcp-adapter`. `scripts/configure-mcp-proxy.mjs` (also called by the installer) switches an existing `zen-browser` server to `directTools: false` and `lifecycle: "lazy-keep-alive"`. It backs up the local file, preserves server commands/credentials and other servers, and does nothing when no Zen server exists. Browser provisioning and credentials are intentionally not copied into this repository.
+
+Use the MCP proxy's search/describe/call flow for the user's existing browser. Use the workbench Chromium tool for isolated local application tests; avoid switching browser sessions mid-task. Public-page research normally uses web search/fetch directly.
+
+```bash
+node scripts/configure-mcp-proxy.mjs --dry-run
+node scripts/configure-mcp-proxy.mjs
+```
+
+Restart Pi after changing MCP exposure or extension source. `/tools adaptive` restores this profile in a project previously set to fast; it preserves explicit disables. Memory storage and injection are unchanged by this migration.
+
 ## Context control handoff
 
 Disabling Magic Context compaction deliberately trades its manual `ctx_reduce` control for SoL's automatic path. Verified in the upstream implementation:

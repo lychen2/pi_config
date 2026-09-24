@@ -70,9 +70,31 @@
     "name:seaborn": false
   },
   "enabledModels": [
-    "manager/deepseek-v4-flash",
+    "manager/Qwen/Qwen3.7-Flash",
+    "manager/Qwen/Qwen3.8-Flash",
+    "manager/Qwen3.7-Flash",
     "manager/Qwen3.8-Flash",
+    "manager/claude-opus-5",
+    "manager/claude-sonnet-5",
+    "manager/deepseek-v4-flash",
+    "manager/deepseek-v4.1-flash",
+    "manager/deepseek/deepseek-v4.1-flash",
+    "manager/glm-5.3",
+    "manager/glm-5.3-flash",
+    "manager/glm-5.3-flashx",
+    "manager/gpt-5.6-terra",
     "manager/gpt-6-astra",
-    "manager/glm-5.3-flash"
+    "manager/grok-4.6",
+    "manager/laguna-s-2.1",
+    "manager/mimo-v2.5",
+    "manager/mimo-v2.5-pro",
+    "manager/poolside/laguna-s-2.1-free",
+    "manager/qwen3.8-flash",
+    "manager/qwen3.8-max-0902",
+    "manager/stealth/union-alpha",
+    "manager/xiaomi/mimo-v2.5",
+    "manager/xiaomi/mimo-v2.5-pro",
+    "manager/z-ai/glm-5.3-flash",
+    "manager/z-ai/glm-5.3-flashx"
   ]
 }

@@ -190,7 +190,7 @@ test("adaptive starts with core and loader, then preserves activated tools", () 
 });
 
 test("adaptive includes memory tools while fast excludes them", () => {
-  const memoryTools = ["ctx_search", "ctx_memory", "ctx_note", "ctx_expand", "ctx_reduce"];
+  const memoryTools = ["ctx_search", "ctx_memory", "ctx_note", "ctx_expand"];
   const groups = [
     { id: "npm:@cortexkit/pi-magic-context", tools: memoryTools.map((name) => ({ name })) },
   ];
@@ -200,6 +200,20 @@ test("adaptive includes memory tools while fast excludes them", () => {
 
   const fast = activeToolsForMode(["bash"], groups, { ...empty, toolMode: "fast" });
   assert.deepEqual(fast, ["bash"]);
+});
+
+test("adaptive preserves memory and defers delegation, MCP and browser schemas", () => {
+  const defaults = ["ctx_search", "ctx_memory", "ctx_note", "ctx_expand"];
+  const deferred = ["ctx_reduce", "browser", "zen_browser_click", "teammate", "teammate-send", "teammate-list", "teammate-wait", "mcp", "teammate-monitor"];
+  const groups = [{ id: "integrations", tools: [...defaults, ...deferred].map(name => ({ name })) }];
+  assert.deepEqual(activeToolsForMode(["read"], groups, empty), ["read", ...defaults]);
+  assert.deepEqual(activeToolsForMode(["read"], groups, { ...empty, toolMode: "fast" }), ["read"]);
+  assert.deepEqual(activeToolsForMode(["read"], groups, { ...empty, disabledTools: ["mcp"] }), ["read", ...defaults.filter(name => name !== "mcp")]);
+  assert.deepEqual(activeToolsForMode(["read"], groups, { ...empty, disabledExtensions: ["integrations"] }), ["read"]);
+  for (const name of ["browser", "teammate", "mcp"]) {
+    assert.deepEqual(activeToolsForMode(["read"], groups, empty, new Set([name])), ["read", ...defaults, name]);
+  }
+  assert.ok(!activeToolsForMode(["read"], groups, { ...empty, disabledTools: ["mcp"] }, new Set(["mcp"])).includes("mcp"));
 });
 
 test("fast is fixed and full respects global disabled tools", () => {

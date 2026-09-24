@@ -13,6 +13,8 @@
   "include": [
     "bash-guard.ts",
     "index.ts",
+    "session-tools/**/*.ts",
+    "code-outline/**/*.ts",
     "deferred-tools/**/*.ts",
     "browser/**/*.ts",
     "todo/**/*.ts",

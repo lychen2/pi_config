@@ -109,5 +109,7 @@ test("concurrent searches merge activations without dropping earlier tools", asy
 
   assert.deepEqual(web.details.activatedTools, ["web_search"]);
   assert.deepEqual(conflict.details.activatedTools, ["conflict"]);
-  assert.deepEqual(active, ["read", "search_tool_bm25", "web_search", "conflict"]);
+  // Concurrent embedding searches can finish in either order; neither activation may be lost.
+  assert.equal(active.length, 4);
+  assert.deepEqual(new Set(active), new Set(["read", "search_tool_bm25", "web_search", "conflict"]));
 });
