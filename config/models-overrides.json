@@ -85,6 +85,10 @@
           ]
         },
         {
+          "id": "gpt-6-luna",
+          "contextWindow": 272000
+        },
+        {
           "id": "gpt-5.6-terra",
           "input": [
             "text",
