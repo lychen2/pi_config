@@ -7,6 +7,7 @@ export const installedSkills = [
   'sympy', 'paper-lookup', 'citation-management', 'scientific-writing',
   'venue-templates', 'scientific-slides', 'agents-progressive-disclosure',
   'find-skills', 'humanizer-zh', 'mineru-file-processing', 'workflow-skill-creator',
+  'pi-learn',
 ];
 // Only known legacy distribution directories are retired; user skills are preserved.
 export const retiredSkills = [
