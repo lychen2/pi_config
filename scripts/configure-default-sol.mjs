@@ -54,9 +54,6 @@ async function main() {
   const settingsPath = join(agent, "settings.json");
   const settings = JSON.parse(await readFile(settingsPath, "utf8"));
   const sol = JSON.parse(await readFile(new URL("../config/sol-pi.json", import.meta.url), "utf8"));
-  if (!settings.defaultProvider || !settings.defaultModel) throw new Error("Set Pi's default provider/model before configuring the reducer.");
-  sol.evidencePreservingReducerProvider = settings.defaultProvider;
-  sol.evidencePreservingReducerModel = settings.defaultModel;
   const projectSol = join(process.cwd(), ".pi", "sol-pi.json");
   if (await exists(projectSol)) throw new Error(`Project override exists: ${projectSol}; reconcile it before migration.`);
   const webPath = process.env.PI_CODING_AGENT_DIR

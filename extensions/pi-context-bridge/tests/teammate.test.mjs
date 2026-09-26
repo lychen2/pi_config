@@ -96,13 +96,20 @@ test("Pi validates the public schema and streaming previews tolerate incomplete 
   assert.equal(previewTeammateDispatch(valid).tasks[0].prompt, task.goal);
 });
 
-test("bridge registers the real upstream extension without loading another package copy", async () => {
+test("bridge registers a lightweight teammate proxy and loads upstream on first use", async () => {
   const loaded = await jiti.import("../teammate.ts");
-  const tools = [], events = [], commands = [];
+  const tools = [], events = [], commands = [], ownershipEvents = [];
+  const listeners = new Map();
   const pi = {
     registerTool: tool => tools.push(tool),
     on: name => events.push(name),
-    events: { on: () => () => {}, emit() {} },
+    events: {
+      on: (name, handler) => { const handlers = listeners.get(name) ?? []; handlers.push(handler); listeners.set(name, handlers); return () => {}; },
+      emit: (name, payload) => {
+        if (name === "cockpit:ui-ownership") ownershipEvents.push(payload);
+        for (const handler of listeners.get(name) ?? []) handler(payload);
+      },
+    },
     registerCommand: name => commands.push(name),
     registerShortcut() {}, registerMessageRenderer() {},
     getActiveTools: () => [], getAllTools: () => [], setActiveTools() {},
@@ -110,22 +117,17 @@ test("bridge registers the real upstream extension without loading another packa
   await loaded.default(pi);
   const dispatch = tools.find(tool => tool.name === "teammate");
   assert.ok(dispatch);
-  assert.ok(tools.some(tool => tool.name === "observe"));
+  assert.equal(tools.length, 1);
   const { TeammateDispatchSchema } = await jiti.import("../teammate-contract.ts");
   assert.deepEqual(dispatch.parameters, TeammateDispatchSchema);
   assert.equal(dispatch.parameters.properties.tasks.items.properties.prompt, undefined);
   assert.deepEqual(dispatch.parameters.properties.tasks.items.required, ["goal", "access", "allowedPaths", "checks", "stopWhen"]);
   assert.doesNotMatch(JSON.stringify(dispatch.parameters), /\(\?[=!<]/, "provider JSON schemas reject regex lookaround");
-  assert.throws(() => dispatch.execute("test", { mode: "expert", tasks: [{ prompt: "test" }] }), /Invalid teammate contract/);
-  assert.throws(() => dispatch.execute("test", { tasks: [{ goal: "missing fields" }] }), /Invalid teammate contract/);
-  const cancelled = await dispatch.execute("cancelled", { tasks: [{ goal: "Review src/a.ts", access: "read-only", allowedPaths: [], checks: ["Cite evidence"], stopWhen: "Return review" }] }, AbortSignal.abort());
-  assert.equal(cancelled.isError, true);
-  assert.match(cancelled.content[0].text, /cancelled before start/);
-  assert.ok(commands.includes("teammate-models"));
-  assert.ok(events.includes("session_start"));
+  assert.equal(typeof dispatch.execute, "function");
+  assert.equal(commands.length, 5);
+  assert.equal(events.includes("session_start"), true);
 
-  // Exercise the real discovery path: activate the registered definition, not
-  // an upstream schema copy or a search-result schema reconstructed by the model.
+  // Exercise the real discovery path before loading: activate the registered proxy schema.
   const { createSearchToolBm25 } = await import("../../pi-default-workbench/deferred-tools/search-tool-bm25.ts");
   let active = ["read", "search_tool_bm25"];
   const discovery = createSearchToolBm25({
@@ -139,4 +141,13 @@ test("bridge registers the real upstream extension without loading another packa
   const loadedSchema = [dispatch].find(tool => active.includes(tool.name)).parameters;
   assert.deepEqual(loadedSchema, TeammateDispatchSchema);
   assert.deepEqual(found.details.tools[0].schemaKeys, ["background", "concurrency", "tasks"]);
+
+  const claimed = { agents: true, sessionList: false, quiet: false };
+  pi.events.emit("cockpit:ui-ownership", claimed);
+  const cancelled = await dispatch.execute("cancelled", { tasks: [{ goal: "Review src/a.ts", access: "read-only", allowedPaths: [], checks: ["Cite evidence"], stopWhen: "Return review" }] }, AbortSignal.abort());
+  assert.equal(cancelled.isError, true);
+  assert.deepEqual(ownershipEvents, [claimed, claimed], "lazy teammate must receive the earlier agent-widget claim");
+  assert.match(cancelled.content[0].text, /cancelled before start/);
+  assert.ok(tools.some(tool => tool.name === "observe"));
+  assert.ok(events.includes("session_start"));
 });

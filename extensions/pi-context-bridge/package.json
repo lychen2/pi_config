@@ -22,6 +22,7 @@
     "teammate.ts",
     "teammate-contract.ts",
     "patch-teammate.mjs",
+    "teammate-config.json",
     "README.md"
   ],
   "pi": {

@@ -4,6 +4,7 @@ import { mkdtempSync, readFileSync, writeFileSync, readdirSync, existsSync } fro
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { configureTeammate } from "../scripts/configure-teammate.mjs";
+import teammateConfig from "../extensions/pi-context-bridge/teammate-config.json" with { type: "json" };
 
 test("profile configuration preserves existing profiles, backs up and is idempotent", () => {
   const dir = mkdtempSync(join(tmpdir(), "teammate-config-"));
@@ -13,9 +14,9 @@ test("profile configuration preserves existing profiles, backs up and is idempot
   configureTeammate(dir);
   const configured = JSON.parse(readFileSync(file, "utf8"));
   assert.deepEqual(configured.profiles.custom, previous.profiles.custom);
-  assert.equal(configured.defaultProfile, "glm-flash");
-  assert.ok(Object.values(configured.profiles["glm-flash"].mappings).every(model => model === "manager/glm-5.3-flash"));
-  assert.equal(readdirSync(dir).filter(name => name.includes("pre-glm")).length, 1);
+  assert.equal(configured.defaultProfile, teammateConfig.profile.id);
+  assert.ok(Object.values(configured.profiles[teammateConfig.profile.id].mappings).every(model => model === teammateConfig.model));
+  assert.equal(readdirSync(dir).filter(name => name.includes(`pre-${teammateConfig.profile.id}`)).length, 1);
   configureTeammate(dir);
   assert.equal(readdirSync(dir).length, 2);
 });

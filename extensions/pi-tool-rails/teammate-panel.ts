@@ -7,7 +7,7 @@ export const TEAMMATE_PANEL_TOGGLE = Key.ctrlAlt("a");
 type Row = {
   correlationId: string; agent: string; name?: string; task?: string; status: string;
   startedAt?: number; durationMs?: number; toolCount?: number; tokens?: number;
-  resolvedModel?: string; lastMessage?: string; error?: string; parent?: string;
+  resolvedModel?: string; requestedModel?: string; lastMessage?: string; error?: string; parent?: string;
 };
 const object = (v: unknown): Record<string, any> => v !== null && typeof v === "object" ? v as Record<string, any> : {};
 const clean = (v: unknown): string => typeof v === "string" ? v.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "").replace(/[\x00-\x1f\x7f-\x9f]/g, " ").replace(/\s+/g, " ").trim() : "";
@@ -37,6 +37,7 @@ export class TeammatePanelStore {
           toolCount: typeof p.toolCount === "number" ? p.toolCount : old?.toolCount,
           tokens: typeof p.tokens === "number" ? p.tokens : old?.tokens,
           resolvedModel: clean(p.resolvedModel) || old?.resolvedModel,
+          requestedModel: clean(p.requestedModel) || old?.requestedModel,
           lastMessage: clean(p.lastMessage) || old?.lastMessage, error: clean(p.error) || old?.error,
         });
       }
@@ -101,15 +102,29 @@ export function installTeammatePanel(pi: ExtensionAPI): void {
   let store = new TeammatePanelStore();
   let ctx: ExtensionContext | undefined;
   let expanded = true;
-  let timer: ReturnType<typeof setInterval> | undefined;
   let requestRender: (() => void) | undefined;
+  let timer: ReturnType<typeof setInterval> | undefined;
+  let mounted = false;
   const own = (agents: boolean) => pi.events.emit("cockpit:ui-ownership", { agents, sessionList: false, quiet: false });
   const draw = () => {
     if (!ctx?.hasUI) return;
-    ctx.ui.setWidget(TEAMMATE_PANEL_KEY, store.rows.size ? (tui, theme) => {
-      requestRender = () => tui.requestRender();
-      return { [AGENTS_PANEL_TAG]: true, render: (width: number) => renderTeammatePanel(store, theme, width, expanded), invalidate() {} };
-    } : undefined, { placement: "aboveEditor" });
+    if (!store.rows.size) {
+      if (mounted) ctx.ui.setWidget(TEAMMATE_PANEL_KEY, undefined);
+      mounted = false;
+      requestRender = undefined;
+      if (timer) clearInterval(timer);
+      timer = undefined;
+      return;
+    }
+    if (!mounted) {
+      ctx.ui.setWidget(TEAMMATE_PANEL_KEY, (tui, theme) => {
+        requestRender = () => tui.requestRender();
+        return { [AGENTS_PANEL_TAG]: true, render: (width: number) => renderTeammatePanel(store, theme, width, expanded), invalidate() {} };
+      }, { placement: "aboveEditor" });
+      mounted = true;
+    } else {
+      requestRender?.();
+    }
     if ([...store.rows.values()].some(active)) {
       timer ??= setInterval(() => requestRender?.(), 1000);
       timer.unref?.();
@@ -120,7 +135,9 @@ export function installTeammatePanel(pi: ExtensionAPI): void {
   }));
   pi.on("session_start", (_event, context) => {
     if (timer) clearInterval(timer);
-    timer = undefined; requestRender = undefined;
+    timer = undefined;
+    if (mounted && ctx?.hasUI) ctx.ui.setWidget(TEAMMATE_PANEL_KEY, undefined);
+    mounted = false; requestRender = undefined;
     ctx = context; store = new TeammatePanelStore(); expanded = true;
     if (ctx.hasUI) own(true);
     draw();
@@ -154,7 +171,7 @@ export function installTeammatePanel(pi: ExtensionAPI): void {
             },
             render(width) {
               const current = store.rows.get(row.correlationId) ?? row;
-              const text = [current.name || current.agent, `Status: ${current.status}`, `Model: ${current.resolvedModel || "manager/glm-5.3-flash (policy)"}`, `ID: ${current.correlationId}`, "", "Task", current.task || "No task text received", "", current.error ? "Error" : "Latest result / progress", current.error || current.lastMessage || "No result received yet"].join("\n");
+              const text = [current.name || current.agent, `Status: ${current.status}`, `Model: ${current.resolvedModel || current.requestedModel || "unresolved"}`, `ID: ${current.correlationId}`, "", "Task", current.task || "No task text received", "", current.error ? "Error" : "Latest result / progress", current.error || current.lastMessage || "No result received yet"].join("\n");
               const lines = new Text(text, 1, 0).render(width);
               const height = Math.max(1, tui.terminal.rows - 4);
               scroll = Math.min(scroll, Math.max(0, lines.length - height));
@@ -169,9 +186,10 @@ export function installTeammatePanel(pi: ExtensionAPI): void {
     if (timer) clearInterval(timer);
     timer = undefined; requestRender = undefined;
     if (ctx?.hasUI) {
-      ctx.ui.setWidget(TEAMMATE_PANEL_KEY, undefined);
+      if (mounted) ctx.ui.setWidget(TEAMMATE_PANEL_KEY, undefined);
       own(false);
     }
+    mounted = false;
     for (const off of dispose) off();
     ctx = undefined;
   });

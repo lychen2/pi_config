@@ -15,7 +15,7 @@ Use `checkpoint` for a meaningful verified decision, failed approach, or phase h
 
 `teammate.ts` loads the exact-pinned `pi-maestro-teammate@2.6.2` dependency. Do not also install its standalone package: that would register the tools twice. The default profile still installs four local aggregate packages.
 
-`patch-teammate.mjs` applies a version-checked, idempotent patch at postinstall and before loading the extension. Both task routing and the single-agent execution boundary force `manager/glm-5.3-flash` and an empty fallback list, including explicitly supplied models and nested child dispatches. Alternate backends and model-registry mode are rejected. Provider failures remain failures instead of switching models. The model must exist in the host's model registry with valid credentials. Swapping the policy model only changes `TEAMMATE_MODEL`: an already-patched install reverts its previous marker block before the new one is applied.
+`teammate-config.json` is the single source for the enforced teammate model and profile name. The installer-generated routing profile and `patch-teammate.mjs` both read it. The patch applies a version-checked, idempotent policy at postinstall and before loading the extension. Task routing and the single-agent execution boundary force the configured model with no fallbacks, including explicitly supplied models and nested child dispatches. Alternate backends and model-registry mode are rejected. Provider failures remain failures instead of switching models. The configured model must exist in the host's model registry with valid credentials. After changing the config, restart Pi to apply the policy.
 
 The bridge replaces the model-facing `teammate` schema with a compact structured contract from `teammate-contract.ts`. Each task requires `goal`, `access`, `allowedPaths`, `checks` and `stopWhen`. Choose `access: "read-only"` and `allowedPaths: []` for investigation; `access: "edit"` requires concrete write paths and the `general` role. Checks must contain at least one specific verification or evidence requirement. Optional task fields are `agent`, `name` and `dependsOn`; dispatch options are `concurrency` (1–4, default 2) and `background`.
 
@@ -37,9 +37,9 @@ Every task receives bounded-work instructions: no unrequested dependency/configu
 }
 ```
 
-The installer runs `node scripts/configure-teammate.mjs`, which creates the global `glm-flash` routing profile, preserves other profiles, and backs up an existing v3 configuration before changing it. Older configuration versions require migration first. UI profile edits cannot override the execution policy.
+The installer runs `node scripts/configure-teammate.mjs`, which creates the configured routing profile, preserves other profiles, and backs up an existing v3 configuration before changing it. Older configuration versions require migration first. UI profile edits cannot override the execution policy.
 
-To upgrade upstream, review the routing and execution code, update the exact dependency and patch version/anchors, then run `npm test` and `npm run typecheck`. Never silently skip a patch that no longer matches. A real child smoke test should deliberately pass another model and fallback and verify that the result still reports `manager/glm-5.3-flash`.
+To upgrade upstream, review the routing and execution code, update the exact dependency and patch version/anchors, then run `npm test` and `npm run typecheck`. Never silently skip a patch that no longer matches. A real child smoke test should deliberately pass another model and fallback and verify that the result still reports the model in `teammate-config.json`.
 
 The companion dashboard lives in `pi-tool-rails/teammate-panel.ts`; it does not require `pi-cockpit`. Restart Pi after installing to discover the new bridge entrypoint.
 

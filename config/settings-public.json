@@ -84,6 +84,7 @@
     "manager/glm-5.3-flashx",
     "manager/gpt-5.6-terra",
     "manager/gpt-6-astra",
+    "manager/gpt-6-luna",
     "manager/grok-4.6",
     "manager/laguna-s-2.1",
     "manager/mimo-v2.5",

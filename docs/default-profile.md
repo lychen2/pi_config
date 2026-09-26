@@ -22,7 +22,7 @@ SoL must precede presentation overrides in the package list: Pi's duplicate tool
 
 Adaptive mode keeps Magic Context's four knowledge tools active when registered. Teammate, its lifecycle controls, the single `mcp` proxy and isolated Chromium are discovered only when needed; they do not add startup schemas. Explicit tool/package disables still win. Fast intentionally excludes these integrations, while full exposes all enabled tools. Discovered tools remain active for the session until the selection is reset or changed.
 
-Use teammate for independent bounded work with distinct write ownership. Small sequential tasks stay in the parent agent. The single-model teammate policy pins every task to `manager/glm-5.3-flash` with no fallbacks.
+Use teammate for independent bounded work with distinct write ownership. Small sequential tasks stay in the parent agent. The single-model teammate policy pins every task to the model in `extensions/pi-context-bridge/teammate-config.json` with no fallbacks.
 
 The external manifest installs `pi-mcp-adapter`. `scripts/configure-mcp-proxy.mjs` (also called by the installer) switches an existing `zen-browser` server to `directTools: false` and `lifecycle: "lazy-keep-alive"`. It backs up the local file, preserves server commands/credentials and other servers, and does nothing when no Zen server exists. Browser provisioning and credentials are intentionally not copied into this repository.
 
@@ -78,6 +78,22 @@ The external package list includes [i-have-adhd](https://github.com/ayghri/i-hav
 New sessions enable the mode automatically and show `ADHD ON`. Use `/i-have-adhd off` or `/i-have-adhd on` to change it for the current session. A saved session choice takes precedence over the default. Restart Pi after installation to load the package and configuration.
 
 The extension injects its bundled skill rules for action-first, numbered multi-step answers. `APPEND_SYSTEM.md` continues to request everyday language, concrete explanations and useful qualifications. No separate copy of the upstream skill is maintained in this repository.
+
+## Skill output conventions
+
+The default deployed skills keep operating instructions, internal checks, and editorial notes separate from reader-facing content. Omit routine process commentary. Put a necessary review note in a native comment; when the format has no comments, put it in the conversation outside the artifact. Captions, footnotes, speaker notes, and rendered bibliography fields remain content. Scientific conditions needed to interpret a result remain with that result.
+
+Validate external data and permissions at system boundaries, then reuse normalized records and established internal contracts. This does not remove checks of scientific assumptions or numerical correctness. Detailed audit procedures apply when an audit is requested, rather than becoming the default output for drafting, lookup, plotting, or calculation.
+
+## Optics research
+
+`optics-research` is installed as a local skill by `scripts/deploy-skills.mjs`. Its metadata provides the entry point; literature and physical-verification references load only when needed. `APPEND_SYSTEM.md` keeps brief defaults for physical checks, traceable evidence, raw-data preservation, and authorization for confidential uploads or hardware operations; detailed research procedures stay in the skills. No extra extension, model, solver, or Python dependency is installed by this change.
+
+After deployment, use `/reload` to refresh the prompt and skill resources. Invoke `/skill:optics-research` with a research question, paper, calculation, or simulation task. Existing project instructions and explicit resource disables still apply.
+
+The workflow reuses the installed literature, symbolic mathematics, experimental design, uncertainty, statistics, writing, and visualization skills. It adds optics-specific checks for conventions, approximation regimes, sampling, convergence, material data, and fair comparison of reported results. Passing these checks does not establish a scientific claim without adequate evidence.
+
+The [research collaboration post](https://linux.do/t/topic/2059718) informed the use of foundational plus recent literature, layered reading, critical review, and maintained research notes. Multi-model consensus and generated scientific images are not treated as validation. Reusable workflows are captured only after successful use or an explicit user request.
 
 ## Verification and references
 

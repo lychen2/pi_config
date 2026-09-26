@@ -58,7 +58,7 @@ test("mounts with UI, toggles, opens details, resets and releases ownership", as
     registerShortcut: (name, value) => shortcuts.set(name, value),
     registerCommand: (name, value) => commands.set(name, value),
   });
-  let detailLines = [];
+  let detailLines = [], renders = 0;
   const ctx = { hasUI: true, ui: { setWidget: (key, factory) => widgets.push({ key, factory }), select: async (_title, labels) => labels[0], notify() {}, custom: async factory => {
     const detail = factory({ requestRender() {}, terminal: { rows: 24 } }, theme, {}, () => {});
     detailLines = detail.render(80);
@@ -67,14 +67,22 @@ test("mounts with UI, toggles, opens details, resets and releases ownership", as
   hooks.get("session_start")({}, ctx);
   assert.equal(emitted[0][1].agents, true);
   events.get("teammate:started")({ correlationId: "a", agent: "general", status: "running" });
-  const component = () => widgets.at(-1).factory({ requestRender() {} }, theme);
+  const component = () => widgets.at(-1).factory({ requestRender() { renders++; } }, theme);
   assert.equal(component()[AGENTS_PANEL_TAG], true);
   assert.equal(component().render(80).length, 2);
+  const mounted = widgets.length;
+  events.get("teammate:message")({ correlationId: "a", progress: [{ correlationId: "a", agent: "general", status: "running", toolCount: 2 }] });
+  assert.equal(widgets.length, mounted, "progress should redraw without remounting the fullscreen widget");
   await shortcuts.get(TEAMMATE_PANEL_TOGGLE).handler(ctx);
+  assert.equal(widgets.length, mounted, "toggle should redraw without remounting");
+  assert.ok(renders >= 2, "changes should request an in-place render");
   assert.equal(component().render(80).length, 1);
   await commands.get("agents-panel").handler("open", ctx);
   assert.match(detailLines.join("\n"), /Status: running/);
-  assert.match(detailLines.join("\n"), /glm-5\.3-flash/);
+  assert.match(detailLines.join("\n"), /Model: unresolved/);
+  events.get("teammate:message")({ correlationId: "a", progress: [{ correlationId: "a", agent: "general", status: "running", requestedModel: "manager/gpt-6-luna" }] });
+  await commands.get("agents-panel").handler("open", ctx);
+  assert.match(detailLines.join("\n"), /Model: manager\/gpt-6-luna/);
   hooks.get("session_start")({}, ctx);
   assert.equal(widgets.at(-1).factory, undefined);
   hooks.get("session_shutdown")({}, ctx);

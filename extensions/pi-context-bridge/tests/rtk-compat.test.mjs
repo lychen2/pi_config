@@ -8,20 +8,26 @@ const jiti = createJiti(import.meta.url);
 const { compactToolResult } = await jiti.import("../node_modules/pi-rtk-optimizer/src/output-compactor.ts");
 const { DEFAULT_RTK_INTEGRATION_CONFIG } = await jiti.import("../node_modules/pi-rtk-optimizer/src/types.ts");
 
-test("production entry loads upstream RTK once through scoped registration", async () => {
+test("production entry defers RTK import until the first user input", async () => {
   const handlers = new Map();
   const commands = [];
-  await registerRtk({
+  const pi = {
     on(name, handler) {
       const existing = handlers.get(name) ?? [];
       existing.push(handler);
       handlers.set(name, existing);
+      return () => {};
     },
     registerCommand(name) { commands.push(name); },
-  });
-  assert.ok(commands.length > 0);
-  assert.equal(handlers.get("tool_call").length, 1);
-  assert.equal(handlers.get("tool_result").length, 1);
+    registerTool() {},
+  };
+  await registerRtk(pi);
+  assert.deepEqual(commands, ["rtk"]);
+  assert.equal(handlers.has("tool_call"), false);
+  assert.equal(handlers.has("input"), true);
+  await handlers.get("input")[0]({ type: "input", text: "hello", source: "interactive" }, {});
+  assert.ok(handlers.has("tool_call"));
+  assert.ok(handlers.has("tool_result"));
   assert.ok(handlers.has("session_start"));
   assert.equal(handlers.has("tool_execution_update"), false);
 });

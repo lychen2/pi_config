@@ -4,7 +4,7 @@
   "observationPack": true,
   "evidencePreservingReducer": true,
   "evidencePreservingReducerProvider": "manager",
-  "evidencePreservingReducerModel": "deepseek-v4-flash",
+  "evidencePreservingReducerModel": "gpt-6-luna",
   "onlineContextCompact": true,
   "cacheWriteReadRatio": 12.5
 }

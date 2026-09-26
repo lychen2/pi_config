@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { enableTun, knowledgeOnly, orderSolFirst } from "./configure-default-sol.mjs";
 import { createJiti } from "../extensions/pi-context-bridge/node_modules/jiti/lib/jiti.mjs";
 const jiti = createJiti(import.meta.url);
@@ -22,6 +23,12 @@ test("SoL registers before presentation overrides without dropping packages", ()
   assert.deepEqual(orderSolFirst(packages), [sol, "local:rails", "npm:memory"]);
   assert.deepEqual(orderSolFirst(orderSolFirst(packages)), orderSolFirst(packages));
   assert.throws(() => orderSolFirst(["local:rails"]), /exactly one/);
+});
+
+test("SoL reducer remains pinned to the dedicated luna model", async () => {
+  const config = JSON.parse(await readFile(new URL("../config/sol-pi.json", import.meta.url), "utf8"));
+  assert.equal(config.evidencePreservingReducerProvider, "manager");
+  assert.equal(config.evidencePreservingReducerModel, "gpt-6-luna");
 });
 
 test("knowledge-only migration preserves models, memories and unrelated options", () => {

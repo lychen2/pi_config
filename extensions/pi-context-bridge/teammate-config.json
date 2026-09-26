@@ -1,0 +1,7 @@
+{
+  "model": "manager/gpt-6-luna",
+  "profile": {
+    "id": "gpt-6-luna",
+    "name": "GPT-6 Luna"
+  }
+}
