@@ -681,19 +681,19 @@ mv references_fixed.bib references.bib
 5. Missing recommended fields
 6. Formatting inconsistencies
 
-### 5. Document Exceptions
+### 5. Handle optional fields and editorial questions
 
-For entries that can't be fixed:
+Omit optional fields that do not apply. A publication date alone does not determine whether a DOI exists. If a lookup remains relevant to the task, use a non-rendered BibTeX comment rather than a `note` field; when no artifact comment is available, ask the question in the conversation. Keep the reference itself limited to bibliographic facts.
 
 ```bibtex
+@comment{Editorial query for Old1950: confirm whether the publisher assigned a DOI.}
 @article{Old1950,
   author = {Smith, John},
   title = {Title},
   journal = {Obscure Journal},
   year = {1950},
   volume = {12},
-  pages = {34--56},
-  note = {DOI not available for publications before 2000}
+  pages = {34--56}
 }
 ```
 

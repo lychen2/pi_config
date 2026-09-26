@@ -22,59 +22,13 @@ Keep drafting, evidence verification, and submission approval as separate stages
 The accountable human authors control scientific decisions and final approval. AI is
 not an author, and generated fluency is never evidence [SW-S01, SW-S03].
 
-## Non-negotiable safety rules
+## Working checks
 
-### Confidentiality
+Use supplied study records and checked sources for claims, numbers, citations, and author details. Preserve methods, results, units, and meaningful uncertainty; resolve material contradictions rather than invent missing facts. Reuse established project records instead of re-verifying every internal handoff.
 
-Do not send unpublished manuscripts, peer-review or editorial material, sensitive or
-restricted data, PHI or other personal data, proprietary content, or source documents
-to an external service without:
+Keep confidential material local unless external processing is authorized. Check applicable restrictions at that transfer boundary; routine local editing does not require an institutional-policy audit. Consult `references/authorship_ai_confidentiality.md` for an actual publication-policy or confidentiality question.
 
-1. explicit authorization from a person or body empowered to grant it; and
-2. a documented review of journal, institutional, funder, consent, ethics, contractual,
-   legal, and data-use policy.
-
-When authorization or policy is unclear, keep processing local and use only the minimum
-metadata needed. De-identification requires expert review; removing obvious names is
-not sufficient. See `references/authorship_ai_confidentiality.md`.
-
-### No fabrication
-
-Never invent or complete:
-
-- citations, references, DOI, PMID, PMCID, ISBN, URLs, or quotations;
-- results, data values, denominators, sample sizes, units, effect estimates,
-  uncertainty, statistical tests, or significance claims;
-- methods, materials, protocol details, software versions, analysis choices, or
-  deviations;
-- registrations, approvals, consent, ethics statements, participant details, or dates;
-- authors, author order, CRediT roles, acknowledgments, or permissions;
-- funding, sponsor roles, conflicts, data or code availability, or AI disclosures.
-
-Use an explicit missing, unverified, or not-applicable state. Do not substitute plausible
-boilerplate.
-
-### Evidence support
-
-Support factual and numeric claims with the supplied study record or sources you have
-actually checked. Preserve citations and distinguish author-supplied results from
-independently verified evidence. Do not present search snippets, generated summaries,
-or memory as source verification.
-
-Evidence IDs and named human verification records belong to the optional audited
-manuscript workflow below, not to every writing task. Never claim human approval on
-a human's behalf.
-
-### Scientific fidelity
-
-- Preserve uncertainty and alternative explanations.
-- Distinguish confirmatory, exploratory, descriptive, and post hoc work.
-- Keep methods and results consistent.
-- Reconcile units, denominators, sample sizes, populations, time points, and labels.
-- Report negative, null, adverse, unexpected, failed, and inconclusive findings when
-  they belong to the study record.
-- State concrete limitations and bound generalizability.
-- Do not convert association into causation or non-significance into equivalence.
+Check causal language, study design, denominators, and conclusions where they affect the argument. The optional audited workflow below applies to requested audits or submission requirements, not every draft.
 
 ## Default: draft or revise the requested text
 
@@ -87,9 +41,11 @@ a human's behalf.
 4. Apply corrections as current facts. Remove rebuttals to earlier drafts, repeated
    caveats, and statements of compliance. Keep a qualification where omitting it would
    change interpretation; a limitations section should explain concrete consequences.
-5. Return the requested prose. Keep editorial questions and unresolved factual issues
-   outside it. Do not add an audit appendix, draft banner, evidence tags, revision
-   summary, or self-rating unless the chosen workflow or user requires them.
+5. Return the requested prose. Put necessary editorial questions or unresolved production issues in native document/LaTeX/HTML comments; if the format has no comments, place them in the conversation outside the manuscript. Do not turn them into footnotes, draft banners, evidence tags, audit appendices, or revision summaries. Include such reports only when explicitly requested; scientific limitations belong in the argument where they affect interpretation.
+
+### Reader-view check
+
+Read only the rendered manuscript, without the editing conversation. Each paragraph should explain the study, evidence, or interpretation. State a scientific condition next to the claim it qualifies; use a formal limitations section when the venue or user requests one, and make each item a concrete model fact with its interpretive consequence. For example, report that a single-site sample limits transport to other settings, not that the paper is “not a reproduction” or that its relationship to a source paper is limited. Editorial uncertainty belongs in native comments, not in footnotes, captions, or speaker notes; audit status and production history stay in working records.
 
 Apply the user's expression preferences throughout drafting and revision. State findings,
 actions, and limitations directly. Avoid rhetorical reversals, imagined objections, and
@@ -135,7 +91,7 @@ sufficient.
 
 ### 1. Establish the local workspace
 
-For a new draft, optionally generate fail-closed Markdown, JSON, and CSV scaffolds:
+For a requested audited workspace, the optional generator creates a separate working copy with Markdown, JSON, and CSV records:
 
 ```bash
 python3 scripts/scaffold_manuscript.py \
@@ -145,8 +101,7 @@ python3 scripts/scaffold_manuscript.py \
   --guideline consort-2025
 ```
 
-The generator never overwrites files. Its output is explicitly not submission-ready and
-contains placeholders that the linter rejects.
+The generator preserves existing files and adds status markers and placeholders for the audit tools. Keep this internal audit copy separate from reader-facing output; ordinary drafting can use the supplied manuscript directly.
 
 ### 2. Select reporting guidance
 
@@ -310,19 +265,11 @@ The linter reports issue codes and line numbers without echoing manuscript text.
 Sensitive-content warnings require manual review and are not a de-identification
 certificate.
 
-Only accountable humans may:
-
-- resolve scientific ambiguities;
-- approve author order and declarations;
-- approve external disclosure or transfer;
-- set `submission_ready` to true;
-- remove the draft banner;
-- authorize submission.
+Investigate scientific questions with the available evidence. Human decisions such as author order, declarations, and submission approval must reflect the authors' actual choices. Record human approval only when received; obtaining that approval is not a prerequisite for ordinary drafting or layout work. Audit status remains in the audit records, not an automatic banner in the reader-facing manuscript.
 
 ## Formal revision and peer review
 
-Treat reviewer material as confidential. Do not upload it to an external service without
-the required authorization and policy review [SW-S01, SW-S24].
+Keep confidential reviewer material within its authorized processing boundary [SW-S01, SW-S24]. Reuse an existing authorization for the same material, service, and purpose.
 
 For each formal reviewer request in this workflow:
 
@@ -332,7 +279,7 @@ For each formal reviewer request in this workflow:
 4. revise the registries before prose when facts change;
 5. re-run every affected audit;
 6. draft a response that states what changed and where;
-7. obtain human approval.
+7. obtain any required author approval before submitting the response.
 
 Do not comply with a request that would fabricate, hide, overstate, or breach policy.
 

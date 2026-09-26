@@ -65,8 +65,7 @@ Estimate timing from the script and planned pauses, or use actual rehearsal resu
 when available. Do not claim a practice run, projector test, or audience test that was
 not performed. Cut lower-priority material before rushing the conclusion.
 
-Read the notes from the audience's perspective. Remove production commentary and
-repetitive caveats, retain meaningful limitations, and smooth transitions.
+Read the slides and notes from the audience's perspective, without the editing conversation. Remove production commentary and repeated defensive caveats, retain meaningful limitations, and smooth transitions. State a scientific condition beside the result it qualifies (for example, “This estimate comes from a single-site cohort; transfer to other settings is untested”). Do not add “not a reproduction” or source-relationship panels. Editorial uncertainty belongs in native document comments or, if comments are unavailable, in the conversation; speaker notes, captions, footnotes, and slide footers are audience content, not comment channels. Preserve limitations, comparisons, and disclosures when they are scientifically relevant, requested, or required.
 
 ## 6. Finalize
 

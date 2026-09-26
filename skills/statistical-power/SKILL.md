@@ -129,7 +129,7 @@ Report the **Monte Carlo confidence interval** on the estimate (the harness retu
 
 ## Adjustments people forget
 
-These routinely make the difference between an adequately powered study and an underpowered one. Apply them explicitly and state that you did.
+Apply adjustments relevant to the design and include their numerical consequences in the sample-size calculation.
 
 - **Multiple comparisons.** If the analysis tests *m* hypotheses with a Bonferroni-style correction, power each test at the corrected α (e.g. α/m), which raises n. Better: power on the family-wise or FDR-controlled procedure directly via simulation. Ignoring this silently underpowers every secondary endpoint.
 - **Attrition / dropout / unusable samples.** Power gives the n you need *analyzed*. Inflate the *enrolled* n: `n_enroll = ceil(n_analyzed / (1 − dropout_rate))`. A 20% dropout rate means enrolling 25% more than the formula returns.
@@ -145,7 +145,7 @@ These routinely make the difference between an adequately powered study and an u
 2. **Choose the effect size** on a defensible basis (SESOI > shrunk pilot > convention) and write down the justification.
 3. **Set α and target power.** Conventional defaults are α = 0.05 (two-sided) and power = 0.80; 0.90 is common for confirmatory/clinical work. State them.
 4. **Compute** with `scripts/power.py` (closed-form) or `scripts/simulate_power.py` (simulation).
-5. **Sensitivity analysis.** Recompute across a range of plausible effect sizes and produce a power curve. This is the deliverable, not a single number.
+5. **Sensitivity analysis.** Vary uncertain inputs when they materially change the design decision. A focused calculation with specified inputs can return a single sample size; broader planning may need a range or power curve.
 6. **Apply adjustments** for dropout, clustering, and multiplicity.
 7. **Report** following the template below.
 
@@ -153,7 +153,9 @@ These routinely make the difference between an adequately powered study and an u
 
 ## Reporting template
 
-A defensible power statement contains every input, so a reader could reproduce it. Adapt:
+Lead with the requested sample size, power estimate, or curve. Include inputs needed to interpret it, without narrating the workflow. Use this paragraph when a methods statement is requested. Put necessary editorial notes in native comments, otherwise in the conversation outside the deliverable.
+
+A reproducible power statement can use:
 
 ```
 A priori power analysis was conducted to determine the sample size needed to detect
@@ -172,7 +174,7 @@ For simulation: also state the data-generating assumptions (baseline rate, resid
 ## Common pitfalls
 
 1. **Inventing the effect size** or copying an inflated pilot estimate — the most common way power analyses go wrong.
-2. **Reporting a single n** instead of a sensitivity range / power curve.
+2. **Ignoring uncertainty in planning inputs** when a plausible range would change the required sample size.
 3. **Post-hoc / observed power** — circular and uninformative; use sensitivity analysis or the effect-size CI instead.
 4. **Ignoring clustering** (pseudoreplication) — counting cells/measurements as if they were independent subjects.
 5. **Forgetting dropout** — powering the analyzed n but enrolling the same number.

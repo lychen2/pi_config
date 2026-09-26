@@ -122,7 +122,7 @@ ML conferences value **novelty**, **rigorous experiments**, and **reproducibilit
 2. **Baselines are critical**: Compare against strong, recent baselines
 3. **Ablations expected**: Show what parts of your method matter
 4. **Reproducibility**: Seeds, hyperparameters, compute requirements
-5. **Limitations section**: Honest acknowledgment (increasingly required)
+5. **Limitations**: State concrete conditions and interpretive consequences; use a separately titled section when the current venue requires it or it best serves the discussion
 
 ### Introduction Structure (ML Conferences)
 

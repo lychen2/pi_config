@@ -7,14 +7,18 @@ description: Refactor oversized agent instruction files into concise shared rule
 
 Use this skill to reduce unnecessary instruction context while preserving project-specific constraints. Keep a short, self-contained file when splitting it would add indirection without helping task selection.
 
+## Delivery and scope
+
+Deliver the revised instruction files. Keep review findings and editing boundaries out of their operational rules unless they are themselves an intended rule. Necessary editorial notes go in native comments, otherwise the conversation; routine checklists need not be reported. Preserve useful permission boundaries, while removing repeated defensive checks on trusted internal calls and redundant approval steps. Detailed examples are optional, not required sections.
+
 ## Core Model
 
 Treat the root instruction file as a router, not a rule warehouse. Audit the instruction surfaces as a system: nearest `AGENTS.md` files, skill metadata and bodies, tool/action descriptions, and task-local instructions must have clear ownership and precedence.
 
 - The entry file keeps only high-frequency, long-lived, must-always-apply rules.
 - Detailed task-specific rules move into `docs/` files.
-- The entry file includes a clear “read this doc when...” index.
-- The agent should load only the docs relevant to the current task.
+- When routing to separate documents is useful, state when to read them.
+- Load the documents relevant to the current task.
 
 ## Workflow
 
@@ -52,14 +56,17 @@ Treat the root instruction file as a router, not a rule warehouse. Audit the ins
      - on-demand docs index;
      - always-on safety/tool rules;
      - precedence rules.
-   - Move detailed rules into docs without changing their intent.
-   - Avoid duplicating the same long rule in multiple places.
+   - Move useful detail into references; remove obsolete, duplicate, or explicitly unwanted restrictions rather than relocating them unchanged.
+   - Avoid duplicating the same long rule in multiple places. Give shared content-placement decisions one global owner; skill entrypoints add only domain-specific choices and examples.
+   - Separate instructions for doing the work from the artifact's section outline. Inspect linked templates and examples for contradictory output patterns, including captions, speaker notes, tooltips, and collapsed panels.
+   - Route subject matter and meaningful limitations to the reader-facing result; route actionable editorial issues to native comments or the handoff; delete routine process residue. Do not weaken scientific, safety, or required disclosure content while removing boilerplate.
 
 6. Validate preservation.
    - Compare line counts before and after.
    - Search for critical keywords from the original file across the new entrypoint and docs.
    - Verify the entrypoint tells future agents when to read each doc.
    - Check that no doc contradicts the entrypoint.
+   - Verify edited templates are tracked and actually deployed, not merely changed in ignored local directories. Separate static rule checks from tests of generated agent output; neither guarantees future compliance.
 
 ## Suggested Entrypoint Shape
 

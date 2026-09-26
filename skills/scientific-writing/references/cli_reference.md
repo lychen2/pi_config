@@ -23,7 +23,8 @@ python3 scripts/scaffold_manuscript.py \
 ```
 
 The output directory must not exist. The command never overwrites files. Generated
-documents are explicitly incomplete and not submission-ready.
+status markers and placeholders belong to the internal audit workspace, not automatically
+to reader-facing manuscripts. Keep an audited copy separate from any requested deliverable.
 
 ## Manifest validation
 

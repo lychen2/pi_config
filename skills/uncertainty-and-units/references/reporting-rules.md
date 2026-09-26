@@ -1,8 +1,6 @@
 # Reporting rules
 
-A number without its uncertainty and without a statement of what that uncertainty means
-cannot be checked, compared, or reused. This file covers what has to accompany a
-reported result.
+Define uncertainty clearly enough for the result to be interpreted and reused. Shared definitions can appear once in a caption, table header, or methods section. These are scientific content; execution checks and editorial questions belong in native comments, or in the conversation when comments are unavailable.
 
 ## Round the uncertainty first
 
@@ -36,10 +34,9 @@ value, so `12.346(23)` is 12.346 ± 0.023 and `1234(25)` is 1234 ± 25. When the
 uncertainty's last significant digit falls left of the decimal point the notation is
 ambiguous and the scientific form must be used instead.
 
-## What has to be stated alongside
+## Define the uncertainty
 
-A bare `±` is ambiguous. Readers cannot tell a standard uncertainty from an expanded
-one, a standard deviation from a standard error, or a 95% interval from a 68% one. State:
+Identify what `±` means wherever it is not already established. Use the relevant details below; avoid repeating a full reporting paragraph for every value:
 
 1. **Which quantity the number is** — combined standard uncertainty u_c, expanded
    uncertainty U, standard deviation of a sample, standard error of a mean, or a
@@ -61,8 +58,7 @@ The two standard forms:
 > for ν_eff = 9 degrees of freedom, and defines an interval estimated to have a level of
 > confidence of 95%.
 
-The second is verbose because it has to be. `scripts/format_result.py --coverage-factor`
-generates the sentence.
+The second form is useful for a detailed metrology report. Elsewhere, a compact form such as `m = (100.02147 ± 0.00079) g (95% expanded interval, k = 2.26)` can refer to methods that define the calculation. Use `scripts/format_result.py --coverage-factor` when the full statement is needed, not as mandatory prose for every answer.
 
 ## SD, SEM, and CI in figures
 

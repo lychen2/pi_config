@@ -103,4 +103,5 @@ try {
 
 run(process.execPath, [path.join(repoRoot, "scripts", "sync-large-beautify.mjs"), "--check"], repoRoot);
 run(process.execPath, [path.join(repoRoot, "scripts", "verify-install-regressions.mjs")], repoRoot);
+run(process.execPath, ["--test", path.join(repoRoot, "scripts", "prompt-content.test.mjs"), path.join(repoRoot, "scripts", "deploy-skills.test.mjs")], repoRoot);
 console.log(`\nRepository verification passed for ${packages.length} extension packages${piVersion ? ` on Pi ${piVersion}` : ""}.`);

@@ -27,6 +27,22 @@
 
 # Generated or machine-specific material
 **/assets/
+# Curated source templates with reviewed deliverable-content guidance.
+!skills/scientific-writing/assets/
+skills/scientific-writing/assets/*
+!skills/scientific-writing/assets/REPORT_FORMATTING_GUIDE.md
+!skills/scientific-slides/assets/
+skills/scientific-slides/assets/*
+!skills/scientific-slides/assets/beamer_template_conference.tex
+!skills/scientific-slides/assets/beamer_template_seminar.tex
+!skills/scientific-slides/assets/beamer_template_defense.tex
+!skills/venue-templates/assets/
+skills/venue-templates/assets/*
+!skills/venue-templates/assets/journals/
+skills/venue-templates/assets/journals/*
+!skills/venue-templates/assets/journals/plos_one.tex
+!skills/venue-templates/assets/journals/nature_article.tex
+!skills/venue-templates/assets/journals/neurips_article.tex
 **/dist/
 **/build/
 .DS_Store

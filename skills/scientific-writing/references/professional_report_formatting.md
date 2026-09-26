@@ -1,82 +1,32 @@
-# Safe Formatting for Reports and Manuscripts
+# Formatting reports and manuscripts
 
-## Content before presentation
-
-The former LaTeX style and demonstration report were removed. They could turn
-plausible-looking placeholder findings into a polished PDF. This version uses
-format-neutral Markdown and JSON/CSV registries so incompleteness remains visible.
-
-Do not format a draft as submission-ready while any verification gate is incomplete.
-Visual polish is not evidence.
+Format the requested text for its audience and destination. Drafting, layout, scientific review, and submission approval are separate tasks; improving layout does not require an evidence audit or authorize submission.
 
 ## Workflow
 
-1. Create a local scaffold.
-2. Draft and verify content in Markdown.
-3. Run manifest, claim, reference, consistency, authorship, coverage, and lint checks.
-4. Obtain accountable human approval.
-5. Copy the verified content into the current venue template.
-6. Re-run checks that remain applicable and inspect the rendered output manually.
+1. Use the supplied manuscript and existing template. Obtain current official venue rules when the task depends on submission requirements.
+2. Preserve scientific content, numbers, units, equations, and citations through formatting.
+3. Inspect the rendered result for clipping, broken references, reading order, and misplaced figures or tables. Recheck affected content after changes.
+4. Deliver the requested source and rendered files. Keep necessary editorial questions in native comments; when comments are unavailable, put them in the conversation rather than adding a draft banner or warning section to the manuscript.
 
-For a journal or conference, use its current author instructions and official template.
-For an institutional report or thesis, use the institution's controlled template.
+## Missing information and audit records
 
-## Fail-closed placeholder policy
+Resolve important missing facts from available evidence or ask a focused question. Keep unresolved editing notes in comments, without replacing missing data, citations, or declarations with plausible boilerplate. Scientific conditions that affect interpretation belong in the methods or argument.
 
-Permitted draft markers are intentionally conspicuous, such as `[[TODO:...]]`. The
-language linter treats them as errors. Never replace an unresolved marker with generic
-boilerplate, a guessed number, a fabricated statement, or an invented citation.
+If the user explicitly requests an audited workspace, use its manifests and approval records for that purpose. Bundled scaffold and lint tools create an internal audit copy with visible status markers; keep that copy separate from the reader-facing manuscript. Retain its actual verification status rather than marking it approved merely to pass a check.
 
-Keep:
+## Layout
 
-- `submission_ready` false;
-- the draft banner visible;
-- missing declaration statuses explicit;
-- human and confidentiality gates incomplete;
-
-until the underlying records are verified.
-
-## Headings and navigation
-
-- Use a single title and logical heading levels.
-- Preserve heading order when converting formats.
-- Include lists of tables or figures only when useful or required.
-- Use stable internal labels for tables, figures, appendices, and supplements.
-- Ensure generated bookmarks and reading order match the visible structure.
-
-## Typography and layout
-
-- Use the venue's prescribed font, spacing, margins, page size, and line numbering.
-- Do not use color, weight, or position as the only carrier of meaning.
-- Keep equations, symbols, units, subscripts, and superscripts intact through
-  conversion.
-- Check widows, orphans, clipped content, broken links, and misplaced floats manually.
-
-## Tables, figures, and accessibility
-
-Follow `figures_tables.md`. Verify alt text, captions, provenance, permissions, color
-independence, reading order, label legibility, and final-size rendering. Do not create a
-decorative visual simply to make a report appear complete.
+- Use a clear title, logical heading levels, and stable figure/table references.
+- Follow the requested template's typography, spacing, page size, and numbering.
+- Preserve symbols, subscripts, superscripts, and equation meaning during conversion.
+- Use readable labels, meaningful captions, and accessible contrast and reading order.
+- Include lists of figures, elaborate front matter, or additional navigation when useful or required.
 
 ## References and declarations
 
-References must render from verified metadata. After conversion, inspect identifier
-links, special characters, author order, and citation order.
+Render citations from the bibliography and check identifiers and special characters affected by conversion. Reuse already checked records. Author roles, ethics, funding, availability, and disclosure statements must reflect the study's actual records; a template supplies structure, not those facts.
 
-Declarations must come from validated records. A style template must never supply a
-default ethics approval, consent statement, funding source, conflict statement, author
-contribution, data or code promise, or AI disclosure.
+## Handoff
 
-## Archival handoff
-
-Retain:
-
-- the verified Markdown source;
-- the structured registries;
-- the exact venue template version;
-- conversion instructions and software versions;
-- the final rendered file;
-- validator outputs and human approval record.
-
-Do not archive sensitive source documents alongside a public manuscript package unless
-authorization, consent, law, contracts, and policy permit it.
+Provide the requested files and any conversion command needed to use them. Keep audit logs and approval records in the working project when that workflow is in use. At a public sharing boundary, include only material authorized for release.

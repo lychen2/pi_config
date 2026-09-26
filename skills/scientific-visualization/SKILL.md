@@ -17,14 +17,15 @@ name: scientific-visualization
 
 Build figures that preserve scientific meaning before optimizing appearance. Separate universal principles from dated publisher rules, preserve raw data and transformations, use color redundantly, and inspect delivered files rather than trusting plotting defaults.
 
-## Non-negotiable guardrails
+## Figure integrity and delivery
 
-- Never alter, hide, invent, or selectively enhance data to improve a figure.
-- Preserve raw tables/images, exclusions, missing-value codes, analysis code, normalization, binning, image adjustments, and random seeds.
-- Do not infer journal requirements. Identify the exact journal, article type, figure type, and submission phase; verify its live official guidance.
-- Do not claim that a palette, DPI value, format, or automated report makes a figure accessible or journal-compliant.
-- Do not silently connect missing observations, suppress inconvenient points, upsample images as if detail increased, or tune axes/dual axes to exaggerate a conclusion.
-- Keep interactive and static outputs as distinct deliverables. Interactive hover is not a substitute for labels, alt text, keyboard access, an accessible data table, or a static fallback.
+Preserve source data and processing history. Choose encodings, axes, labels, and uncertainty displays that represent the data accurately. Check publication rules when a specific submission requires them; general plots do not need a journal audit.
+
+Deliver figures and captions that explain the science. Keep production checks and publication-status notes in working records or native comments; if comments are unavailable, use the conversation outside the artifact. Do not put compliance claims or routine disclaimers in titles, captions, or figure panels. These output rules also apply when using the reference checklists. Native comments mean comments attached to the source document or figure file; captions and footnotes remain reader-visible and are not substitutes for comments.
+
+**Audience-view check:** inspect the exported figure and caption without the production conversation. Labels and caption should state what was measured, encoded, and necessary to interpret it. Put a genuine model condition beside the affected result (for example, “Values are normalized to baseline; absolute levels are not comparable”), not in a defensive disclaimer panel. Omit “not a reproduction” or source-relationship commentary. Keep provenance and export checks in the manifest or working record; include comparisons, limitations, or disclosures when they are scientifically needed or explicitly required.
+
+Use the relevant accessibility features for the medium, and distinguish interactive outputs from static exports.
 
 Read `references/publication_guidelines.md` for deceptive-encoding and integrity checks. Read `references/journal_requirements.md` only after the target and phase are known.
 
@@ -41,7 +42,7 @@ Record:
 - transformations: filtering, aggregation, normalization, smoothing, bins, image processing;
 - source-data paths/identifiers and output provenance.
 
-If requirements are not known, create a provisional general figure and label all publisher choices as pending verification.
+Use reasonable general figure settings when no publication target is specified. Resolve exact publisher requirements when preparing that submission, without adding a pending-verification label to the figure.
 
 ### 2. Choose an honest encoding
 

@@ -291,7 +291,7 @@ Since 2022, ACL venues use a shared review system:
 ### Responsible NLP Checklist
 
 Reviewers check for:
-- Limitations section (required)
+- Limitations and disclosures in the form required by the current venue instructions
 - Risks and ethical considerations
 - Compute/carbon footprint
 - Bias analysis (when applicable)

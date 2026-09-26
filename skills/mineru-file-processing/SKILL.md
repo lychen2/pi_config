@@ -7,7 +7,9 @@ description: Use when processing PDF, image, Word, PowerPoint, Excel, or documen
 
 ## Overview
 
-Use MinerU for agent-readable document parsing when local reading is insufficient or the file is a supported document format. Prefer the Agent lightweight API for small single-file work; ask before using the token-based precise API except when the user already asked for high accuracy, OCR, batch parsing, or structured exports.
+Use local reading when it provides the needed content. When external parsing is appropriate and authorized, choose MinerU lightweight for small files or precise for larger, OCR, batch, or structured extraction. Check permission at the external-transfer boundary for confidential or nonpublic material, and resolve any unapproved cost; reuse that decision throughout the same parsing job. Having a token alone does not authorize an upload.
+
+Deliver the requested extracted content or answer. Keep parsing diagnostics and editorial boundaries in native comments when useful; if the output format has no comments, put them in the conversation rather than the extracted text. Preserve source content without adding compliance statements or routine warnings.
 
 ## Supported Files
 
@@ -18,20 +20,17 @@ Use MinerU for agent-readable document parsing when local reading is insufficien
 - Excel: `xls`, `xlsx`
 - HTML is supported by the precise API with `model_version: "MinerU-HTML"`
 
-Lightweight API is the default first attempt for a single small file. MinerU documents lightweight support for PDF, images, `docx`, `pptx`, and `xlsx`; URL mode may also accept `doc` and `ppt`. If lightweight returns unsupported-file or limit errors, stop and ask before using the token-based precise API.
+Lightweight is suitable for a single small file when local reading is insufficient. The documented lightweight formats include PDF, images, `docx`, `pptx`, and `xlsx`; URL mode may also accept `doc` and `ppt`. If the service rejects the format or limits, switch to an available precise route within the same authorized scope; ask only if that changes cost or data-transfer authorization.
 
 ## Routing Rules
 
 | Situation | Default action |
 |---|---|
-| Single small supported file, ≤10MB and ≤20 pages | Use ⚡ Agent lightweight parse API directly; do not ask first; if the API rejects the extension, ask before precise API |
-| PDF that fits lightweight limits | Use ⚡ Agent lightweight parse API directly |
-| Image + current model can read images | Read image directly with the multimodal model |
-| Image + current model cannot read images | Use ⚡ Agent lightweight parse API directly if it fits limits |
-| Batch files, >10MB, >20 pages, or needs high accuracy | Ask whether to use MinerU precise API |
-| Needs OCR, tables, formulas, layout, JSON, docx/html/latex export | Ask whether to use MinerU precise API unless user already requested it |
-| User explicitly asks to use MinerU or precise parsing | Use MinerU precise API |
-| Unsupported file or missing URL/upload path | Ask for a supported file source |
+| Small supported file, ≤10MB and ≤20 pages | Read locally first; use lightweight if external parsing is needed and authorized |
+| Image the current model can read | Read it directly |
+| Batch, larger files, OCR, high accuracy, or structured exports | Use an available precise route within approved scope |
+| User specifies a parsing service or method | Use that method when supported; resolve a concrete blocker if unavailable |
+| Unsupported file or no usable source | Try a supported local conversion or ask for the missing source |
 
 Small file means a single file within the lightweight API limits: ≤10MB and ≤20 pages. The precise API supports files up to 200MB, 200 pages, and batches up to 200 files.
 
@@ -151,18 +150,14 @@ curl --location --request POST 'https://mineru.net/api/v4/extract/task' \
   }'
 ```
 
-## Ask Template
+## Missing decisions
 
-When asking whether to use MinerU precise API, ask one direct question:
-
-> 这个文件超出轻量解析范围，或需要更高精度/结构化结果。是否使用 MinerU 精准解析 API？这需要 `MINERU_API_TOKEN`。
-
-Do not ask for small single-file lightweight parsing. Ask only after lightweight parsing reports unsupported type, exceeded size/page limits, or the user needs precise outputs.
+Ask only for the missing permission, cost approval, credential setup, or usable source that blocks the selected route. Do not request credentials in chat. Once a route is approved, polling, parsing its result, and passing normalized records to subsequent local steps need no repeated approval.
 
 ## Common Mistakes
 
 - Do not use the token-based precise API for a small single file unless precision or structured output matters.
-- Do not ask before lightweight parsing of a small single supported file.
+- Apply external-transfer authorization to either API; file size does not determine confidentiality.
 - Do not send images to MinerU when the active model can directly read images and the user only needs visual understanding.
 - Do not hardcode or print `MINERU_API_TOKEN`.
 - Do not claim parsing succeeded until the async task result has been polled and the output link or parsed content exists.

@@ -19,6 +19,12 @@ name: sympy
 
 SymPy is a Python library for symbolic mathematics that enables exact computation using mathematical symbols rather than numerical approximations. This skill provides comprehensive guidance for performing symbolic algebra, calculus, linear algebra, equation solving, physics calculations, and code generation using SymPy.
 
+## Working scope and delivery
+
+Use established symbols, assumptions, and internal expressions directly. Validate unfamiliar external expressions before parsing or executing them; do not add repeated defensive wrappers around trusted symbolic operations. Check domains, branches, and solutions where they affect the mathematics.
+
+Return the requested expression, derivation, or executable code. Include mathematical conditions needed to use the result. Keep necessary implementation or editorial notes in code/document comments; if the format has no comments, use the conversation outside the artifact. Omit routine checks and statements that instructions were followed.
+
 ## Installation
 
 Tested against **SymPy 1.14.0** (stable; April 2025). Requires **Python 3.9+**.

@@ -97,8 +97,17 @@ schematics to explain concepts, clearly distinguished from observations or resul
   when applicable. Writing notes alone does not require rebuilding the deck.
 - Read once as an audience member unfamiliar with the editing conversation. Remove
   production commentary and repetitive qualifications; preserve scientific caveats.
-- Deliver the requested files or text. Report actual checks and material unresolved
-  issues briefly outside the talk. Do not append a self-score or compliance checklist.
+- **Audience-view check:** every slide and spoken note should explain the research or its
+  interpretation, not defend the production process or state a paper's relationship to a
+  source. Put a scientific condition beside the result it qualifies: for example,
+  “Measured in one clinic; transfer to other settings is untested.” Do not add a
+  “not a reproduction” panel. Retain real model boundaries, user-requested comparisons,
+  formal limitations, and required disclosures. Editorial questions belong in native
+  document comments, never speaker notes, captions, or footnotes; if comments are
+  unavailable, put them in the conversation outside the deck.
+- Deliver the requested files or text. Speaker notes, captions, and slide footers are
+  audience content, not places for operating instructions. Omit routine check reports
+  and self-scores; include a review report only when requested.
 
 ## Read on demand
 

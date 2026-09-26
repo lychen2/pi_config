@@ -339,10 +339,10 @@ P=0.16). The absolute difference was 0.3 percentage points (95% CI,
 - Generalizability
 - Completeness of follow-up
 
-**Paragraph 5: Limitations**
-- Be specific and thoughtful
-- Discuss how limitations might affect interpretation
-- Avoid generic statements
+**Limitations, where required or useful**
+- State concrete study conditions and their consequences for interpretation
+- Integrate a qualification near the affected finding when that is clearer
+- Retain a formal section or box when the journal requires it; avoid generic disclaimers
 
 **Final Paragraph: Conclusions and Implications**
 - Clinical implications
@@ -352,15 +352,7 @@ P=0.16). The absolute difference was 0.3 percentage points (95% CI,
 ### Example Limitations Paragraph
 
 ```
-Our study has several limitations. First, despite randomization, we 
-cannot exclude residual confounding from unmeasured factors. Second, 
-the open-label design may have introduced bias in outcome assessment 
-for subjective endpoints, though the primary outcome of death was 
-objective. Third, our findings may not generalize to patients without 
-established cardiovascular disease or to healthcare settings with 
-different resources. Fourth, the 3.5-year follow-up may have been 
-insufficient to detect cardiovascular benefits that emerge over 
-longer periods.
+The open-label design may have biased assessment of subjective endpoints; the primary outcome of death was objective. Participants had established cardiovascular disease, so transfer to patients without that condition is untested. A 3.5-year follow-up does not establish whether cardiovascular benefits emerge later.
 ```
 
 ---

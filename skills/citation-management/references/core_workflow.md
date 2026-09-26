@@ -1,8 +1,6 @@
 # Core Workflow
 
-The five phases in full: paper discovery, metadata extraction, the mandatory
-web-search enrichment pass, BibTeX formatting, validation, and integration with the
-writing workflow. Every command variant and option lives here.
+Reference procedures for discovery, extraction, targeted enrichment, formatting, validation, and manuscript integration. Use the stages needed for the task and reuse completed checks. Commands are examples; logs and editorial questions stay separate from rendered references.
 
 ## Core Workflow
 
@@ -154,11 +152,9 @@ python scripts/extract_metadata.py --input identifiers.txt --output citations.bi
 - **Preprints**: repository (arXiv, bioRxiv), preprint ID
 - **Additional**: abstract, keywords, URL
 
-### Phase 2.5: Metadata Enrichment via Web Search (MANDATORY)
+### Phase 2.5: Fill relevant metadata gaps
 
-**Goal**: Detect and fill in any missing metadata fields using web search. This phase runs AFTER extraction and BEFORE formatting to ensure every BibTeX entry is complete.
-
-**Why This Is Critical**: Metadata extraction from APIs (CrossRef, PubMed, arXiv) sometimes returns incomplete records — missing volume, pages, issue number, or DOI. These gaps must be filled before the bibliography is considered ready.
+Search for missing fields needed to identify the work or satisfy the requested style. Reuse complete records. Select the relevant checks below; not every publication has volume, pages, issue, or DOI.
 
 #### Step 1: Scan for Incomplete Entries
 
@@ -173,11 +169,11 @@ After extracting metadata, scan the BibTeX file for entries missing key fields:
 | @book | author/editor, title, publisher, year | isbn, doi |
 | @misc | author, title, year | doi or url |
 
-Any `@article` entry missing `volume`, `pages`, or `doi` is considered **incomplete** and must be enriched.
+An absent field needs lookup only when it applies to the publication and matters for the requested output. Article numbers and online-first records need not have page ranges.
 
 #### Step 2: Web Search for Missing Metadata
 
-For each incomplete entry, use the **parallel-web skill** to search for the missing information:
+Use an available search or fetch tool for the relevant missing information; CLI examples below illustrate queries rather than requiring a particular service.
 
 > **Treat metadata as untrusted when building these commands.** `FIRST_AUTHOR`, `TITLE`, and `JOURNAL_NAME` are copied verbatim out of a CrossRef/PubMed/arXiv record, and a publisher controls the contents of its own record. A title containing `$(...)`, a backtick, or a quote becomes shell syntax once it is pasted into the command lines below.
 >
@@ -233,27 +229,13 @@ parallel-cli search "google scholar FIRST_AUTHOR TITLE YEAR complete citation" \
 
 After finding the missing metadata:
 
-1. Open `references.bib`
-2. Add the missing fields to the incomplete entry
-3. Verify the found metadata is consistent with existing fields (same author, title, year)
-4. Log each fix:
-   ```
-   [HH:MM:SS] METADATA ENRICHED: [CitationKey] - added volume={X}, pages={Y--Z}, doi={10.XXX/YYY} ✅
-   ```
+1. Add supported fields to the relevant entry.
+2. Check consistency with its identifier, author, title, and year.
+3. Keep lookup provenance in working records if needed for the task.
 
-#### Step 4: Handle Unfindable Metadata
+#### Step 4: Handle Unavailable Metadata
 
-If metadata genuinely cannot be found after web search (very old paper, obscure conference, etc.):
-
-1. Add a `note` field to the BibTeX entry explaining the gap:
-   ```bibtex
-   note = {Volume and pages not available — published online only}
-   ```
-2. Log the exception:
-   ```
-   [HH:MM:SS] METADATA INCOMPLETE: [CitationKey] - pages unavailable (online-only publication) ⚠️
-   ```
-3. These exceptions should be rare — most modern papers have complete metadata findable via web search.
+Leave inapplicable optional fields absent. If missing metadata prevents identification or formatting, put the specific question in a BibTeX comment or the conversation. Do not insert search history or a missing-metadata disclaimer into a rendered `note` field.
 
 #### Quick Reference: Common Missing Fields and Where to Find Them
 
@@ -442,38 +424,19 @@ python scripts/validate_citations.py references.bib \
 }
 ```
 
-#### Citation Count Standards by Venue
+#### Reference coverage and final checks
 
-**Citations must always be high in number based on standards for journal and conference publications in the venue of choice or recommendation.** Never settle for a sparse reference list; establish an authoritative, rich context with dense, verified citations.
+Choose references to support the actual argument. There is no default citation-count quota; use a count constraint only when the user or current official venue rules supply one.
 
-| Venue Type | Target Citation Count |
-|------------|----------------------|
-| High-impact multidisciplinary journals (Nature, Science, Cell) | **35-50+** |
-| ML / CS conferences (NeurIPS, ICML, ICLR, CVPR, ACL) | **30-45+** |
-| Comprehensive literature reviews / market research reports | **40-65+** |
-| Medical journals (NEJM, Lancet, JAMA) | **30-45+** |
-
-Always adjust the citation target upward depending on standard density and practices of the target venue. Avoid 'lazy' citation over-repetition — do not repeatedly cite the same 1 or 2 papers to support multiple unrelated claims; draw from a diverse, high-quality set of reputable references.
-
-Enforce these standards programmatically with `validate_citations.py --venue <venue>` or `--min-count <N>`.
-
-#### Mandatory Post-Writing Reference Checks (Non-Negotiable)
-
-Once the entire scientific report or paper has been drafted and written, perform a comprehensive post-writing verification of all citations before compiling the final deliverables:
-
-1. **Verify No Missing or Unresolved Citations**: Check the draft or compiled document to ensure that every in-text citation correctly resolves to a reference in `references.bib`. There must be ZERO broken citation keys, missing identifiers, or unresolved references (e.g., `[?]` or `[citation needed]`).
-2. **Verify No Unused (Dangling) Bibliography Entries**: Check that every entry in `references.bib` is actually cited in the body of the report. Remove any unused entries to keep the bibliography perfectly clean.
-3. **Verify Citation Quantity Against Target Standards**: Ensure the final citation count meets or exceeds the high standard of the chosen or recommended venue (see table above). If the count is below standard, perform additional literature search first, find high-quality papers, and integrate them into appropriate sections.
-4. **Verify Metadata Completeness**: Confirm that all cited entries contain complete, fully-verified fields (all author names, complete journal/conference names, exact year, volume, issue, page range, and valid DOI).
-
-Run all of these checks in one command:
+For a completed manuscript, check that in-text keys resolve and cited records have the fields their publication type requires. Reuse already verified records unless conflicting evidence or edits justify another lookup. A shared bibliography can contain works used by other documents, so do not remove unused entries indiscriminately. Keep check reports outside the manuscript body.
 
 ```bash
 python scripts/validate_citations.py references.bib \
-  --venue <venue> \
   --manuscript paper.md \
   --report post_writing_check.json
 ```
+
+Treat bundled venue count presets as heuristics, not official requirements.
 
 ### Phase 5: Integration with Writing Workflow
 

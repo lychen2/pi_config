@@ -21,7 +21,7 @@ Prepare publication and funding documents without treating stale formatting deta
 - writing-style and reviewer-expectation guides; and
 - local helpers for discovering, copying, and inspecting templates.
 
-## Mandatory Currency Rule
+## Current venue requirements
 
 Venue requirements are time-sensitive. Before giving exact page limits, deadlines, style-file names, anonymity rules, or required sections:
 
@@ -45,7 +45,13 @@ Use this skill for:
 - adapting prose to a venue's audience and reviewer expectations; or
 - inspecting a PDF's page count and embedded fonts.
 
-## Verification-First Workflow
+## Workflow
+
+For general drafting or layout changes, use the available template and reasonable formatting defaults. Resolve exact official rules when preparing a specific submission or answering a venue-rule question. Reuse rules already checked for the same target and stage unless they may have changed.
+
+Deliver the requested manuscript, template, or formatting result. Necessary editorial and production notes belong in native document or LaTeX comments; if comments are unavailable, use the conversation outside the artifact. Do not insert an unrequested compliance report or pending-verification banner into the body. Required publication statements remain content.
+
+**Reader-view check:** inspect the rendered document without the editing conversation. The content should discuss the work, evidence, or its interpretation; do not add a “not a reproduction” or source-relationship disclaimer panel. State a scientific limitation locally as a concrete condition and consequence, and retain a formal limitations section, requested comparison, or required venue disclosure when applicable. Editorial uncertainty belongs in native source comments, not in footnotes or captions; task logs and validation reports stay outside the manuscript.
 
 ### 1. Resolve the exact target
 
@@ -77,9 +83,9 @@ Do not combine rules from similarly named venues or tracks.
 
 Reference files summarize rules but do not override the current official source.
 
-### 3. Capture a compliance note
+### 3. Record relevant submission rules
 
-Before editing, write a short note in the working document or task log:
+When submission checks are part of the task, keep the applicable rules in a task log or native comment. This record is not manuscript prose. For example:
 
 ```text
 Target: ICML 2026 main track, initial submission
@@ -249,7 +255,7 @@ python scripts/validate_format.py \
 
 `--content-pages` must be counted according to the official rule. The script does not infer where references or appendices begin.
 
-## Final Compliance Checklist
+## Internal submission checklist
 
 - [ ] Exact venue, year/cycle, track, article type, and stage identified
 - [ ] Official source URL recorded with date checked

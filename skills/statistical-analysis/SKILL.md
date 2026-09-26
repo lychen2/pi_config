@@ -15,7 +15,11 @@ name: statistical-analysis
 
 ## Overview
 
-Conduct hypothesis tests (t-tests, ANOVA, chi-square), regression, correlation, and Bayesian analyses with systematic assumption checking, effect sizes, and APA-style reporting. The goal is an analysis a reviewer could not tear apart: the right test, verified assumptions, honest effect sizes, and a complete write-up.
+Conduct hypothesis tests, regression, correlation, and Bayesian analyses appropriate to the study design. Estimate effects and uncertainty, check assumptions relevant to the method, and explain the result in the requested format.
+
+## Delivery
+
+Give the analysis result or requested manuscript passage, with the quantities and conditions needed to interpret it. Keep execution checks and model-selection deliberations in working records. Place a necessary editorial or implementation note in a native comment; if unavailable, use the conversation outside the deliverable. Do not add a compliance checklist or routine disclaimer.
 
 ## When to Use This Skill
 
@@ -55,16 +59,16 @@ For model-specific APIs (OLS, GLM, ARIMA), see the **statsmodels** skill. For Py
 
 ## Analysis Workflow
 
-Every sound analysis follows the same arc. Skipping steps is how analyses end up retracted, so work through them in order and say what you did at each one.
+Use the steps needed for the requested analysis; reuse established design information and prior checks when their inputs have not changed.
 
-1. **Frame the question before touching the data.** State the hypothesis, the outcome and predictor variables, and the design (independent vs. paired, number of groups). Commit to a planned test now — choosing the test after peeking at results is p-hacking, even when done innocently.
-2. **Inspect the data.** Per group: n, mean, SD, median, missing values. Plot the raw data (histograms or box plots) before any test. Unequal group sizes, missingness, floor/ceiling effects, and outliers all change what test is appropriate — surface them to the user rather than silently working around them.
-3. **Select the test** using the quick reference below, or `references/test_selection_guide.md` for designs beyond the basics (counts, time-to-event, reliability, factorial).
-4. **Check assumptions** with `scripts/assumption_checks.py`. If an assumption fails, switch to the remedial test (table below) and report both the plan and the change.
-5. **Run the test** and always compute the effect size alongside it — a p-value says an effect exists; the effect size says whether anyone should care.
-6. **Report** using the APA templates below, including descriptives, exact statistics, effect sizes with CIs, and the assumption checks performed.
+1. **Frame the question.** Identify outcome, predictors, dependence structure, and whether the analysis is confirmatory or exploratory. Preserve a prespecified plan when one exists.
+2. **Inspect imported data.** Check units, missingness, sample structure, and relevant distributions at ingestion. Use the normalized dataset in subsequent steps rather than revalidating it at each call.
+3. **Select the method** using the design and estimand; consult `references/test_selection_guide.md` when needed.
+4. **Check relevant assumptions.** Use diagnostics suited to the model. A failed diagnostic needs interpretation, not an automatic switch driven solely by a threshold.
+5. **Estimate effects and uncertainty.** Compute the test statistic or posterior summary needed for the question; a p-value alone does not establish the presence or importance of an effect.
+6. **Report the scientific result.** Include relevant estimates, intervals, sample sizes, and method details. Use APA templates only when that format fits the deliverable.
 
-If the user only needs one step (e.g., "how many participants do I need?"), jump straight to that section — but still confirm the design assumptions the calculation rests on.
+For a request about one step, answer that step using the design information already available.
 
 ---
 
@@ -99,7 +103,7 @@ All tests have Bayesian versions providing direct probability statements about h
 
 ## Assumption Checking
 
-**Always check assumptions before interpreting test results**, and report the checks — reviewers look for them.
+Check the assumptions relevant to the selected method before interpreting results; reuse checks when the data and method are unchanged. Report diagnostics when they affect interpretation or the requested reporting standard requires them. Keep routine check logs out of the deliverable.
 
 Use the bundled `scripts/assumption_checks.py` module. Run Python from the skill directory (`skills/statistical-analysis/`) or add `scripts/` to `sys.path`:
 

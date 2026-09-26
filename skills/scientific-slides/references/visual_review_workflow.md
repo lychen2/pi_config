@@ -4,34 +4,18 @@
 
 Visual review is a critical quality assurance step for presentations, allowing you to identify and fix layout issues, text overflow, element overlap, and design problems before presenting. This guide covers converting presentations to images, systematic visual inspection, common issues, and iterative improvement strategies.
 
-## ⚠️ CRITICAL RULE: NEVER READ PDF PRESENTATIONS DIRECTLY
+## Choose the review method for the task
 
-**MANDATORY: Always convert presentation PDFs to images FIRST, then review the images.**
+Use text extraction or direct PDF reading for content questions. For layout review, inspect rendered slides through a supported viewer, screenshots, or image conversion; text extraction alone does not show clipping, overlap, or readability. Convert only when the available tools require it, and use bounded pages or image batches when tool size limits apply.
 
-### Why This Rule Exists
+### Visual review workflow
 
-- **Buffer Overflow Prevention**: Presentation PDFs (especially multi-slide decks) cause "JSON message exceeded maximum buffer size" errors when read directly
-- **Visual Accuracy**: Images show exactly what the audience will see, including rendering issues
-- **Performance**: Image-based review is faster and more reliable than PDF text extraction
-- **Consistency**: Ensures uniform review process for all presentations
+1. Render the current source or open the supplied presentation.
+2. Inspect the slides relevant to the change; review the full deck for a final presentation delivery.
+3. Fix observed layout problems in the source.
+4. Re-render and check the affected slides, including neighboring slides when layout changes propagate.
 
-### The ONLY Correct Workflow for Presentations
-
-1. ✅ Generate PDF from PowerPoint/Beamer source
-2. ✅ **Convert PDF to images** using the pdf_to_images.py script
-3. ✅ **Review the image files** systematically
-4. ✅ Document issues by slide number
-5. ✅ Fix issues in source files
-6. ✅ Regenerate PDF and repeat
-
-### What NOT To Do
-
-- ❌ NEVER use read_file tool on presentation PDFs
-- ❌ NEVER attempt to read PDF slides as text
-- ❌ NEVER skip the image conversion step
-- ❌ NEVER assume PDF is "small enough" to read directly
-
-**If you're reviewing a presentation and haven't converted to images yet, STOP and convert first.**
+Keep review logs in working records. Necessary editorial questions belong in native document comments, or in the conversation if comments are unavailable; do not insert production notes into slides, captions, or speaker notes.
 
 ## Why Visual Review Matters
 

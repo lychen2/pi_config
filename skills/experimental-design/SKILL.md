@@ -188,6 +188,8 @@ These are structural — they can't be fixed in analysis, only in design.
 
 ## Workflow
 
+Use the stages needed for the requested design. Reuse established factor definitions, unit structure, and validated allocation inputs. Deliver the design, run order, or protocol the user requested; keep planning checks internal. Necessary editorial questions go in native comments, or in the conversation if comments are unavailable. Design assumptions, controls, and replication remain in the protocol because they determine how to run and interpret the experiment.
+
 1. **State the question, the unit, and the response.** What is randomized? What is
    measured? At what level is a true independent replicate? This determines everything.
 2. **List nuisance factors** (batch, day, site, operator, position) — plan to block,
@@ -197,8 +199,7 @@ These are structural — they can't be fixed in analysis, only in design.
    **statistical-power** skill for the chosen design).
 5. **Generate the layout** with `randomization.py` / `doe_designs.py`, seeded.
 6. **Randomize run/processing order** and plate/batch positions.
-7. **Document** the design, seed, and schedule (pre-register if possible) so the
-   analysis is confirmatory and the layout is auditable.
+7. **Record** the design, seed, and schedule. For confirmatory work, establish the analysis plan before examining outcomes; exploratory designs can remain adaptive.
 8. **Match the analysis to the design** — blocks, strata, clusters, and nesting must
    appear in the model (hand off to **statistical-analysis** / **statsmodels**).
 

@@ -454,6 +454,11 @@ print(pg.tost(group_a, group_b, bound=0.5))  # significant pval -> equivalence
 
 ## Checklist for Statistical Reporting
 
+Use applicable items when preparing a manuscript or full statistical report, not as
+mandatory headings for every analysis answer. State a material limitation beside
+the affected inference; use a dedicated section when the requested format or venue
+calls for one. Keep this working checklist out of the delivered report.
+
 - [ ] Sample size and demographics
 - [ ] Study design clearly described
 - [ ] All measures described with reliability
@@ -468,7 +473,7 @@ print(pg.tost(group_a, group_b, bound=0.5))  # significant pval -> equivalence
 - [ ] Figures/tables properly formatted and labeled
 - [ ] Multiple comparisons corrections described
 - [ ] Missing data handling explained
-- [ ] Limitations discussed
+- [ ] Material study limitations and their consequences for inference explained
 - [ ] Data/code availability statement
 
 ---

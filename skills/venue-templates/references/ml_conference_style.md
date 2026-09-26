@@ -358,12 +358,19 @@ attention operator itself.
 
 ## Limitations Section
 
+Follow the exact current venue checklist: some tracks require a separately titled
+section or disclosure, while others assess these topics through a checklist. Do not
+add a generic disclaimer paragraph merely to satisfy a vague expectation. Keep a
+formal section when required or when it helps explain material boundaries; state each
+as a concrete model or experiment condition and its consequence for interpretation.
+Editorial/process uncertainty belongs in native source comments or outside the paper,
+not in a limitation statement.
+
 ### Why It Matters
 
-**Increasingly required** at NeurIPS, ICML, ICLR. Honest limitations:
-- Show scientific maturity
-- Guide future work
-- Prevent overselling
+Specific limitations help readers interpret the evidence, understand failure conditions,
+and identify useful future tests. They do not require defensive language or ritual
+statements about a paper's relationship to prior work.
 
 ### What to Include
 
@@ -375,15 +382,10 @@ attention operator itself.
 ### Example Limitations Section
 
 ```
-**Limitations.** While FlashAttention-2 provides substantial speedups, 
-several limitations remain. First, our implementation is optimized for 
-NVIDIA GPUs and does not support AMD or other hardware. Second, the 
-speedup is most pronounced for medium to long sequences; for very short 
-sequences (<256 tokens), the overhead of our kernel launch dominates. 
-Third, we focus on dense attention; extending our approach to sparse 
-attention patterns remains future work. Finally, our theoretical 
-analysis assumes specific GPU memory hierarchy parameters that may not 
-hold for future hardware generations.
+**Limitations.** The implementation supports NVIDIA GPUs; performance on AMD
+accelerators was not evaluated. For sequences shorter than 256 tokens, kernel-launch
+overhead dominates and reduces the measured speedup. These conditions bound the
+hardware and sequence-length settings for which the reported speedups apply.
 ```
 
 ---

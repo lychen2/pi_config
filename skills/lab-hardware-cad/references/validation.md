@@ -1,7 +1,6 @@
 # Pre-fabrication validation checklist
 
-Work through this before telling a user a part is ready to fabricate. Each item names the failure
-it catches, because a checklist without consequences gets skipped.
+Use this checklist internally for the relevant fabrication process. Reuse checks on unchanged inputs; report design parameters and actionable unresolved issues, not a transcript of the checklist.
 
 ## 1. Provenance
 
@@ -11,8 +10,7 @@ it catches, because a checklist without consequences gets skipped.
       *Catches: silently editing an exported STEP, which makes the design unreproducible.*
 - [ ] The manifest's `interfaces` block lists every dimension a bundled standard covers, and its
       values are the ones the model computed after any `--param` override. Empty is correct only
-      when nothing on the part mates with a bundled standard — and then every interface dimension
-      is named as unchecked in the report instead.
+      when nothing on the part mates with a bundled standard; verify those interfaces against their drawing or measurement.
       *Catches: a static `INTERFACES` list frozen at import, recording pre-override numbers; and
       an interface that silently escaped checking.*
 - [ ] Every parameter in the model is named with units.
@@ -58,8 +56,7 @@ python scripts/check.py geometry out/part.step --model part_model.py
       *Catches: propagating a derived number as if it were read from the standard.*
 - [ ] Metric vs imperial is confirmed where both exist, and no expression mixes them.
       *Catches: the 25.0 vs 25.4 mm grid error, which accumulates to 1.6 mm over four holes.*
-- [ ] Interfaces not covered by any bundled standard — a vendor drawing, a measurement — were
-      reported to the user as unchecked, with the number and its source.
+- [ ] Interfaces outside the bundled standards were checked against their vendor drawing or measurement; missing information that affects fit is identified.
       *Catches: a silent gap where the automatic check simply had nothing to say.*
 
 ```bash
@@ -101,32 +98,17 @@ python scripts/check.py clearance out/a.step out/b.step --min 0.3
 - [ ] Optical requirements — autofluorescence, scatter, transmission — are addressed if the part is
       near a beam or a detector.
 
-## 7. Visual review — mandatory
+## 7. Visual review of changed and final geometry
 
-- [ ] A snapshot was rendered **and read** after the most recent generation.
-- [ ] Confirmed in the image: features on the intended faces; correct mold/chip polarity; every
-      port, bore, and boss present, inside the body, and passing through; nothing consumed by a
-      fillet; clear apertures unobstructed.
+- [ ] Inspect the final geometry in a CAD viewer or rendered snapshot. Reuse prior visual checks for unchanged geometry; recheck features affected by edits.
+- [ ] Confirm features lie on the intended faces, mold/chip polarity is correct, ports and bores have the intended depth, fillets preserve required features, and clear apertures remain unobstructed.
 
 ```bash
 python scripts/snapshot.py out/part.step --out out/part.png
 ```
 
-**This step is never waived by the numeric checks passing.** `is_valid: true` with a correct
-bounding box is fully consistent with a pocket cut on the wrong face or an inverted mold. Those
-errors are obvious in the picture and invisible in the numbers.
+A valid solid and correct bounding box do not establish feature placement or mold polarity. Use visual inspection alongside dimensional checks; another export of unchanged geometry does not require repeating the same review.
 
-## 8. Report
+## 8. Delivery
 
-Give the user, explicitly:
-
-1. Process and material, and why.
-2. Every interface dimension with its source and tolerance.
-3. Clearances chosen, and the fit class they came from.
-4. What the snapshot showed — described, not merely "a snapshot was generated".
-5. Every check that did not pass, and every dimension you could not verify.
-6. A recommendation to print a test coupon of the critical interface before committing to the full
-   part, whenever the design depends on a fit.
-
-State the unverified items plainly. A part list with one honest "this dimension needs
-confirmation" is far more useful than a confident one that is silently wrong.
+Provide the requested files and fabrication parameters. Record sources and detailed check results in the model/manifest or working records. Place a necessary review note in a native comment; if the format has no comments, use the conversation outside the artifact. A fit-critical unknown needs its dimension and required measurement, not a generic disclaimer. Suggest a test coupon when process variability makes it useful.

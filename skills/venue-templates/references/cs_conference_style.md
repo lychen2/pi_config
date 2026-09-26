@@ -398,7 +398,7 @@ All CS venues increasingly expect:
 ## Ethics and Broader Impact
 
 ### NLP (ACL/EMNLP)
-- **Limitations section**: Required
+- **Limitations and responsible-NLP disclosures**: Check the current venue instructions for required form and placement. State concrete model or evaluation conditions and their interpretive consequences; avoid generic disclaimer text.
 - **Responsible NLP checklist**: Ethical considerations
 - **Bias analysis**: For models affecting people
 

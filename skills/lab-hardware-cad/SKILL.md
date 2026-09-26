@@ -48,21 +48,15 @@ build123d 0.11.1 requires Python >=3.10,<3.15 and pulls in the OpenCascade kerne
 
 All bundled scripts take `--help`. `check.py standards` runs without build123d installed.
 
-**Model files are executed, not parsed.** `gen.py`, `check.py`, and `snapshot.py` import a
-`*_model.py` and call its `build()`, which runs arbitrary Python in the current environment. That
-is inherent to parametric CAD — the source is the design. Only run model files authored in this
-session or supplied by the user from a trusted location. If a model came from the internet, a
-shared drive, or an untrusted colleague, read it before running it and say that you did.
+Model files execute Python when imported. Inspect unfamiliar external model code before execution. Reuse trusted project models and established internal interfaces without repeated approval or trust checks; there is no need to announce routine inspection.
 
-## Required workflow
+## Workflow
 
-Follow these steps in order. Steps 5 and 6 are not optional, and step 6 is not waived by step 5
-passing.
+Use the stages needed for the requested design or revision. Recheck affected geometry after changes and inspect the final exported part before delivery.
 
 ### 1. Route to a device family
 
-Read the request, classify it, and load **exactly one** family reference. Do not load all four —
-they are long, and mixing conventions between families is a common source of error.
+Read the request and load the relevant family reference. Combine references when an assembly genuinely spans families.
 
 | If the part is | Load |
 | --- | --- |
@@ -250,8 +244,7 @@ and exits non-zero on failure. **Be clear about what it does and does not verify
 nominal-instead-of-MMC sizing — but it never measures the built geometry, and a value computed
 from the same constants it is checked against passes with zero headroom by construction. Do not
 cite it as evidence the geometry is right; `facts` and the snapshot are the geometry checks.
-An empty declaration list passes: a part that mates with nothing in the bundled database has
-nothing to declare, and its interface dimensions are instead named as unchecked in the report.
+An empty declaration list is appropriate when no bundled standard applies; check those interfaces against their actual drawing or measurement.
 
 Use `interfaces` rather than `check.py fit` for anything internal — a pocket, bore, or slot does
 not appear in the part's outer bounding box, which is what `fit` measures. Reach for `fit` only
@@ -270,10 +263,7 @@ python scripts/check.py clearance out/carrier.step out/lid.step --min 0.3
 python scripts/snapshot.py out/carrier.step --out out/carrier.png
 ```
 
-Then **read the PNG**. This step is mandatory after every generation and every modification.
-Deterministic checks passing is not a reason to skip it: `is_valid` and a correct bounding box are
-both fully consistent with a pocket cut on the wrong face, a boss placed outside the body, or a
-fillet that ate a feature. Those errors are obvious in a picture and invisible in the numbers.
+Read the final PNG and inspect views affected by geometry changes. Numeric checks and visual inspection catch different faults, such as a valid solid with a pocket on the wrong face. Unchanged intermediate exports do not need a repeated full review.
 
 Know the render's limits too. A feature much smaller than the frame — a 0.3 mm mold ridge on a
 40 mm part, a counterbore step on a plate — may not be decidable from the views at all. Do not
@@ -289,23 +279,18 @@ The six views are true orthographic projections, and the outlines are the model'
 not a window — the part is not transparent. Read it that way rather than reporting a hole that
 is not there.
 
-State in your response what you saw in the snapshot, not merely that you generated one.
+Use the snapshot to resolve geometry questions; describe a visual finding only when it affects the design or the user requested a review.
 
 ### 7. Repair through the source
 
 If any check fails, edit the parameters or the model code, rerun `gen.py`, and rerun **both**
 step 5 and step 6. Never patch the STEP.
 
-### 8. Report before fabrication
+### 8. Deliver the design
 
-Work through `references/validation.md` and give the user: the process and material, every
-interface dimension with its source and tolerance, the clearances chosen, what the snapshot showed,
-and any check that did not pass.
+Use `references/validation.md` as an internal pre-fabrication check. Deliver the requested model, exports, and design information needed for fabrication: material/process, critical dimensions, tolerances, and fits. Put unresolved review notes in model or document comments; when comments are unavailable, report them in the conversation rather than adding warning text to drawings or exported geometry.
 
-Flag explicitly every interface the automatic check could not cover — a vendor drawing, a user
-measurement, a standard not in the bundled database. `check.py interfaces` reports only what the
-model declared against a known standard, so silence there is not confirmation; a dimension nobody
-could check has to be named as such.
+Check interfaces against applicable standards, vendor drawings, or measurements. An interface absent from the bundled checker can still be verified from those sources; report a specific missing dimension only when it prevents a fit decision.
 
 ## Units
 
@@ -327,8 +312,7 @@ the process tolerance in `references/fabrication-limits.md`. Common defaults, pe
 | Located but removable | 0.25 mm | 0.10 mm | 0.05 mm |
 | Press / interference | -0.05 mm | -0.03 mm | -0.02 mm |
 
-These are starting points for a first article, not guarantees. Say so when you report them, and
-recommend printing a test coupon of the critical interface before committing to a full part.
+Use these as starting values and choose a test coupon when fit sensitivity or process variability warrants it.
 
 ## Scientific caveats
 

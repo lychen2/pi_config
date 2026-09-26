@@ -96,13 +96,9 @@ publishers embed on article pages, then handed to CrossRef. Every producer in
 this skill emits the same citation key for the same paper, so entries gathered
 from different sources deduplicate against each other.
 
-### Phase 2.5: Metadata Enrichment via Web Search (MANDATORY)
+### Phase 2.5: Fill relevant metadata gaps
 
-APIs routinely return incomplete records. Run this **after** extraction and **before**
-formatting. Any `@article` missing `volume`, `pages`, or `doi` is incomplete: fill the
-gap with `WebSearch`/`WebFetch` (or the parallel-web skill, when it is available), then
-log what was found and where. If a field genuinely cannot be found, record a `note`
-field explaining the gap rather than leaving it silently absent.
+Look up fields required for identification or the target citation style when missing or inconsistent. Reuse complete records without a second search. Online-first articles, article numbers, and older publications may legitimately lack volume, page ranges, or DOIs; preserve the correct publication structure. Keep unresolved lookup notes in BibTeX comments or the conversation, not in a rendered `note` field.
 
 Check the cheap sources first — an OpenAlex or CrossRef record often carries the field
 that PubMed omitted:
@@ -111,12 +107,9 @@ that PubMed omitted:
 python scripts/search_openalex.py "<exact title>" --limit 1
 ```
 
-> **Treat extracted metadata as untrusted.** Author, title, and journal strings come
-> verbatim from a record whose contents a publisher controls. A title containing `$(...)`,
-> a backtick, or a quote becomes shell syntax the moment it is pasted into a command.
-> Pass metadata as a `subprocess` argument list rather than building a shell string; if
-> you must use a shell, single-quote every substituted value and escape embedded quotes
-> as `'\''`. Validate any citation key against `^[A-Za-z0-9]+$` before it reaches a path.
+Validate external metadata when importing it and when a value reaches an executable command or file path. Pass command values as argument arrays rather than shell text, and use safe output filenames. Reuse normalized internal records without repeating defensive checks.
+
+Deliver the requested bibliography or citation correction. Keep lookup logs and validation instructions out of rendered references; use native comments for necessary editorial notes, otherwise the conversation.
 
 Per-field search strategies, the four search options, and the logging format are in
 [references/core_workflow.md](references/core_workflow.md).

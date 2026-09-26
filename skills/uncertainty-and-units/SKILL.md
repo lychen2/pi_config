@@ -55,30 +55,15 @@ uv pip install "pint==0.25.3" "uncertainties==3.2.3" "numpy==2.5.1" "scipy==1.18
 `pint-pandas` and `pint-xarray` add unit-aware columns and arrays and are separate
 installs.
 
-## Non-negotiable workflow
+## Workflow
 
-1. **Attach units at input and strip them only at output.** Convert at function
-   boundaries with `ureg.wraps` or `m_as("unit")`, never mid-calculation.
-2. **Write the measurement model explicitly** before computing anything, including
-   corrections whose estimated value is zero. A correction left out of the model leaves
-   its uncertainty out of the budget.
-3. **Give every input four things**: an estimate, a standard uncertainty, the
-   distribution the uncertainty came from, and its degrees of freedom.
-4. **Convert Type B statements with the right divisor.** A certificate's expanded
-   uncertainty divides by its stated `k`; rectangular limits divide by `sqrt(3)`.
-5. **Identify correlations before combining.** Inputs calibrated against the same
-   standard, measured on the same instrument, or drawn from the same fit are correlated.
-6. **Compute sensitivity coefficients**, and read the budget from `c_i * u(x_i)` rather
-   than from the raw uncertainties.
-7. **Check the linearization.** Run Monte Carlo alongside the GUM framework and apply
-   the JCGM 101 clause 8 comparison. Report the Monte Carlo result when it fails.
-8. **Choose `k` from the effective degrees of freedom**, not by habit.
-9. **Round the uncertainty first, then the value to the same decimal place.**
-10. **State what the `±` is** — standard or expanded, with `k`, the coverage probability,
-    and the method.
-11. **Sanity-check the magnitude before reporting.** A dimensionally consistent result can
-    still be impossible. Compare it against a known scale or a dimensionless group, and
-    confirm every assumption you relied on still holds in that regime.
+Choose the steps needed for the calculation; a unit conversion does not require a full uncertainty budget.
+
+1. **Normalize external inputs once.** Establish units when importing measurements or crossing a library interface with different unit conventions. Internal calls can use the agreed units or quantity objects without repeated conversions and validation wrappers.
+2. **Define the measurement model.** Include relevant corrections and the input estimates, uncertainties, distributions, and correlations needed for propagation. Reuse established calibration records.
+3. **Propagate appropriately.** Convert Type B inputs to standard uncertainties with their specified divisor. Use sensitivity coefficients and covariance for a suitable linear approximation; use Monte Carlo when nonlinearity, bounds, or distribution shape makes it useful. A second propagation method is not required for every calculation.
+4. **Check the physical result.** Assess dimensions, magnitude, and approximation regime where they could affect the conclusion. Choose coverage factors consistent with the uncertainty model.
+5. **Present the result.** Round uncertainty and value consistently and define what `±` means once in the relevant result, caption, or methods section. Put necessary editorial notes in native comments, or in the conversation if comments are unavailable; omit routine validation narration.
 
 ## The failures this skill exists to prevent
 
@@ -360,9 +345,7 @@ absolute one.
 - `references/domain-conversions.md` — the energy ladder, spectroscopy, concentration,
   pressure, radiation and magnetism, mass spectrometry, logarithmic quantities, and the
   pairs that share dimensions without sharing meaning.
-- `references/reporting-rules.md` — rounding, notations, the sentence that must
-  accompany a result, SD versus SEM versus CI in figures, non-detects, and conformity
-  decision rules.
+- `references/reporting-rules.md` — rounding, notation, uncertainty definitions, SD versus SEM versus CI in figures, non-detects, and conformity decision rules.
 - `references/plausibility-scales.md` — choosing the characteristic length, the
   dimensionless groups and the modelling assumption each one gates, characteristic
   scales, the observed magnitude bands and their sources, and the caveats on every

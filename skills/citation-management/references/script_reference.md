@@ -150,15 +150,15 @@ python scripts/extract_metadata.py \
 
 ### validate_citations.py
 
-Validate BibTeX entries for accuracy, completeness, citation count standard compliance, and manuscript integration.
+Check BibTeX syntax, relevant metadata, and manuscript references. Count presets are optional heuristics, not publication requirements.
 
 **Features**:
 - DOI verification via doi.org and CrossRef
 - Required field checking
 - Duplicate detection
 - Format validation
-- **Publication standard citation count checks** against specified venues (Nature, NeurIPS, review, etc.) or custom thresholds.
-- **Mandatory post-writing checks** matching manuscript citations (Markdown or LaTeX) with defined BibTeX entries to detect unresolved/missing or unused references.
+- **Optional count checks** using bundled presets or a requested threshold; enable these only when the task actually specifies a count constraint.
+- **Manuscript checks** matching citations (Markdown or LaTeX) with BibTeX entries. Interpret unused entries in context: a shared bibliography can serve multiple documents.
 - Detailed reporting
 
 **Usage**:

@@ -4,18 +4,17 @@ Adapted from hybrid-teach; preserve its upstream notice in ../LICENSE.
 
 ## Workspace and privacy
 
-All paths below are relative to the learner-approved workspace, normally
-`~/learning/<topic-slug>/`. Create files lazily, only after approval. A supplied
-workspace path authorizes learning records there, not publication. Session-only
-mode requires no files. Do not put records in the installed skill directory.
+Save records when the learner requests persistence, using the supplied workspace or
+`~/learning/<topic-slug>/` when no location is specified. Reuse that authorization
+for subsequent checkpoints. Session-only learning needs no files. Keep records
+outside installed skills and source repositories by default.
 
-Prefer a directory outside source repositories. If a requested location is
-inside Git, warn that personal records could be published and check tracked
-paths before writing. Ignore rules do not protect files already tracked. Changing
-ignore rules, untracking, committing, pushing, or publishing needs separate
-consent. Do not copy whole private source documents into records. Local storage
-can still be cloud-synced; content read by the assistant may reach its model
-provider. Do not imply that local Markdown makes the session offline or private.
+For a requested repository location, check existing tracking and sharing settings
+once before adding personal records. Preserve the project's configuration; ask
+only when a concrete publication or access change is needed. Saving progress does
+not authorize publishing it or copying private source documents into a shared area.
+Routine privacy checks stay internal; raise a specific issue only when it affects
+the chosen storage or sharing action.
 
 Read before editing and preserve the learner's notes. Use targeted edits for
 existing files. Re-read before checkpointing; reconcile concurrent changes or

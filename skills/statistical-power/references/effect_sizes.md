@@ -117,5 +117,5 @@ difference and the SD, work in raw units and convert at the end:
 - **Copying a published d without shrinking** — inflated by publication bias.
 - **Mixing up d and f, or η² and f²** — they differ by the conversions above; a
   factor-of-2 error in d quadruples or quarters the required n.
-- **Reporting one number** — always show the sensitivity range.
+- **Ignoring consequential input uncertainty** — show sensitivity when plausible effect sizes change the design decision. For a calculation with specified inputs, report the requested result without a compulsory range.
 - **Treating Cohen's benchmarks as truth** — they're conventions, not measurements.
