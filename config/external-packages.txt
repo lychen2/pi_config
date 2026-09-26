@@ -16,6 +16,8 @@ npm:pi-slopchop
 npm:pi-workspace-history
 # RTK is loaded through extensions/pi-context-bridge/rtk.ts for evidence safety.
 npm:@victor-software-house/pi-curated-themes
+# math includes the official skills/math/SKILL.md for Pi discovery.
+npm:math@0.1.0
 git:github.com/BevalZ/pi-provider
 # ADHD-friendly responses; enabled by config/i-have-adhd.json.
 git:github.com/ayghri/i-have-adhd
