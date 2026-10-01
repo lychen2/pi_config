@@ -1,0 +1,3 @@
+# Runtime source trees loaded by repository extensions, but not registered twice
+# in Pi's package list. The installer fast-forwards these repositories' default branches.
+git:github.com/NVlabs/SoL-Pi

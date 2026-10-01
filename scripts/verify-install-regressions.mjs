@@ -4,8 +4,8 @@
 // - F-02: run() enforces its deadline and reports "Timed out".
 // - F-03: no remote curl|bash / irm|iex pipelines remain; pi.dev/RTK go through
 //   hash- or checksum-verified installers, and the Linux bootstrap pins commits.
-// - F-05: installation verifies Default/Large presentation sync and packages
-//   both thinking-trail implementations.
+// - F-05: installation verifies active tool presentations.
+// - Retired workspace history and Large features stay out of the default install.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
@@ -21,7 +21,7 @@ try {
   // F-01: stdio pipes simulate a non-TTY environment.
   const f01 = spawnSync(
     process.execPath,
-    [installMjs, "--yes", "--dry-run", "--skip-external", "--skip-rtk", "--skip-model-defaults"],
+    [installMjs, "--yes", "--dry-run", "--with-external", "--skip-rtk", "--skip-model-defaults"],
     {
       cwd: repoRoot,
       env: { ...process.env, PI_CODING_AGENT_DIR: path.join(tempRoot, "agent") },
@@ -33,13 +33,31 @@ try {
   assert.match(f01.stdout, /Dry run complete\. No changes were made\./);
   assert.doesNotMatch(f01.stdout, /upstream setup wizard/);
   assert.doesNotMatch(f01.stdout, /raw\.githubusercontent\.com\/cortexkit/);
-  assert.match(f01.stdout, /sync-large-beautify\.mjs --check/);
+  assert.doesNotMatch(f01.stdout, /sync-large-beautify|pi-large-mode|pi-workspace-history/i);
+  assert.match(f01.stdout, /verify active tool presentations/);
   assert.match(f01.stdout, /i-have-adhd\.json/);
   const adhdConfig = JSON.parse(await readFile(path.join(repoRoot, "config", "i-have-adhd.json"), "utf8"));
   assert.deepEqual(adhdConfig, { alwaysOn: true, hideStatus: false });
+  const installMjsSource = await readFile(installMjs, "utf8");
+  console.log("  package all external Pi dependencies from config/external-packages.txt with unversioned npm sources");
+  assert.match(installMjsSource, /installRuntimeGitSources/);
+  assert.match(installMjsSource, /config", "sol-pi\.json"/);
+  assert.match(installMjsSource, /\["merge", "--ff-only", defaultRef\]/);
+  assert.match(installMjsSource, /\["update", "--extension", packageSource\]/);
   const externalPackages = (await readFile(path.join(repoRoot, "config", "external-packages.txt"), "utf8"))
     .split(/\r?\n/).map((line) => line.trim()).filter((line) => line && !line.startsWith("#"));
-  assert.equal(externalPackages.filter((entry) => entry === "git:github.com/ayghri/i-have-adhd").length, 1);
+  assert.deepEqual(externalPackages, [
+    "npm:@pi-lab/notify",
+    "npm:@cortexkit/pi-magic-context", "npm:@narumitw/pi-plan-mode",
+    "npm:@juicesharp/rpiv-ask-user-question", "npm:pi-slopchop", "npm:pi-btw",
+    "npm:@victor-software-house/pi-curated-themes",
+    "git:github.com/BevalZ/pi-provider", "git:github.com/ayghri/i-have-adhd",
+  ]);
+  assert.ok(!externalPackages.some(entry => /^npm:.*@\d/.test(entry)), "npm sources must not pin a version");
+  const runtimeSources = (await readFile(path.join(repoRoot, "config", "runtime-git-sources.txt"), "utf8"))
+    .split(/\r?\n/).map(line => line.trim()).filter(line => line && !line.startsWith("#"));
+  assert.deepEqual(runtimeSources, ["git:github.com/NVlabs/SoL-Pi"]);
+  assert.doesNotMatch(f01.stdout, /pi-workspace-history/i, "retired workspace history package must not be offered by the installer");
 
   // F-02: a hanging command must fail on deadline instead of blocking.
   const { run } = await import(pathToFileURL(installMjs).href);
@@ -59,21 +77,15 @@ try {
   assert.match(installSh, /commits\/main/);
   assert.match(installSh, /PI_INSTALL_SHA256/);
 
-  const installMjsSource = await readFile(installMjs, "utf8");
   assert.doesNotMatch(installMjsSource, /raw\.githubusercontent\.com\/cortexkit\/magic-context/);
-  assert.doesNotMatch(installMjsSource, /rtk-ai\/rtk\/refs\/heads\/master\/install\.sh/);
-  assert.match(installMjsSource, /path\.join\(repoDir, "scripts", "install-rtk\.mjs"\)/);
-  assert.match(installMjsSource, /path\.join\(repoDir, "scripts", "sync-large-beautify\.mjs"\), "--check"/);
+  const workbenchEntry = await readFile(path.join(repoRoot, "extensions", "pi-default-workbench", "index.ts"), "utf8");
+  assert.doesNotMatch(workbenchEntry, /large-mode|registerLazyLargeCommand/);
+  const lazyTools = await readFile(path.join(repoRoot, "extensions", "pi-default-workbench", "lazy-tools.ts"), "utf8");
+  assert.doesNotMatch(lazyTools, /registerCommand\("large"|large-mode\.ts/);
+  const workbenchManifest = JSON.parse(await readFile(path.join(repoRoot, "extensions", "pi-default-workbench", "package.json"), "utf8"));
+  assert.ok(!workbenchManifest.files.includes("large-mode.ts") && !workbenchManifest.files.includes("large-mode-core.ts"));
 
-  const toolRailsManifest = JSON.parse(await readFile(path.join(repoRoot, "extensions", "pi-tool-rails", "package.json"), "utf8"));
-  assert.ok(toolRailsManifest.files.includes("thinking-message.ts"), "pi-tool-rails omits thinking-message.ts from its package");
-  for (const entry of ["plan-widget.ts", "prototype-patch-registry.ts"]) {
-    assert.ok(toolRailsManifest.files.includes(entry), `pi-tool-rails omits ${entry} from its package`);
-  }
-  const largeBeautifyManifest = JSON.parse(await readFile(path.join(repoRoot, "extensions", "pi-large-beautify", "package.json"), "utf8"));
-  assert.ok(largeBeautifyManifest.files.includes("vendor"), "pi-large-beautify omits its vendored thinking implementation");
-
-  console.log("installer regression checks passed (F-01/F-02/F-03/F-04/F-05 surface).");
+  console.log("installer regression checks passed (F-01/F-02/F-03/F-04/F-05 surface; retired features absent).");
 } finally {
   await rm(tempRoot, { recursive: true, force: true });
 }

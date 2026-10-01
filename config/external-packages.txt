@@ -1,23 +1,16 @@
-# External pi packages recorded from ~/.pi/agent/settings.json
+# Pi package sources installed from npm and GitHub.
+# Unversioned sources resolve the current latest release/branch.
 npm:@pi-lab/notify
-# One lazy proxy for configured MCP servers; server credentials stay local.
-npm:pi-mcp-adapter
-# pi-markdown-preview is a dependency of
-# extensions/pi-default-workbench, its sole registration entry.
-# SoL owns action fusion, observation packing, log reduction and compaction.
-git:github.com/NVlabs/SoL-Pi
 # Magic Context retains knowledge/history with compaction disabled.
 npm:@cortexkit/pi-magic-context
 npm:@narumitw/pi-plan-mode
 npm:@juicesharp/rpiv-ask-user-question
-# Web Access is a dependency of
-# extensions/pi-context-bridge, its sole default-mode registration entry.
+# Web Access is loaded by pi-context-bridge.
 npm:pi-slopchop
-npm:pi-workspace-history
-# RTK is loaded through extensions/pi-context-bridge/rtk.ts for evidence safety.
+# Parallel side conversations; /btw:ask is the read-only entry.
+npm:pi-btw
+# pi-mcp-adapter is installed only when a user-configured server requires it.
+# RTK is loaded through pi-context-bridge for evidence safety.
 npm:@victor-software-house/pi-curated-themes
-# math includes the official skills/math/SKILL.md for Pi discovery.
-npm:math@0.1.0
 git:github.com/BevalZ/pi-provider
-# ADHD-friendly responses; enabled by config/i-have-adhd.json.
 git:github.com/ayghri/i-have-adhd

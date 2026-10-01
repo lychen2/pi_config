@@ -1,16 +1,16 @@
 # Default profile
 
-Default combines metadata-first skill/tool discovery with NVIDIA's standalone [SoL-Pi](https://github.com/NVlabs/SoL-Pi), tracking the upstream default branch without a pinned revision. Large and its third-party workflow are unchanged.
+Default combines metadata-first skill/tool discovery with NVIDIA's standalone [SoL-Pi](https://github.com/NVlabs/SoL-Pi), tracking the upstream default branch without a pinned revision. Workspace history and the Large profile are not part of the active default runtime or installer.
 
 ## Ownership
 
 | Surface | Owner |
 | --- | --- |
 | File mutation plus optional `then_run` validation | SoL Action Fusion; failed validation retains the successful edit |
-| Large repeated observations and paged exact recall | SoL ObservationPack and `obs_recall` |
+| Repeated observations and paged exact recall | SoL ObservationPack and `obs_recall` |
 | Long diagnostic-log reduction with verified quotations | SoL Evidence-Preserving Reducer; original output survives failed reduction |
 | Execution plan and boundary-driven native compaction | SoL `update_plan` and Online Context Compact |
-| Durable memory and history search | Magic Context in `compaction.enabled=false` mode; `ctx_search`/`ctx_memory`/`ctx_note`/`ctx_expand` and memory injection stay active, `ctx_reduce` is not registered |
+| Durable memory and knowledge search | Magic Context in `compaction.enabled=false` mode; `ctx_search`/`ctx_memory`/`ctx_note`/`ctx_expand` and memory injection stay active, `ctx_reduce` is not registered |
 | Skill discovery | Workbench search/load plus slim-skills router; descriptions and exact paths remain visible when search is unavailable |
 | Tool discovery | Adaptive mode only; full exposes enabled tools directly without `search_tool_bm25` |
 
@@ -24,7 +24,7 @@ Adaptive mode keeps Magic Context's four knowledge tools active when registered.
 
 Use teammate for independent bounded work with distinct write ownership. Small sequential tasks stay in the parent agent. The single-model teammate policy pins every task to the model in `extensions/pi-context-bridge/teammate-config.json` with no fallbacks.
 
-The external manifest installs `pi-mcp-adapter`. `scripts/configure-mcp-proxy.mjs` (also called by the installer) switches an existing `zen-browser` server to `directTools: false` and `lifecycle: "lazy-keep-alive"`. It backs up the local file, preserves server commands/credentials and other servers, and does nothing when no Zen server exists. Browser provisioning and credentials are intentionally not copied into this repository.
+The external manifest installs the optional `pi-mcp-adapter`. The browser proxy configuration is applied only when a `zen-browser` server is already defined. `scripts/configure-mcp-proxy.mjs` (also called by the installer) switches that server to `directTools: false` and `lifecycle: "lazy-keep-alive"`. It backs up the local file, preserves server commands/credentials and other servers, and does nothing when no Zen server exists. Browser provisioning and credentials are intentionally not copied into this repository.
 
 Use the MCP proxy's search/describe/call flow for the user's existing browser. Use the workbench Chromium tool for isolated local application tests; avoid switching browser sessions mid-task. Public-page research normally uses web search/fetch directly.
 
@@ -49,7 +49,7 @@ Restart Pi for the handoff to take effect; a session started before the migratio
 
 ## Install and migrate
 
-The installer records the unpinned standalone package in `config/external-packages.txt`. Installing the package alone leaves its mechanisms disabled until configured. After installing external packages, explicitly authorize migration:
+The installer fetches the unpinned SoL-Pi Git source from its upstream default branch into the Pi agent directory and updates that checkout on later installs. If `sol-pi.json` is missing, it seeds the file from `config/sol-pi.json`. The standalone package entry in `config/external-packages.txt` is filtered from installation to prevent duplicate registration. Explicitly authorize the shared-settings migration:
 
 ```bash
 node scripts/configure-default-sol.mjs --approve-shared-memory
@@ -61,7 +61,7 @@ The migration:
 
 - Backs up existing files with `.pre-sol-<timestamp>` suffixes; preserves unrelated configuration and JSONC comments.
 - Writes all four enabled flags to the agent's `sol-pi.json` using `config/sol-pi.json` as a template. The installed reducer uses the machine's current default provider/model through Pi-managed authentication, not credentials in this file.
-- Moves the standalone SoL package first and enables Pi native compaction. A custom retained-tail setting requires a matching SoL programmatic integration and is rejected before writing.
+- Places the runtime SoL source first in the package list and enables Pi native compaction.
 - Sets shared Magic Context `compaction.enabled=false` and disables its duplicate `todowrite`; preserves its knowledge configuration and database.
 - Optionally adds only `198.18.0.0/15` to Web Access's `ssrf.allowRanges`. Existing provider, proxy and domain-policy settings remain intact; other private ranges remain blocked.
 
@@ -87,7 +87,7 @@ Validate external data and permissions at system boundaries, then reuse normaliz
 
 ## Optics research
 
-`optics-research` is installed as a local skill by `scripts/deploy-skills.mjs`. Its metadata provides the entry point; literature and physical-verification references load only when needed. `APPEND_SYSTEM.md` keeps brief defaults for physical checks, traceable evidence, raw-data preservation, and authorization for confidential uploads or hardware operations; detailed research procedures stay in the skills. No extra extension, model, solver, or Python dependency is installed by this change.
+The installer stages `skills/optics-research/` with `scripts/deploy-skills.mjs`, preserving user-owned skill files. `APPEND_SYSTEM.md` keeps brief defaults for physical checks, traceable evidence, raw-data preservation, and authorization for confidential uploads or hardware operations; detailed research procedures stay in the skill. No extra extension, model, solver, or Python dependency is installed for optics guidance.
 
 After deployment, use `/reload` to refresh the prompt and skill resources. Invoke `/skill:optics-research` with a research question, paper, calculation, or simulation task. Existing project instructions and explicit resource disables still apply.
 

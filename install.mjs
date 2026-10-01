@@ -7,7 +7,6 @@ import {
   cp,
   mkdir,
   readFile,
-  readlink,
   rm,
   readdir,
   writeFile,
@@ -49,6 +48,15 @@ const retiredLocalPackageNames = new Set([
   "pi-todo-guard",
   "pi-zh-localizer",
 ]);
+const retiredDefaultPackageNames = new Set([
+  "pi-workspace-history",
+  "pi-deepseek-anchored-standard",
+  "pi-large-mode",
+  "pi-large-beautify",
+]);
+const retiredExternalPackageSources = new Set(["npm:pi-workspace-history"]);
+const managedExternalGitSources = new Set(["git:github.com/NVlabs/SoL-Pi"]);
+
 // Local packages that ship in this repository but stay out of the default profile;
 // install them explicitly with `pi install <dir>` when the profile needs them.
 const optInLocalPackageNames = new Set([
@@ -247,32 +255,29 @@ function configuredPackageSource(value) {
   return undefined;
 }
 
+function isRetiredDefaultPackage(value) {
+  const source = configuredPackageSource(value)?.replaceAll("\\", "/").replace(/\/+$/, "");
+  if (!source) return false;
+  return [...retiredDefaultPackageNames].some((name) =>
+    source === `npm:${name}`
+    || source.startsWith(`npm:${name}@`)
+    || source.endsWith(`/extensions/${name}`)
+    || source.endsWith(`/extensions/${name}/package.json`)
+  );
+}
+
 function isLocalPackageSource(value, packageName) {
   const source = configuredPackageSource(value)?.replaceAll("\\", "/").replace(/\/+$/, "");
   return source?.endsWith(`/extensions/${packageName}`) ?? false;
 }
 
-async function normalizeAnchoredStandardOrder() {
+async function removeRetiredPackages() {
   const settingsPath = path.join(agentDir, "settings.json");
-  const settings = await readJson(settingsPath, {});
-  if (!Array.isArray(settings.packages)) return;
-
-  const anchorIndex = settings.packages.findIndex((entry) =>
-    isLocalPackageSource(entry, "pi-deepseek-anchored-standard")
-  );
-  const workbenchIndex = settings.packages.findIndex((entry) =>
-    isLocalPackageSource(entry, "pi-default-workbench")
-  );
-  if (anchorIndex < 0 || workbenchIndex < 0 || anchorIndex === workbenchIndex + 1) return;
-
-  const [anchor] = settings.packages.splice(anchorIndex, 1);
-  const nextWorkbenchIndex = settings.packages.findIndex((entry) =>
-    isLocalPackageSource(entry, "pi-default-workbench")
-  );
-  settings.packages.splice(nextWorkbenchIndex + 1, 0, anchor);
-  console.log("  ordered pi-deepseek-anchored-standard after pi-default-workbench");
-  if (!installerOptions.dryRun) {
-    await writeFile(settingsPath, `${JSON.stringify(settings, null, 2)}\n`, "utf8");
+  const currentSettings = await readJson(settingsPath);
+  if (!Array.isArray(currentSettings.packages)) return;
+  const packages = currentSettings.packages.filter((entry) => !isRetiredDefaultPackage(entry));
+  if (JSON.stringify(packages) !== JSON.stringify(currentSettings.packages) && !installerOptions.dryRun) {
+    await writeFile(settingsPath, `${JSON.stringify({ ...currentSettings, packages }, null, 2)}\n`, "utf8");
   }
 }
 
@@ -478,7 +483,7 @@ async function restoreFiles() {
     await copyPath(path.join(repoDir, "config", file), path.join(agentDir, file));
   }
 
-  console.log("  SoL migration: run node scripts/configure-default-sol.mjs --approve-shared-memory after installing external packages (add --tun for Fake-IP proxies).");
+  console.log("  SoL-Pi source is prepared and registered through pi-context-bridge.");
 
   for (const file of ["matugen-chrome.ts", "matugen-footer-core.mjs"]) {
     await copyPath(
@@ -552,6 +557,9 @@ async function mergePublicSettings(includeModelDefaults) {
 
   const currentSettings = await readJson(settingsPath);
   const mergedSettings = mergeObjects(publicSettings, currentSettings);
+  if (Array.isArray(mergedSettings.packages)) {
+    mergedSettings.packages = mergedSettings.packages.filter((entry) => !isRetiredDefaultPackage(entry));
+  }
   if (includeModelDefaults) {
     for (const key of ["defaultProvider", "defaultModel", "enabledModels"]) {
       if (Object.hasOwn(publicSettings, key)) mergedSettings[key] = publicSettings[key];
@@ -568,28 +576,6 @@ async function mergePublicSettings(includeModelDefaults) {
   await writeFile(settingsPath, `${JSON.stringify(mergedSettings, null, 2)}\n`, "utf8");
 }
 
-
-async function retireLegacyLargeLauncher() {
-  if (isWindows) return;
-
-  const legacySource = path.join(repoDir, "bin", "pi-large");
-  const destination = path.join(homeDir, ".local", "bin", "pi-large");
-  let linkTarget;
-  try {
-    linkTarget = await readlink(destination);
-  } catch (error) {
-    if (error?.code === "ENOENT" || error?.code === "EINVAL") return;
-    throw error;
-  }
-
-  const resolvedTarget = path.resolve(path.dirname(destination), linkTarget);
-  if (resolvedTarget !== legacySource) return;
-
-  console.log(`  remove retired pi-large launcher ${destination}`);
-  if (!installerOptions.dryRun) {
-    await rm(destination, { force: true });
-  }
-}
 
 async function installLocalPackages() {
   console.log(`\n${installStep(4)} Installing local Pi packages`);
@@ -609,11 +595,13 @@ async function installLocalPackages() {
     }
   }
 
-  packageDirs.sort();
-  console.log(`  discovered local packages: ${packageDirs.map((packageDir) => path.basename(packageDir)).join(", ") || "none"}`);
-  for (const packageDir of packageDirs.filter((entry) => {
+  const activePackageDirs = packageDirs
+    .filter((packageDir) => !retiredLocalPackageNames.has(path.basename(packageDir)))
+    .sort();
+  console.log(`  discovered local packages: ${activePackageDirs.map((packageDir) => path.basename(packageDir)).join(", ") || "none"}`);
+  for (const packageDir of activePackageDirs.filter((entry) => {
     const packageName = path.basename(entry);
-    return !retiredLocalPackageNames.has(packageName) && !optInLocalPackageNames.has(packageName);
+    return !optInLocalPackageNames.has(packageName);
   })) {
     if (preserveSelection && !settings.packages.some((entry) => isLocalPackageSource(entry, path.basename(packageDir)))) {
       continue;
@@ -624,14 +612,47 @@ async function installLocalPackages() {
     }
     if (!preserveSelection) run(commandName("pi"), ["install", packageDir]);
   }
-  await normalizeAnchoredStandardOrder();
+  await removeRetiredPackages();
 
   console.log("  apply Pi Chinese UI localization");
   run(process.execPath, [path.join(extensionsDir, "pi-zh-localizer", "localize.mjs")]);
-  console.log("  verify Default/Large presentation bundle sync");
-  run(process.execPath, [path.join(repoDir, "scripts", "sync-large-beautify.mjs"), "--check"]);
+  console.log("  verify active tool presentations");
   run(process.execPath, [path.join(repoDir, "scripts", "verify-tool-presentations.mjs")]);
-  await retireLegacyLargeLauncher();
+}
+
+async function installRuntimeGitSources() {
+  const manifestPath = path.join(repoDir, "config", "runtime-git-sources.txt");
+  const sources = (await readFile(manifestPath, "utf8"))
+    .split(/\r?\n/).map(line => line.trim()).filter(line => line && !line.startsWith("#"));
+  for (const source of sources) {
+    const match = source.match(/^git:github\.com\/([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)$/);
+    if (!match) throw new Error(`Unsupported runtime git source: ${source}`);
+    const [, owner, repository] = match;
+    const target = path.join(agentDir, "git", "github.com", owner, repository);
+    if (!(await pathExists(target))) {
+      run(commandName("git"), ["clone", "--depth", "1", `https://github.com/${owner}/${repository}.git`, target]);
+    } else {
+      const clean = spawnSync(commandName("git"), ["status", "--porcelain"], { cwd: target, encoding: "utf8" });
+      if (clean.error || clean.status !== 0) throw new Error(`Runtime git source is not a Git checkout: ${target}`);
+      if (clean.stdout.trim()) {
+        console.warn(`  preserve modified runtime source; skipped update: ${target}`);
+      } else {
+        run(commandName("git"), ["fetch", "--prune", "origin"], { cwd: target });
+        const head = spawnSync(commandName("git"), ["symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"], { cwd: target, encoding: "utf8" });
+        const defaultRef = head.status === 0 ? head.stdout.trim().replace(/^refs\/remotes\//, "") : undefined;
+        if (!defaultRef) throw new Error(`Could not determine the default branch for ${source}`);
+        run(commandName("git"), ["merge", "--ff-only", defaultRef], { cwd: target });
+      }
+    }
+    if (owner === "NVlabs" && repository === "SoL-Pi") {
+      const solConfigPath = path.join(agentDir, "sol-pi.json");
+      const sourceConfigPath = path.join(repoDir, "config", "sol-pi.json");
+      if (!(await pathExists(solConfigPath))) {
+        await copyPath(sourceConfigPath, solConfigPath);
+        if (!installerOptions.dryRun) await chmod(solConfigPath, 0o600);
+      }
+    }
+  }
 }
 
 async function installExternalPackages(enabled) {
@@ -645,7 +666,7 @@ async function installExternalPackages(enabled) {
   const packages = (await readFile(manifestPath, "utf8"))
     .split(/\r?\n/)
     .map((line) => line.trim())
-    .filter((line) => line && !line.startsWith("#"));
+    .filter((line) => line && !line.startsWith("#") && !retiredExternalPackageSources.has(line) && !managedExternalGitSources.has(line));
 
   const gitAvailable = commandExists("git");
   for (const packageSource of packages) {
@@ -655,6 +676,7 @@ async function installExternalPackages(enabled) {
     }
     const commandOptions = {};
     run(commandName("pi"), ["install", packageSource], commandOptions);
+    run(commandName("pi"), ["update", "--extension", packageSource], commandOptions);
   }
 }
 
@@ -743,6 +765,7 @@ async function main() {
   await mergeModelOverrides();
   await mergePublicSettings(choices.modelDefaults);
   await installLocalPackages();
+  await installRuntimeGitSources();
   await installExternalPackages(choices.external);
   await configureRtkCompat(agentDir, { dryRun: installerOptions.dryRun });
   configureTeammate(agentDir, { dryRun: installerOptions.dryRun });
