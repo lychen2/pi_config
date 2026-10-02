@@ -65,9 +65,10 @@ test("renders plan contents and progress above the editor when expanded", () => 
   assert.deepEqual(widget.render(80), [
     header(1, 3, 1, "collapse"),
     "  ✓ Completed step",
-    "  ■ 当前进行中的步骤",
+    "▏ ■ 当前进行中的步骤",
     "  □ Pending step",
   ]);
+  assert.match(widget.render(80)[0], /^Plan/);
   const finished = steps.map(step => ({ ...step, status: "completed" }));
   app.hooks.get("tool_result")({ toolName: "update_plan", input: { steps: finished }, isError: false }, app.ctx);
   assert.equal(app.latest().render(80)[0], header(3, 3, 0, "collapse"));
@@ -208,7 +209,7 @@ test("bounds long plans and narrow Unicode rows while keeping current step visib
   const lines = renderPlanWidget(long, theme, 40);
   assert.ok(lines.length <= 11);
   assert.ok(lines.some(line => line.startsWith("  … ")));
-  assert.ok(lines.includes("  ■ Step 100"));
+  assert.ok(lines.includes("▏ ■ Step 100"));
   assert.deepEqual(renderPlanWidget(long, theme, 30, false), ["Plan  0/128"]);
   assert.deepEqual(renderPlanWidget(long, theme, 40, false), ["Plan  0/128 · 1 running  (Alt+T expand)"]);
   assert.deepEqual(renderPlanWidget(long, theme, 60, false), ["Plan  128 steps · 0 done · 1 running  (Alt+T expand)"]);

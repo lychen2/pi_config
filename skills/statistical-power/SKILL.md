@@ -198,7 +198,8 @@ For simulation: also state the data-generating assumptions (baseline rate, resid
 ### Related skills
 - **experimental-design** — once you know n, lay out the actual study (randomization, blocking, factorial/DOE, crossover, sequential designs).
 - **statistical-analysis** — assumption checks, running the test, effect sizes, and APA reporting after data collection.
-- **statsmodels** / **pymc** — fitting the models referenced here.
+- **statsmodels** — use the installed package and its documentation for model APIs referenced here.
+- **PyMC** — use the installed package and its documentation for Bayesian models referenced here.
 
 ### Key references
 - Cohen, J. (1988). *Statistical Power Analysis for the Behavioral Sciences* (2nd ed.).

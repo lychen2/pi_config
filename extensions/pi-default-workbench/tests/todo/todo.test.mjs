@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { visibleWidth } from "@earendil-works/pi-tui";
 
-import register, {
+import register, { createTodoInitializer } from "../../index.ts";
+import {
   applyMutation,
   cloneState,
   dependencyState,
@@ -120,6 +121,54 @@ test("keeps the Todo center inside narrow widths and preserves task priority", a
   assert.match(center.render(72).join("\\n"), /Long running implementation task/);
 });
 
+test("Todo initializer retries a failed load and shares concurrent initialization", async () => {
+  let loads = 0;
+  let todoRegistrations = 0;
+  let guardRegistrations = 0;
+  const initializer = createTodoInitializer(
+    async () => {
+      loads += 1;
+      if (loads === 1) throw new Error("temporary import failure");
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      return ["todo", "guard"];
+    },
+    () => { todoRegistrations += 1; },
+    () => { guardRegistrations += 1; },
+  );
+
+  await assert.rejects(initializer(), /temporary import failure/);
+  await Promise.all([initializer(), initializer()]);
+  await initializer();
+
+  assert.equal(loads, 2);
+  assert.equal(todoRegistrations, 1);
+  assert.equal(guardRegistrations, 1);
+});
+
+test("Todo initializer does not duplicate a successful partial registration on retry", async () => {
+  let todoRegistrations = 0;
+  let guardRegistrations = 0;
+  let failGuard = true;
+  const initializer = createTodoInitializer(
+    async () => ["todo", "guard"],
+    () => { todoRegistrations += 1; },
+    () => {
+      guardRegistrations += 1;
+      if (failGuard) {
+        failGuard = false;
+        throw new Error("temporary guard registration failure");
+      }
+    },
+  );
+
+  await assert.rejects(initializer(), /temporary guard registration failure/);
+  await initializer();
+  await initializer();
+
+  assert.equal(todoRegistrations, 1);
+  assert.equal(guardRegistrations, 2, "retry the failed guard, preserving the completed todo registration");
+});
+
 test("registers one todo tool, both commands, shortcut, and session hooks", async () => {
   const tools = [];
   const commands = new Map();
@@ -136,13 +185,13 @@ test("registers one todo tool, both commands, shortcut, and session hooks", asyn
     },
   };
   register(pi);
-  assert.deepEqual(tools.map((tool) => tool.name), ["todo"]);
-  assert.deepEqual([...commands.keys()], ["todos", "maestro-todo"]);
-  assert.deepEqual([...shortcuts.keys()], ["alt+shift+t"]);
+  assert.ok(tools.some((tool) => tool.name === "code_outline"));
+  assert.ok(!tools.some((tool) => tool.name === "todo"));
+  assert.deepEqual([...commands.keys()], ["stash", "anycopy", "md", "preview", "preview-browser", "preview-pdf", "preview-clear-cache", "tools", "deferred-tools"]);
+  assert.deepEqual([...shortcuts.keys()], ["ctrl+alt+s", "ctrl+alt+y", "ctrl+alt+t"]);
   assert.ok(handlers.has("session_start"));
   assert.ok(handlers.has("session_tree"));
   assert.ok(handlers.has("session_compact"));
-  assert.ok(handlers.has("session_shutdown"));
 
   const widgets = new Map();
   const ctx = {
@@ -155,13 +204,23 @@ test("registers one todo tool, both commands, shortcut, and session hooks", asyn
         else widgets.set(key, factory({ requestRender() {} }, plainTheme));
       },
       notify() {},
+      setStatus() {},
     },
   };
-  await handlers.get("session_start")[0]({}, ctx);
-  const result = await tools[0].execute("call-1", { action: "create", subject: "Test tool" }, undefined, undefined, ctx);
+  await handlers.get("session_start").at(-1)({}, ctx);
+  assert.equal(tools.filter((tool) => tool.name === "todo").length, 1);
+  assert.equal(tools.filter((tool) => tool.name === "code_outline").length, 1);
+  assert.ok(commands.has("todos"));
+  assert.ok(commands.has("maestro-todo"));
+  assert.ok(shortcuts.has("alt+shift+t"));
+  assert.ok(handlers.has("session_tree"));
+  assert.ok(handlers.has("session_compact"));
+  assert.ok(handlers.has("session_shutdown"));
+  const result = await tools.find((tool) => tool.name === "todo").execute("call-1", { action: "create", subject: "Test tool" }, undefined, undefined, ctx);
   assert.equal(result.details.nextId, 2);
   assert.equal(result.details.tasks[0].subject, "Test tool");
-  assert.ok(widgets.has("todo-panel"));
-  await handlers.get("session_shutdown")[0]({}, ctx);
-  assert.equal(widgets.size, 0);
+  await handlers.get("session_start").at(-1)({}, ctx);
+  assert.equal(tools.filter((tool) => tool.name === "todo").length, 1);
+  await handlers.get("session_shutdown").at(-1)({}, ctx);
+  await handlers.get("session_shutdown").at(-1)({}, ctx);
 });

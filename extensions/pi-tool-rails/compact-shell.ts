@@ -2,11 +2,15 @@ import {
   BashExecutionComponent,
   ToolExecutionComponent,
   type ExtensionAPI,
+  type Theme,
 } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth, visibleWidth, type Component } from "@earendil-works/pi-tui";
-import { shortToolName, toolIcon } from "./tool-presentations.mjs";
+import { normalizeToolName, shortToolName, toolIcon } from "./tool-presentations.mjs";
+import { backgroundToolStatus, collapsedToolCard, hasToolCardFailure } from "./tool-card-summary.ts";
+import { cleanCodemodeText, codemodeCallTarget, measuredSavingsLine, renderCodemodeTree, summarizeCodemodeOutput } from "./codemode-tree.ts";
 import { installPrototypePatch } from "./prototype-patch-registry.ts";
-import { compactBashBody, compactToolBody, TOOL_COLLAPSED_MAX_LINES, TOOL_EXPANDED_MAX_LINES } from "./tool-body-polish.ts";
+import { compactToolBody, TOOL_COLLAPSED_MAX_LINES, TOOL_EXPANDED_MAX_LINES } from "./tool-body-polish.ts";
+import { renderSoftFrame, softFrameTop, softFrameBottom, softFrameLine, softFrameInnerWidth, type VisualTheme, type VisualState } from "./visual-style.ts";
 
 type ShellMode = "default" | "self";
 type GetRenderShell = (this: ToolExecutionComponent) => ShellMode;
@@ -24,11 +28,8 @@ type SettledRender = {
   showImages: boolean;
   lines: string[];
 };
-type ToolTheme = {
-  bg(color: "toolErrorBg" | "toolPendingBg" | "toolSuccessBg", text: string): string;
-  fg(color: "accent" | "borderAccent" | "dim" | "error" | "muted" | "success" | "syntaxFunction" | "syntaxVariable" | "text" | "toolOutput" | "toolTitle" | "warning", text: string): string;
+type ToolTheme = VisualTheme & Pick<Theme, "bg" | "bold"> & {
   getBgAnsi?(color: "toolErrorBg" | "toolPendingBg" | "toolSuccessBg"): string;
-  bold(text: string): string;
 };
 type ShellPatch = {
   originalShell: GetRenderShell;
@@ -45,11 +46,12 @@ type ExecutionState = {
   hideComponent?: boolean;
   imageComponents?: unknown[];
   isPartial?: boolean;
-  result?: { isError?: boolean };
+  result?: { isError?: boolean; content?: unknown; details?: unknown };
   selfRenderContainer?: Component;
   toolName?: string;
-  args?: { steps?: unknown };
+  args?: { steps?: unknown; [key: string]: unknown };
   expanded?: boolean;
+  cancelled?: boolean;
   showImages?: boolean;
 };
 
@@ -58,44 +60,157 @@ const DIFF_BACKGROUND = /\x1b\[48;(?:2;\d+;\d+;\d+|5;(?:22|52))m/;
 const SHELL_PATCH = Symbol.for("pi.toolRails.labeledShellPatch");
 // Two cells keep the leading emoji from crowding the centered tool text.
 const LABEL_WIDTH = 12;
-const BOX_LEFT_RAIL = "┃ ";
-const BOX_RIGHT_RAIL = "│";
-
-function boxStatusLabel(execution: ExecutionState): { label: string; color: "error" | "toolTitle" | "warning" } {
-  const name = shortToolName(execution.toolName ?? "tool").toUpperCase();
-  const icon = toolIcon(execution.toolName ?? "tool");
-  if (execution.isPartial !== false) return { label: `◆ ${icon} ${name} · 执行中`, color: "warning" };
-  if (execution.result?.isError) return { label: `× ${icon} ${name} · 失败`, color: "error" };
-  return { label: `✓ ${icon} ${name} · 完成`, color: "toolTitle" };
+function boxStatus(execution: ExecutionState): { status: string; state: VisualState } {
+  if (execution.cancelled) return { status: "⊘ 已取消", state: "cancelled" };
+  if (hasToolCardFailure(execution)) return { status: "× 失败", state: "error" };
+  if (execution.isPartial !== false) return { status: "◐ 执行中", state: "running" };
+  const background = backgroundToolStatus(execution);
+  if (background) return { status: `↗ ${background}`, state: "running" };
+  return { status: "✓ 完成", state: "success" };
 }
 
-function fitBorderLabel(label: string, width: number): string {
-  // Reserve ╭─, one trailing ╮, and two spaces around the status label.
-  const available = Math.max(1, width - 5);
-  if (visibleWidth(label) <= available) return label;
-  return `${plain(truncateToWidth(label, Math.max(1, available - 1), ""))}…`;
+function boxTitle(execution: ExecutionState): string {
+  const name = execution.toolName ?? "tool";
+  return `${toolIcon(name)} ${shortToolName(name)}`;
 }
 
 export function toolBoxTop(execution: ExecutionState, width: number, theme: ToolTheme): string {
-  if (width <= 0) return "";
-  const status = boxStatusLabel(execution);
-  const label = ` ${fitBorderLabel(status.label, width)} `;
-  const remaining = Math.max(0, width - 3 - visibleWidth(label));
-  const line = `${theme.fg("borderAccent", "╭─")}${theme.fg(status.color, theme.bold(label))}${theme.fg("borderAccent", `${"─".repeat(remaining)}╮`)}`;
-  return truncateToWidth(line, width, "");
+  return softFrameTop({ title: boxTitle(execution), ...boxStatus(execution), width, theme });
 }
 
 export function toolBoxBottom(width: number, theme: ToolTheme): string {
-  return theme.fg("borderAccent", `╰${"─".repeat(Math.max(0, width - 2))}╯`);
+  return softFrameBottom(width, theme);
 }
 
 export function toolBoxLine(line: string, width: number, theme: ToolTheme): string {
-  const left = theme.fg("borderAccent", BOX_LEFT_RAIL);
-  const right = theme.fg("borderAccent", BOX_RIGHT_RAIL);
-  const contentWidth = Math.max(0, width - visibleWidth(BOX_LEFT_RAIL) - visibleWidth(BOX_RIGHT_RAIL));
-  const content = truncateToWidth(line, contentWidth, "");
-  return `${left}${content}${" ".repeat(Math.max(0, contentWidth - visibleWidth(content)))}${right}`;
+  return softFrameLine(line, width, theme);
 }
+
+function executionFrame(execution: ExecutionState, lines: string[], width: number, theme: ToolTheme): string[] {
+  const { state, status } = boxStatus(execution);
+  const surface = state === "error" ? "toolErrorBg" : state === "running" ? "toolPendingBg" : "toolSuccessBg";
+  return renderSoftFrame({ theme, title: boxTitle(execution), status, state, lines, width, surface });
+}
+function solResultLines(result: ExecutionState["result"]): string[] {
+  const content = result?.content;
+  if (!Array.isArray(content)) return [];
+  return content
+    .filter((block): block is { type?: unknown; text?: unknown } => Boolean(block) && typeof block === "object")
+    .filter((block) => block.type === "text" && typeof block.text === "string")
+    .flatMap((block) => (block.text as string).replace(ANSI_ESCAPE, "").replace(/\r/g, "").split("\n"));
+}
+
+function usefulSolLine(line: string): boolean {
+  const value = railStripped(line);
+  if (!value || isInternalToolDiagnosticLine(value) || isFrameLine(value)) return false;
+  if (/^(?:codemode|obs_recall|SoL-Pi|⚡ SoL-Pi)/i.test(value)) return false;
+  if (/^(?:\[AFT\b|Use .* to (?:continue|expand)|Tip:)/i.test(value)) return false;
+  return true;
+}
+
+function codemodeBody(execution: ExecutionState, expanded: boolean, theme: ToolTheme, width: number): string[] {
+  const args = execution.args ?? {};
+  const source = [args.code, args.source, args.script].find((value): value is string => typeof value === "string") ?? "";
+  const purpose = [args.reasoning, args.description, args.purpose].find((value): value is string => typeof value === "string" && Boolean(value.trim()));
+  const details = execution.result?.details && typeof execution.result.details === "object"
+    ? execution.result.details as Record<string, unknown> : {};
+  const nativeCallsPresent = Array.isArray(details.calls);
+  const calls = nativeCallsPresent
+    ? (details.calls as unknown[]).filter((call): call is Record<string, unknown> => Boolean(call) && typeof call === "object") : [];
+  let nativeDuration: number | undefined;
+  const content = execution.result?.content;
+  const nativeHeader = /^Script (completed|failed)\nWall time ([\d.]+) seconds\nOutput:\n/;
+  const resultLines = Array.isArray(content) ? content
+    .filter((block): block is { type?: unknown; text?: unknown } => Boolean(block) && typeof block === "object")
+    .filter(block => block.type === "text" && typeof block.text === "string")
+    .flatMap(block => {
+      let text = (block.text as string).replace(ANSI_ESCAPE, "").replace(/\r/g, "");
+      if (nativeDuration === undefined) {
+        const header = text.match(nativeHeader);
+        if (header) { nativeDuration = Number(header[2]) * 1000; text = text.slice(header[0].length); }
+      }
+      return text.split("\n");
+    }) : [];
+  const meaningful = filterSoLStaticSavingsLines(resultLines).filter(usefulSolLine);
+  const duration = [details.duration_ms, details.durationMs, nativeDuration]
+    .find((value): value is number => typeof value === "number" && Number.isFinite(value) && value >= 0);
+  const durationText = duration === undefined ? "" : ` · ${duration < 1000 ? `${Math.round(duration)}ms` : `${(duration / 1000).toFixed(1)}s`}`;
+  const body: string[] = purpose ? [theme.fg("accent", cleanCodemodeText(purpose))] : [];
+  if (calls.length) {
+    const completed = calls.filter(call => ["ok", "error", "cancelled"].includes(String(call.status))).length;
+    const failed = calls.filter(call => call.status === "error").length;
+    const cancelled = calls.filter(call => call.status === "cancelled").length;
+    const color = failed || execution.result?.isError ? "error" : execution.isPartial !== false ? "warning" : "success";
+    body.push(theme.fg(color, `工具调用 ${completed}/${calls.length}${failed ? ` · ${failed} 失败` : ""}${cancelled ? ` · ${cancelled} 取消` : ""}`) + theme.fg("muted", durationText));
+  } else {
+    body.push(theme.fg("muted", `${execution.isPartial !== false ? "等待调用记录" : "脚本执行"}${durationText}`));
+  }
+  const fullOutputPath = typeof details.fullOutputPath === "string" ? cleanCodemodeText(details.fullOutputPath) : undefined;
+  if (fullOutputPath) body.push(theme.fg("muted", `完整输出: ${fullOutputPath}`));
+  body.push(...renderCodemodeTree(calls, expanded, width, theme));
+  if (!nativeCallsPresent && source) {
+    const refs = [...new Set(Array.from(source.matchAll(/\btools?\.([A-Za-z_$][\w$]*)\s*\(/g), match => match[1]!))];
+    if (refs.length) body.push(theme.fg("muted", `代码引用 · ${refs.map(shortToolName).join("、")}`));
+  }
+  if (meaningful.length) {
+    if (expanded) {
+      body.push(theme.fg("syntaxFunction", "结果"));
+      const limit = Math.min(80, Math.max(0, 200 - body.length - 12));
+      body.push(...meaningful.slice(0, limit).map(line => theme.fg(execution.result?.isError ? "error" : "toolOutput", line)));
+      if (meaningful.length > limit) body.push(theme.fg("muted", `… +${meaningful.length - limit} 行结果`));
+    } else {
+      const summaries = summarizeCodemodeOutput(meaningful).filter(line =>
+        !line.startsWith("计划 · ") || !calls.some(call => call.name === "update_plan" && codemodeCallTarget(call) === line.slice("计划 · ".length)));
+      body.push(...summaries.map(line => theme.fg(execution.result?.isError ? "error" : "toolOutput", `结果 · ${line}`)));
+      const saving = meaningful.map(measuredSavingsLine).find((line): line is string => Boolean(line));
+      if (saving && !body.some(line => plain(line).includes(saving))) body.push(theme.fg("muted", saving));
+    }
+  } else if (execution.isPartial === false && !calls.length && !execution.result?.isError) {
+    body.push(theme.fg("muted", "无输出"));
+  }
+  if (expanded) {
+    body.push(theme.fg("syntaxVariable", "源代码"));
+    const sourceLines = source ? source.replace(/\r/g, "").split("\n") : [];
+    const limit = Math.min(80, Math.max(0, 200 - body.length - 1));
+    body.push(...sourceLines.slice(0, limit).map(line => theme.fg("toolOutput", line || " ")));
+    if (sourceLines.length > limit) body.push(theme.fg("muted", `… +${sourceLines.length - limit} 行代码`));
+  }
+  return body.slice(0, expanded ? 200 : 12);
+}
+
+function recallBody(execution: ExecutionState, expanded: boolean, theme: ToolTheme): string[] {
+  const args = execution.args ?? {};
+  const id = [args.id, args.observation_id, args.observationId].find((value) => typeof value === "string" || typeof value === "number");
+  const offset = [args.offset, args.start].find((value) => typeof value === "number" && Number.isFinite(value));
+  const details = execution.result?.details && typeof execution.result.details === "object"
+    ? execution.result.details as Record<string, unknown>
+    : {};
+  const nextOffset = [details.nextOffset, details.next_offset, args.next_offset, args.nextOffset]
+    .find((value) => typeof value === "number" && Number.isFinite(value));
+  const reference = [id === undefined ? "" : `#${id}`, offset === undefined ? "" : `偏移 ${offset}`, details.eof === true ? "已到末尾" : nextOffset === undefined ? "" : `下次 ${nextOffset}`].filter(Boolean).join(" · ");
+  const resultLines = solResultLines(execution.result);
+  // SoL puts two transport metadata rows before the actual recovered evidence.
+  if (/^\[obs_recall id=\S+ offset=\d+ next_offset=\d+ eof=(?:true|false)\]$/.test(resultLines[0] ?? "")
+    && /^\[chunk_bytes=\d+ chunk_lines=\d+; use next_offset to continue\]$/.test(resultLines[1] ?? "")) {
+    resultLines.splice(0, 2);
+  }
+  const lines = filterSoLStaticSavingsLines(resultLines).filter(usefulSolLine);
+  if (execution.isPartial !== false && lines.length === 0) return [theme.fg("warning", "正在回读")];
+  const preview = lines.slice(0, expanded ? 80 : 2).map((line) => theme.fg(execution.result?.isError ? "error" : "toolOutput", line || " "));
+  return [
+    `${theme.fg("toolTitle", "🧠 回读")}${reference ? theme.fg("muted", ` · ${reference}`) : ""}`,
+    ...preview,
+    ...(lines.length > preview.length ? [theme.fg("muted", `… +${lines.length - preview.length} 行`)] : []),
+  ];
+}
+
+function semanticSolBody(execution: ExecutionState, expanded: boolean, theme: ToolTheme, width: number): string[] | undefined {
+  const name = normalizeToolName(execution.toolName ?? "");
+  if (name === "codemode") return codemodeBody(execution, expanded, theme, width);
+  if (name === "obs_recall") return recallBody(execution, expanded, theme);
+  return undefined;
+}
+
 function release(
   shared: typeof globalThis & Record<symbol, unknown>,
   prototype: ShellPrototype,
@@ -398,28 +513,30 @@ function installBashBox(theme: ToolTheme): () => void {
     "bash-tool-box",
     ({ predecessor, receiver, args }) => {
       const width = args[0];
-      const rendered = Reflect.apply(predecessor, receiver, args);
-      if (
-        typeof width !== "number" ||
-        width <= 2 ||
-        !Array.isArray(rendered) ||
-        !rendered.every((line) => typeof line === "string")
-      ) return rendered;
+      if (typeof width !== "number" || width <= 3) return Reflect.apply(predecessor, receiver, args);
+      const innerWidth = softFrameInnerWidth(width);
+      const rendered = Reflect.apply(predecessor, receiver, [innerWidth, ...args.slice(1)]);
+      if (!Array.isArray(rendered) || !rendered.every(line => typeof line === "string")) return rendered;
       const lines = rendered as string[];
-      if (lines.some((line) => line.includes("\x1b_G") || line.includes("\x1b]1337;File="))) return lines;
-      const body = lines.filter((line) => !isFrameLine(line) && !isInternalToolDiagnosticLine(line));
-      const compactedBody = compactBashBody(body, theme);
-      const running = compactedBody.some((line) => /(?:Running\.\.\.|运行中)/.test(plain(line)));
-      const execution: ExecutionState = {
-        toolName: "bash",
-        isPartial: running,
-        result: { isError: body.some((line) => /(?:^|\s)(?:Error|failed|exit\s+[1-9])/i.test(plain(line))) },
+      if (lines.some(line => line.includes("\x1b_G") || line.includes("\x1b]1337;File="))) return lines;
+      const component = receiver as unknown as {
+        status?: string; expanded?: boolean; exitCode?: number; fullOutputPath?: string;
+        getCommand(): string; getOutput(): string;
       };
-      return [
-        toolBoxTop(execution, width, theme),
-        ...(compactedBody.length > 0 ? compactedBody : [""]).map((line) => toolBoxLine(styleBashBodyLine(line, theme), width, theme)),
-        toolBoxBottom(width, theme),
-      ];
+      const originalBody = lines.filter(line => !isFrameLine(line) && !isInternalToolDiagnosticLine(line));
+      const execution: ExecutionState = {
+        toolName: "bash", args: { command: component.getCommand() },
+        isPartial: component.status === "running", cancelled: component.status === "cancelled",
+        result: {
+          isError: component.status === "error" || component.status === "cancelled",
+          content: [{ type: "text", text: component.getOutput() }],
+          details: { exitCode: component.exitCode, fullOutputPath: component.fullOutputPath },
+        },
+      };
+      const body = component.expanded
+        ? originalBody.map(line => styleBashBodyLine(line, theme))
+        : collapsedToolCard(execution, originalBody, theme, innerWidth);
+      return executionFrame(execution, body, width, theme);
     },
   );
 }
@@ -463,7 +580,7 @@ export function planBody(steps: unknown, expanded = false): string[] | undefined
     ...valid.filter((step) => step.status === "completed"),
   ].slice(0, limit);
   return [
-    `计划 · ${completed}/${valid.length} 完成`,
+    `📋 计划 · ${completed}/${valid.length} 完成`,
     ...shown.map((step) => `${step.status === "completed" ? "✓" : step.status === "in_progress" ? "◐" : "○"} ${step.goal.replace(/[\r\n\t]+/g, " ")}`),
     ...(shown.length < valid.length ? [`… +${valid.length - shown.length} 步 · 展开`] : []),
   ];
@@ -524,7 +641,7 @@ function installLabeledShell(theme: ToolTheme): () => void {
       return cached.lines;
     }
 
-    const innerWidth = Math.max(1, width - visibleWidth(BOX_LEFT_RAIL) - visibleWidth(BOX_RIGHT_RAIL));
+    const innerWidth = softFrameInnerWidth(width);
     const rendered = execution.selfRenderContainer
       ? renderWithCapturedSelf(
           this,
@@ -537,9 +654,10 @@ function installLabeledShell(theme: ToolTheme): () => void {
     if (execution.hideComponent || !execution.selfRenderContainer) return lines;
     if (lines.some((line) => line.includes("\x1b_G") || line.includes("\x1b]1337;File="))) return lines;
 
-    const contentLines = rendered.contentLines ?? execution.selfRenderContainer.render(innerWidth);
-    if (contentLines.length === 0) return lines;
-    const name = execution.toolName ?? "tool";
+    const capturedLines = rendered.contentLines ?? execution.selfRenderContainer.render(innerWidth);
+    const contentLines = capturedLines.length ? capturedLines : lines;
+    const name = normalizeToolName(execution.toolName ?? "tool");
+    const customSolBody = semanticSolBody(execution, Boolean(execution.expanded), state.theme, innerWidth);
     const framedBody = filterSoLStaticSavingsLines(
       contentLines.filter((line) => !isFrameLine(line)),
     );
@@ -555,21 +673,20 @@ function installLabeledShell(theme: ToolTheme): () => void {
       : withoutHeader.filter((line) => !isInternalToolDiagnosticLine(line));
     const plan = name === "update_plan" && !execution.result?.isError
       ? planBody(execution.args?.steps, Boolean(execution.expanded)) : undefined;
-    const bodyLines = stabilizeToolBoxBody(name, plan
-      ? plan.map((line) => styleStructuredLine(line, state.theme, selection))
-      : name === "edit" || name === "write"
-        ? mutationBody(bodySource, Boolean(execution.expanded), state.theme)
-        : compactToolBody(bodySource, {
-            expanded: Boolean(execution.expanded),
-            theme: state.theme,
-            formatLine: (content) => styleStructuredLine(content, state.theme, selection),
-          }));
-    const body = (bodyLines.length > 0 ? bodyLines : [""]).map((content) => toolBoxLine(content, width, state.theme));
-    const output = [
-      toolBoxTop(execution, width, state.theme),
-      ...body,
-      toolBoxBottom(width, state.theme),
-    ];
+    const expanded = Boolean(execution.expanded);
+    const selectedBody = !expanded && name !== "codemode"
+      ? plan ?? collapsedToolCard(execution, bodySource, state.theme, innerWidth)
+      : customSolBody ?? (plan
+        ? plan.map(line => styleStructuredLine(line, state.theme, selection))
+        : name === "edit" || name === "write"
+          ? mutationBody(bodySource, expanded, state.theme)
+          : compactToolBody(bodySource, {
+              expanded,
+              theme: state.theme,
+              formatLine: content => styleStructuredLine(content, state.theme, selection),
+            }));
+    const bodyLines = stabilizeToolBoxBody(name, selectedBody);
+    const output = executionFrame(execution, bodyLines, width, state.theme);
     if (cacheable && execution.result) {
       state.settledRenders.set(this, {
         width,

@@ -25,6 +25,23 @@ test("SoL registers before presentation overrides without dropping packages", ()
   assert.throws(() => orderSolFirst(["local:rails"]), /exactly one/);
 });
 
+test("bridge-owned SoL is ordered first without requiring duplicate registration", () => {
+  for (const bridge of [
+    "/repo/extensions/pi-context-bridge",
+    "npm:pi-context-bridge@0.2.0",
+    { source: "C:\\repo\\extensions\\pi-context-bridge", extensions: ["index.ts"] },
+  ]) {
+    const packages = ["local:rails", bridge, "npm:memory"];
+    assert.deepEqual(orderSolFirst(packages), [bridge, "local:rails", "npm:memory"]);
+    assert.deepEqual(orderSolFirst(orderSolFirst(packages)), orderSolFirst(packages));
+    assert.deepEqual(packages, ["local:rails", bridge, "npm:memory"]);
+  }
+  assert.throws(() => orderSolFirst([
+    "/repo/extensions/pi-context-bridge", "git:github.com/NVlabs/SoL-Pi",
+  ]), /exactly one SoL registration source/);
+  assert.throws(() => orderSolFirst(["/repo/extensions/pi-context-bridge-copy"]), /exactly one/);
+});
+
 test("SoL reducer remains pinned to the dedicated luna model", async () => {
   const config = JSON.parse(await readFile(new URL("../config/sol-pi.json", import.meta.url), "utf8"));
   assert.equal(config.evidencePreservingReducerProvider, "manager");

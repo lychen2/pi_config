@@ -13,11 +13,18 @@ export function enableTun(config) {
 }
 
 export function orderSolFirst(packages) {
-  if (!Array.isArray(packages)) throw new Error("Install SoL-Pi before configuration.");
-  const isSol = entry => /(?:github\.com[/:]NVlabs\/SoL-Pi)(?:@|$)/i.test(typeof entry === "string" ? entry : entry?.source ?? "");
-  const sol = packages.filter(isSol);
-  if (sol.length !== 1) throw new Error("Expected exactly one standalone NVlabs/SoL-Pi package.");
-  return [...sol, ...packages.filter(entry => !isSol(entry))];
+  if (!Array.isArray(packages)) throw new Error("Install pi-context-bridge or standalone SoL-Pi before configuration.");
+  const sourceOf = entry => typeof entry === "string" ? entry : entry?.source ?? "";
+  const isSolProvider = entry => {
+    const source = sourceOf(entry).replaceAll("\\", "/").replace(/\/+$/, "");
+    return /(?:github\.com[/:]NVlabs\/SoL-Pi)(?:@|$)/i.test(source)
+      || /(?:^|[/:])pi-context-bridge(?:@[^/]+)?$/.test(source);
+  };
+  const providers = packages.filter(isSolProvider);
+  if (providers.length !== 1) {
+    throw new Error("Expected exactly one SoL registration source: pi-context-bridge or standalone NVlabs/SoL-Pi.");
+  }
+  return [...providers, ...packages.filter(entry => !isSolProvider(entry))];
 }
 
 export function knowledgeOnly(config) {
@@ -63,7 +70,7 @@ async function main() {
     ? enableTun(await exists(webPath) ? JSON.parse(await readFile(webPath, "utf8")) : {}) : undefined;
   settings.packages = orderSolFirst(settings.packages);
   settings.compaction = { ...settings.compaction, enabled: true };
-  // Standalone SoL uses Pi's default retained-tail estimate.
+  // Both registration paths currently use Pi's default retained-tail estimate.
   if (settings.compaction.keepRecentTokens !== undefined && settings.compaction.keepRecentTokens !== 20000) {
     throw new Error("Custom compaction.keepRecentTokens needs a matching SoL programmatic integration; no files changed.");
   }

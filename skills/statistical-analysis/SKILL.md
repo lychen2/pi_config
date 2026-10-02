@@ -53,7 +53,7 @@ uv pip install "pymc>=5.0" "arviz>=1.0"
 - **ArviZ 1.x**: `az.summary()` now defaults to **89% intervals** (`eti89` columns) and the width parameter is `ci_prob` (not `hdi_prob`). To report a conventional 95% credible interval, pass `az.summary(trace, ci_prob=0.95)`.
 - **One-sided Bayes Factors are gone from Pingouin**: `pg.ttest(..., alternative='greater')` silently drops the `BF10` column, and `pg.bayesfactor_ttest` raises on one-sided alternatives. For one-sided Bayesian tests, use PyMC directly (compute the posterior probability of the directional hypothesis) or JASP/R's BayesFactor.
 
-For model-specific APIs (OLS, GLM, ARIMA), see the **statsmodels** skill. For PyMC workflows, see the **pymc** skill.
+For model-specific APIs (OLS, GLM, ARIMA), use the installed statsmodels package and its documentation. For PyMC workflows, use the installed PyMC package and its documentation.
 
 ---
 

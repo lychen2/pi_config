@@ -12,7 +12,7 @@ test("patch is installed, idempotent, and fails closed on version changes", () =
   const temp = mkdtempSync(join(tmpdir(), "teammate-patch-"));
   writeFileSync(join(temp, "package.json"), JSON.stringify({ version: "9.0.0" }));
   assert.throws(() => patchTeammate(temp), /Review teammate patch/);
-  writeFileSync(join(temp, "package.json"), JSON.stringify({ version: "2.6.2" }));
+  writeFileSync(join(temp, "package.json"), JSON.stringify({ version: "2.7.2" }));
   mkdirSync(join(temp, "src/models"), { recursive: true });
   writeFileSync(join(temp, "src/models/model-routing.ts"), "changed upstream");
   assert.throws(() => patchTeammate(temp), /anchor changed/);
@@ -96,7 +96,14 @@ test("Pi validates the public schema and streaming previews tolerate incomplete 
   assert.equal(previewTeammateDispatch(valid).tasks[0].prompt, task.goal);
 });
 
-test("bridge registers a lightweight teammate proxy and loads upstream on first use", async () => {
+test("bridge registers a lightweight teammate proxy and loads upstream on first use", async (t) => {
+  // This fixture exercises root registration even when run by a delegated reviewer.
+  const childMode = process.env.PI_TEAMMATE_CHILD;
+  delete process.env.PI_TEAMMATE_CHILD;
+  t.after(() => {
+    if (childMode === undefined) delete process.env.PI_TEAMMATE_CHILD;
+    else process.env.PI_TEAMMATE_CHILD = childMode;
+  });
   const loaded = await jiti.import("../teammate.ts");
   const tools = [], events = [], commands = [], ownershipEvents = [];
   const listeners = new Map();

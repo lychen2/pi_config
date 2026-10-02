@@ -1,0 +1,126 @@
+{
+  "timestamp": "2026-10-02T11:02:25.635127+08:00",
+  "commit_hash": "501624ae6c619e00f4186df6705b55426b106908",
+  "selected_modes": [
+    "full"
+  ],
+  "scope": "Current working tree, active global instructions and skills; exclude dependencies, vendor, generated artifacts and virtualenvs",
+  "overall_score": 7.0,
+  "dimension_scores": {
+    "Security": 7.8,
+    "Stability": 7.0,
+    "Performance": 7.2,
+    "Testing": 7.5,
+    "Maintainability": 6.8,
+    "Design": 7.0,
+    "Release": 6.2
+  },
+  "finding_counts_by_severity": {
+    "Critical": 0,
+    "High": 0,
+    "Medium": 6,
+    "Low": 4,
+    "Info": 1
+  },
+  "report_path": "/home/zonazcy/pi_config/audit-report-pi_config-2026-10-02.md",
+  "baseline": "pre-remediation",
+  "coverage": {
+    "architecture": "Medium",
+    "security": "Medium",
+    "stability": "Medium",
+    "performance": "Medium",
+    "testing": "High",
+    "maintainability": "Medium",
+    "design": "Medium",
+    "release": "Medium",
+    "documentation": "High",
+    "observability": "Medium",
+    "configuration": "High",
+    "data-integrity": "Medium",
+    "privacy": "Medium",
+    "accessibility": "Medium",
+    "supply-chain": "Low",
+    "cost": "Medium",
+    "ai-safety": "Medium",
+    "fallback": "Medium",
+    "testing-authenticity": "Medium",
+    "type-safety": "Medium",
+    "frontend-state": "Medium",
+    "backend-api": "Not assessed",
+    "dependency-weight": "Medium",
+    "code-consistency": "Medium",
+    "comment-coverage": "Low",
+    "concurrency": "Medium"
+  },
+  "remediation_date": "2026-10-02",
+  "verification": {
+    "tests": {
+      "tests": 330,
+      "pass": 329,
+      "fail": 0,
+      "skipped": 1
+    },
+    "startup": [
+      {
+        "file": "pi-config-startup-before.tty",
+        "main": 2079,
+        "extensions": 1432,
+        "bridgeFactory": 810,
+        "startupErrors": []
+      },
+      {
+        "file": "pi-config-startup-after-1.tty",
+        "main": 2400,
+        "extensions": 1807,
+        "bridgeFactory": 754,
+        "startupErrors": []
+      },
+      {
+        "file": "pi-config-startup-after-2.tty",
+        "main": 1859,
+        "extensions": 1200,
+        "bridgeFactory": 676,
+        "startupErrors": []
+      },
+      {
+        "file": "pi-config-startup-after-3.tty",
+        "main": 1985,
+        "extensions": 1326,
+        "bridgeFactory": 685,
+        "startupErrors": []
+      }
+    ],
+    "rules": {
+      "sourceBeforeBytes": 9436,
+      "liveBeforeBytes": 8492,
+      "afterBytes": 2718,
+      "afterLines": 27
+    },
+    "backup": "/home/zonazcy/.pi/backups/pi-1-audit-20261002-105044"
+  },
+  "remediation": {
+    "implemented": [
+      "F01",
+      "F02",
+      "F03",
+      "F04",
+      "F05",
+      "F06",
+      "F07",
+      "F08",
+      "F09",
+      "F11"
+    ],
+    "retained_policy": [
+      "F10"
+    ],
+    "remaining_validation": [
+      "F06 Windows runtime; CI job added but not executed in this session"
+    ]
+  },
+  "live_deployment": {
+    "managed_skills": 20,
+    "global_rules_bytes": 2718,
+    "skill_archive": "/home/zonazcy/.pi/agent/skill-archives/2026-10-02T03-11-28.932Z-611116"
+  }
+}

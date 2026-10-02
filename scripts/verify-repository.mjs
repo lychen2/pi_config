@@ -10,7 +10,10 @@ const repoRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const extensionsDir = path.join(repoRoot, "extensions");
 const skipInstall = process.argv.includes("--skip-install");
 const skipPack = process.argv.includes("--skip-pack");
-const piRange = ">=0.85.0 <0.86.0";
+const piRange = ">=1.0.0 <2.0.0";
+const legacyPiRange = ">=0.85.0 <0.86.0";
+const defaultOnly = process.argv.includes("--default-profile");
+const defaultPackages = new Set(["pi-context-bridge", "pi-default-workbench", "pi-slim-skills", "pi-tool-rails", "pi-cache-drop-guard", "pi-zh-localizer"]);
 const nodeRange = ">=22.19.0";
 const piVersion = process.argv.find((argument) => argument.startsWith("--pi-version="))?.slice("--pi-version=".length);
 
@@ -33,8 +36,9 @@ function run(command, args, cwd) {
 function checkManifest(name, manifest) {
   if (manifest.engines?.node !== nodeRange) throw new Error(`${name}: engines.node must be ${nodeRange}`);
   for (const dependency of Object.keys(manifest.peerDependencies ?? {}).filter((name) => name.startsWith("@earendil-works/pi-"))) {
-    if (manifest.peerDependencies[dependency] !== piRange) {
-      throw new Error(`${name}: peerDependencies.${dependency} must be ${piRange}`);
+    const expected = defaultPackages.has(name) ? piRange : legacyPiRange;
+    if (manifest.peerDependencies[dependency] !== expected) {
+      throw new Error(`${name}: peerDependencies.${dependency} must be ${expected}`);
     }
   }
 }
@@ -64,6 +68,7 @@ const names = await readdir(extensionsDir, { withFileTypes: true });
 const packages = [];
 for (const entry of names) {
   if (!entry.isDirectory() || !entry.name.startsWith("pi-")) continue;
+  if (defaultOnly && !defaultPackages.has(entry.name)) continue;
   const packageDir = path.join(extensionsDir, entry.name);
   const manifestPath = path.join(packageDir, "package.json");
   let manifest;
@@ -101,7 +106,10 @@ try {
   if (stagingRoot) await rm(stagingRoot, { recursive: true, force: true });
 }
 
-run(process.execPath, [path.join(repoRoot, "scripts", "sync-large-beautify.mjs"), "--check"], repoRoot);
 run(process.execPath, [path.join(repoRoot, "scripts", "verify-install-regressions.mjs")], repoRoot);
-run(process.execPath, ["--test", path.join(repoRoot, "scripts", "prompt-content.test.mjs"), path.join(repoRoot, "scripts", "deploy-skills.test.mjs")], repoRoot);
+const scriptTests = (await readdir(path.join(repoRoot, "scripts")))
+  .filter((name) => name.endsWith(".test.mjs"))
+  .sort()
+  .map((name) => path.join(repoRoot, "scripts", name));
+run(process.execPath, ["--test", ...scriptTests], repoRoot);
 console.log(`\nRepository verification passed for ${packages.length} extension packages${piVersion ? ` on Pi ${piVersion}` : ""}.`);

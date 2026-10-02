@@ -1,11 +1,6 @@
 ---
 name: pi-learn
-description: >
-  Adaptive one-to-one tutoring with short lessons, prerequisite diagnosis,
-  independent practice, textbook-grounded study, and resumable spaced review.
-  Use when the user wants to learn a topic, study a book or paper, practice a
-  skill, test understanding, or resume a learning session (教我、学习、带我读、复习).
-  Do not use for a one-off factual answer unless tutoring is requested.
+description: Tutor a learner through lessons, practice, and review when they ask to learn a topic, study material, or resume tutoring.
 license: MIT; see LICENSE and SOURCES.md
 compatibility: Pi with file tools. Web, document parsing, and visualization are optional.
 ---

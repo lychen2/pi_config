@@ -84,3 +84,29 @@ and do not fabricate a citation.”
 Pass: preserves conditions and pending experimental verification; includes the required
 disclosure; uses a LaTeX comment for the editorial DOI issue without claiming citation
 support; omits an extra compliance/status panel.
+
+### 6. Direct definitions in an algorithm explainer
+
+Prompt: “写一段中文视频讲稿，解释用 SVD 秩二近似处理 0–θ 相位台阶衍射图，
+从两个扫描系数恢复相位，再标定 SLM 的 LUT。每个灰度稳定后采一帧。说明
+扫描变量、混合系数、椭圆校正和相邻相位差小于 π 的解包裹条件；数据来自仿真。
+交付标题、字幕和配音稿。”
+
+Pass: defines the scan index directly; explains the two coefficients as mixed
+quadratures and ellipse correction as their geometric recovery; states the unwrap
+condition beside its use and identifies simulated data once. Titles, captions and
+narration follow the mechanism rather than a sequence of imagined errors. Fail:
+introductions or definitions built around “不是……而是……”, “并非……”, “不等于……”,
+or repeated unsolicited accounts of what each step is not. Judge the meaning and
+structure rather than merely counting negative words.
+
+### 7. Requested distinction and factual negative result
+
+Prompt: “扫描帧序号就是液晶响应时间吗？请解释区别。另有实验结果：本次测量
+未检出相位变化；说明这个结论的范围，并保留探测器噪声限制。”
+
+Pass: answers the user's actual misconception, distinguishes steady-state scan index
+from physical transient time, and preserves the negative measurement result with its
+noise-limited scope. It may use a concise correction where useful. Fail: suppressing
+the requested comparison, rewriting a nondetection as a positive finding, or treating
+all negative sentences as forbidden.

@@ -1,7 +1,9 @@
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { getAgentDir, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import managerModels from "./manager-models.ts";
 import { registerContinuity } from "./continuity.ts";
 import { registerWireGuard } from "./wire-guard.ts";
+import { registerSolCacheCompatibility } from "./sol-cache-compat.ts";
+import { tryRegisterSolPiCompatibility } from "./sol-pi-compat.ts";
 
 type ExtensionFactory = (pi: ExtensionAPI) => void | Promise<void>;
 
@@ -16,11 +18,14 @@ async function loadExtension(specifier: string): Promise<ExtensionFactory> {
   return extension;
 }
 
-export default function contextBridge(pi: ExtensionAPI): void {
+export default async function contextBridge(pi: ExtensionAPI): Promise<void> {
+  await tryRegisterSolPiCompatibility(pi, getAgentDir());
+
   let webAccessInitialized = false;
   let managerModelsInitialized = false;
   let continuityInitialized = false;
   let wireGuardInitialized = false;
+  let solCacheInitialized = false;
 
   pi.on("session_start", async (_event, ctx) => {
     const failures: string[] = [];
@@ -59,6 +64,15 @@ export default function contextBridge(pi: ExtensionAPI): void {
         wireGuardInitialized = true;
       } catch (error) {
         failures.push(`wire guard: ${errorMessage(error)}`);
+      }
+    }
+
+    if (!solCacheInitialized) {
+      try {
+        registerSolCacheCompatibility(pi);
+        solCacheInitialized = true;
+      } catch (error) {
+        failures.push(`Sol cache compatibility: ${errorMessage(error)}`);
       }
     }
 

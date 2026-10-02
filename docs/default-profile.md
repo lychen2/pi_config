@@ -1,105 +1,109 @@
-# Default profile
+# Default Profile
 
-Default combines metadata-first skill/tool discovery with NVIDIA's standalone [SoL-Pi](https://github.com/NVlabs/SoL-Pi), tracking the upstream default branch without a pinned revision. Workspace history and the Large profile are not part of the active default runtime or installer.
+The default runtime targets **Pi 1.0.x** and is verified against Pi 1.0.0. `config/settings-public.json` owns public defaults; private credentials remain in the user's agent directory. Local package sources load TypeScript directly, so restart Pi after updating them.
 
-## Ownership
+## Restore this configuration on another host
 
-| Surface | Owner |
-| --- | --- |
-| File mutation plus optional `then_run` validation | SoL Action Fusion; failed validation retains the successful edit |
-| Repeated observations and paged exact recall | SoL ObservationPack and `obs_recall` |
-| Long diagnostic-log reduction with verified quotations | SoL Evidence-Preserving Reducer; original output survives failed reduction |
-| Execution plan and boundary-driven native compaction | SoL `update_plan` and Online Context Compact |
-| Durable memory and knowledge search | Magic Context in `compaction.enabled=false` mode; `ctx_search`/`ctx_memory`/`ctx_note`/`ctx_expand` and memory injection stay active, `ctx_reduce` is not registered |
-| Skill discovery | Workbench search/load plus slim-skills router; descriptions and exact paths remain visible when search is unavailable |
-| Tool discovery | Adaptive mode only; full exposes enabled tools directly without `search_tool_bm25` |
+Run `node install.mjs --yes --with-external --with-model-defaults` after cloning the repository (or use `install.sh` / `install.ps1` to bootstrap Pi). Public templates restore provider endpoints and model metadata, MCP definitions, Web Search preferences, and tool selection. Existing machine values and credentials win during incremental merges; public model selection is applied only with `--with-model-defaults`. Local npm lockfiles remain committed for verification; package sources do not pin exact versions or Git commits. Supported peer ranges and the TypeScript 5 compiler-API major remain compatibility constraints: TypeScript 7 does not export that API.
 
-When SoL's `update_plan` is active, the selector hides `todo`/`todowrite` from every mode and from discovery. Existing Todo records and user commands remain intact. If SoL planning is explicitly disabled, Todo can be used again. `obs_recall` and `update_plan` remain available in fast/adaptive modes so recall and compaction do not depend on discovering their control tools.
+Set `MANAGER_API_KEY` and, if using the secondary provider, `PROVIDER_111_API_KEY` locally. Model templates contain environment-variable names, not keys. Web Search keys are deliberately omitted: configure them locally. Sessions, authentication state, knowledge databases, and private backups are not copied into this repository.
 
-SoL must precede presentation overrides in the package list: Pi's duplicate tool registrations otherwise let the existing edit/write definitions hide Action Fusion. The selector refreshes after resource discovery as well as before turns so dynamically registered tools receive the correct mode selection.
+All MCP entries start disabled on a fresh host. Start the required service, open `/mcp`, and enable its server. Zotero and Jupyter remain disabled on this host until explicitly enabled, so Pi does not connect to them or report startup timeouts. Incremental installation preserves your subsequent `/mcp` choices. GitHub requires `GITHUB_TOKEN`; Jupyter requires `JUPYTER_TOKEN`, a loopback Jupyter URL, and an appropriately restricted notebook root. Install `uvx` for the Python MCP entries and adjust the Obsidian folder before enabling its filesystem server. Fresh Python MCP commands use unversioned `uvx --from` sources; an existing host keeps its own commands and paths.
 
-## Delegation and browser access
+Web Search restores `ssrf.allowRanges=["198.18.0.0/15"]` for this profile's TUN synthetic-DNS setup. Other private ranges remain blocked. Remove this allowance on a host without synthetic DNS if it is not needed.
 
-Adaptive mode keeps Magic Context's four knowledge tools active when registered. Teammate, its lifecycle controls, the single `mcp` proxy and isolated Chromium are discovered only when needed; they do not add startup schemas. Explicit tool/package disables still win. Fast intentionally excludes these integrations, while full exposes all enabled tools. Discovered tools remain active for the session until the selection is reset or changed.
+## Native capabilities and local responsibilities
 
-Use teammate for independent bounded work with distinct write ownership. Small sequential tasks stay in the parent agent. The single-model teammate policy pins every task to the model in `extensions/pi-context-bridge/teammate-config.json` with no fallbacks.
+| Capability | Owner | Loading behavior |
+| --- | --- | --- |
+| Tool BM25 ranking and deferred schema discovery | Pi `tool_search` / `codemode` | Matching tools are declared when requested |
+| MCP connections | Pi's built-in MCP support | Connection and exposure follow each configured server; no server is assumed installed |
+| Skill instructions | Pi resource loader and workbench `search_skill_bm25` | Search metadata first when useful; load the selected body on demand |
+| Project tool modes and disabled-tool policy | `pi-default-workbench` | `fast`, `adaptive`, and `full`; full mode hides the redundant local tool-search entry |
+| Heavy implementation modules | Workbench lazy wrappers | Implementation imports occur on first use, separately from schema visibility |
+| Compressed skill directory | `pi-slim-skills` | Empty default injection allowlist; no automatic full-body injection |
+| Tool and thinking presentation | `pi-tool-rails` | Preserves raw evidence, actual errors, timing and mutation ratio bars |
 
-The external manifest installs the optional `pi-mcp-adapter`. The browser proxy configuration is applied only when a `zen-browser` server is already defined. `scripts/configure-mcp-proxy.mjs` (also called by the installer) switches that server to `directTools: false` and `lifecycle: "lazy-keep-alive"`. It backs up the local file, preserves server commands/credentials and other servers, and does nothing when no Zen server exists. Browser provisioning and credentials are intentionally not copied into this repository.
+Native tool search and local skill search have different catalogs. Native schema deferral also does not defer arbitrary extension imports. Keep the components that provide those separate responsibilities; avoid duplicate discovery instructions in the global prompt, tool description and skill-directory header.
 
-Use the MCP proxy's search/describe/call flow for the user's existing browser. Use the workbench Chromium tool for isolated local application tests; avoid switching browser sessions mid-task. Public-page research normally uses web search/fetch directly.
+## Startup and local embeddings
 
-```bash
-node scripts/configure-mcp-proxy.mjs --dry-run
-node scripts/configure-mcp-proxy.mjs
+The five default local runtime packages are `pi-context-bridge`, `pi-default-workbench`, `pi-slim-skills`, `pi-tool-rails`, and `pi-cache-drop-guard`. `pi-zh-localizer` is an installer patcher. Source-only compatibility packages are not extra runtime registrations.
+
+Workbench search can use a cached local embedding model; lexical BM25 remains available when embeddings are absent or disabled. Starting Pi does not download model weights by default. Explicitly enabled downloads still honor offline mode. See `extensions/pi-default-workbench/README.md` for the explicit download option and local-model behavior.
+
+Use the installed Pi's startup benchmark in an interactive terminal:
+
+```sh
+PI_TIMING=1 PI_STARTUP_BENCHMARK=1 pi --no-session
 ```
 
-Restart Pi after changing MCP exposure or extension source. `/tools adaptive` restores this profile in a project previously set to fast; it preserves explicit disables. Memory storage and injection are unchanged by this migration.
+The benchmark requires a TTY. Its reported timing is more useful than shell process duration, which can include shutdown work. Compare repeated measurements under the same profile and cache state.
 
-## Context control handoff
+## SoL and persistent knowledge
 
-Disabling Magic Context compaction deliberately trades its manual `ctx_reduce` control for SoL's automatic path. Verified in the upstream implementation:
+The default bridge registers SoL-Pi from its runtime source checkout at `~/.pi/agent/git/github.com/NVlabs/SoL-Pi`. Do not also register that checkout as a standalone Pi package in the same profile. A failed optional SoL initialization must leave independent bridge features available and report the failure.
 
-- ObservationPack archives any tool result above 10 KB, sends it in full for the first two provider requests, then projects a ~1 KB placeholder with a stable id. Originals are read back page by page with `obs_recall` (16 KB/400 lines per call), and recall keeps working after compaction or session resume.
-- Online Context Compact aborts a turn and hands the window to Pi native compaction only at a completed plan boundary when archive savings exceed cache read/write cost, then continues the task automatically. It declines when native compaction is not feasible for the current branch.
-- Pi native compaction remains enabled because `compaction.enabled` in `sol-pi.json` is only SoL's own gate.
+`config/sol-pi.json` controls artifact reduction, turn folding, online compaction and tool selection. It is copied to the agent directory; project `.pi/sol-pi.json` overrides require explicit reconciliation. RTK uses the bridge compatibility entry and only rewrites supported Git overview commands, preserving tool-result evidence for SoL.
 
-Magic Context keeps its knowledge surface in this mode: `ctx_search`, `ctx_memory`, `ctx_note`, `ctx_expand`, raw-message indexing and memory injection stay registered, while `ctx_reduce` is intentionally absent because tagging and drops stop. There is no manual drop entry point in the SoL path. `magic-context.jsonc`-level historian, dreamer and sidekick features were already disabled on this machine.
+Magic Context retains its knowledge and history role. Turning its compaction off affects every host sharing that user configuration, so the migration requires explicit approval:
 
-Restart Pi for the handoff to take effect; a session started before the migration still shows Magic Context markers.
-
-## Install and migrate
-
-The installer fetches the unpinned SoL-Pi Git source from its upstream default branch into the Pi agent directory and updates that checkout on later installs. If `sol-pi.json` is missing, it seeds the file from `config/sol-pi.json`. The standalone package entry in `config/external-packages.txt` is filtered from installation to prevent duplicate registration. Explicitly authorize the shared-settings migration:
-
-```bash
+```sh
 node scripts/configure-default-sol.mjs --approve-shared-memory
-# On a TUN/Fake-IP proxy host:
-node scripts/configure-default-sol.mjs --approve-shared-memory --tun
 ```
 
-The migration:
+The migration accepts either the bridge-owned registration or one standalone SoL source, rejects duplicates, and saves backups. It does not erase memory databases or change reducer/provider credentials. Add `--tun` only for the documented synthetic DNS range used by a TUN proxy; other private ranges remain blocked.
 
-- Backs up existing files with `.pre-sol-<timestamp>` suffixes; preserves unrelated configuration and JSONC comments.
-- Writes all four enabled flags to the agent's `sol-pi.json` using `config/sol-pi.json` as a template. The installed reducer uses the machine's current default provider/model through Pi-managed authentication, not credentials in this file.
-- Places the runtime SoL source first in the package list and enables Pi native compaction.
-- Sets shared Magic Context `compaction.enabled=false` and disables its duplicate `todowrite`; preserves its knowledge configuration and database.
-- Optionally adds only `198.18.0.0/15` to Web Access's `ssrf.allowRanges`. Existing provider, proxy and domain-policy settings remain intact; other private ranges remain blocked.
+## Rules and skills
 
-**Shared impact:** Magic Context's compaction-off switch is user-wide under the CortexKit config directory, not a project setting. It also affects OpenCode/OMP using that file; enable native compaction there if needed. Restart affected hosts. Historical data is not deleted; the first resumed long session may require native compaction. The migration refuses a project-local SoL override rather than silently writing an ineffective global configuration.
+`config/APPEND_SYSTEM.md` is the source for the global working rules copied into the agent directory. There is no required global `AGENTS.md` in this repository. Keep only broadly applicable instructions global; task-specific procedures belong in the relevant skill.
 
-Web Access's actual config location is `$PI_CODING_AGENT_DIR/web-search.json`, otherwise `$XDG_CONFIG_HOME/pi/web-search.json`, otherwise `~/.pi/web-search.json` (not necessarily Pi's agent directory). Fake-IP allowance is an explicit host-network exception, not a blanket SSRF disable.
+`scripts/deploy-skills.mjs` owns the managed skill list. It preserves user-added skills and archives only explicitly retired managed names. Scientific calculations retain their relevant unit, approximation, numerical and evidence checks. Skill metadata should describe the task that benefits from the guidance; references are opened when needed for that task.
 
-The normal installer copies `config/APPEND_SYSTEM.md` and the slim-skills configuration. Running only the migration script does not install these prompt files.
+The active Manim entries in `.pi/agent/skills` may point to `.agents/skills`. Resolve symlinks before treating matching names as duplicate installations. Package-provided skills remain owned by their package.
 
-## ADHD-friendly responses
+## Updates and verification
 
-The external package list includes [i-have-adhd](https://github.com/ayghri/i-have-adhd). The installer copies `config/i-have-adhd.json` to the agent directory with `alwaysOn: true` and `hideStatus: false`. Install external packages to load its extension and skill; `--skip-external` copies the configuration without installing the package.
+Installation is incremental by default. `--clean-plugins` is an explicit cleanup option; review its backup and removal behavior in the installation guide before using it. External packages follow rolling release/branch sources from `config/external-packages.txt`, so installs on different dates are not guaranteed identical. Preserve a working snapshot before upgrades.
 
-New sessions enable the mode automatically and show `ADHD ON`. Use `/i-have-adhd off` or `/i-have-adhd on` to change it for the current session. A saved session choice takes precedence over the default. Restart Pi after installation to load the package and configuration.
+### Safely update patched Git plugins
 
-The extension injects its bundled skill rules for action-first, numbered multi-step answers. `APPEND_SYSTEM.md` continues to request everyday language, concrete explanations and useful qualifications. No separate copy of the upstream skill is maintained in this repository.
+SoL-Pi and pi-provider are managed runtime sources in `config/runtime-git-sources.txt`. `config/managed-patches/pi-provider.patch` restores the local provider metadata fixes on a fresh clone; an already applied patch is preserved, and a conflict stops installation without replacing local edits. This patch does not pin the upstream revision. The installer preserves dirty checkouts. pi-provider is registered as a local absolute path, so native `pi update --extensions` cannot reset its Git checkout. SoL-Pi remains bridge-loaded, not a second package registration.
 
-## Skill output conventions
+From this repository, explicitly update both plugins:
 
-The default deployed skills keep operating instructions, internal checks, and editorial notes separate from reader-facing content. Omit routine process commentary. Put a necessary review note in a native comment; when the format has no comments, put it in the conversation outside the artifact. Captions, footnotes, speaker notes, and rendered bibliography fields remain content. Scientific conditions needed to interpret a result remain with that result.
+```sh
+node scripts/update-managed-git.mjs
+```
 
-Validate external data and permissions at system boundaries, then reuse normalized records and established internal contracts. This does not remove checks of scientific assumptions or numerical correctness. Detailed audit procedures apply when an audit is requested, rather than becoming the default output for drafting, lookup, plotting, or calculation.
+Pass `sol-pi` or `pi-provider` to update only that plugin. `PI_CODING_AGENT_DIR` selects another agent directory. The command requires Git, npm/npx, installed bridge development dependencies, and network access. It does not run automatically during installation.
 
-## Optics research
+Each run archives the local binary patch, stages an independent checkout of the configured upstream branch, applies tracked changes using a three-way merge, and preserves untracked/ignored ordinary files except `node_modules`. Extra-file symlinks or collisions with upstream files stop the update. SoL-Pi runs its complete tests and typecheck under npm 11.6.2; pi-provider compares strict TypeScript diagnostics with an independent pristine checkout of the exact upstream revision, blocking any new diagnostic while reporting unchanged upstream errors. It also runs the upstream API-error tests and exercises the public status command with sparse-model fixtures, an isolated HOME, and simulated network responses. Both plugins receive a Pi 1.0 load/registration smoke test; no real credentials or provider endpoints are used.
 
-The installer stages `skills/optics-research/` with `scripts/deploy-skills.mjs`, preserving user-owned skill files. `APPEND_SYSTEM.md` keeps brief defaults for physical checks, traceable evidence, raw-data preservation, and authorization for confidential uploads or hardware operations; detailed research procedures stay in the skill. No extra extension, model, solver, or Python dependency is installed for optics guidance.
+All selected candidates must pass before any checkout is switched. Conflicts, failed validation, or observed source changes stop activation. Failed switches attempt to restore already-switched directories. Registration protection happens before staging and can remain in place after a failed update; its settings backup is printed. Do not edit or reload these plugins while an update runs. Directory switching is sequential, not an atomic filesystem operation across both plugins.
 
-After deployment, use `/reload` to refresh the prompt and skill resources. Invoke `/skill:optics-research` with a research question, paper, calculation, or simulation task. Existing project instructions and explicit resource disables still apply.
+Successful runs retain each complete old checkout in:
 
-The workflow reuses the installed literature, symbolic mathematics, experimental design, uncertainty, statistics, writing, and visualization skills. It adds optics-specific checks for conventions, approximation regimes, sampling, convergence, material data, and fair comparison of reported results. Passing these checks does not establish a scientific claim without adequate evidence.
+```text
+<agentDir>/managed-updates/<run>/<plugin>/previous-checkout
+```
 
-The [research collaboration post](https://linux.do/t/topic/2059718) informed the use of foundational plus recent literature, layered reading, critical review, and maintained research notes. Multi-model consensus and generated scientific images are not treated as validation. Reusable workflows are captured only after successful use or an explicit user request.
+The same directory contains `local.patch`, `rebased.patch`, `before.json`, `manifest.json`, and `checks.log`. Failures retain candidates and command output in `failure.log` for review rather than resolving conflicts automatically. Review conflict semantics, rerun validation, and verify the live snapshot before any manual switch. Never use native Git-package updates to bypass a failed patch validation. Restart Pi after a successful update.
 
-## Verification and references
+For recovery, close Pi and restore the affected `previous-checkout` directory to its original plugin path, preserving the failed version under a separate name. No automatic backup deletion is performed. A stale `<agentDir>/managed-updates/.lock` after a killed process must be removed only after confirming no updater is running.
 
-- SoL source checks: 139 tests, typecheck and package inspection passed against the pinned Pi 0.85.1 matrix. npm 11 is required for the upstream package tests' array-shaped `npm pack --json` expectation; npm 12 changes that output shape.
-- Upstream audit: no high-severity findings; two moderate development-test dependency advisories remain (`vitest` / `@vitest/mocker`).
-- Default regression tests cover exact tool activation, mode switching, SoL control availability, single task ownership, skill lifecycle, TUN exception boundaries and configuration preservation.
-- Real offline startup verified SoL-owned edit/write schemas contain `then_run`, `obs_recall`/`update_plan` are active, the configured reducer model exists, and full omits tool search and duplicate Todo. No end-to-end remote reducer cost/latency benchmark is claimed.
+### Repository verification
 
-[OpenAI's skills and prompts guidance](https://developers.openai.com/blog/rethinking-skills-and-prompts-for-gpt-6-astra) informs the short stable contract and progressive disclosure. [SoL configuration](https://github.com/NVlabs/SoL-Pi/blob/main/docs/configuration.md) owns the four efficiency mechanisms. [Magic Context compaction-off mode](https://github.com/cortexkit/magic-context/blob/master/CONFIGURATION.md#compaction-off-mode) owns the knowledge-only coexistence contract.
+Run the default profile's tests and type checks against the installed dependencies:
+
+```sh
+node scripts/verify-repository.mjs --default-profile --skip-install --skip-pack
+```
+
+For clean CI/package verification against the supported baseline:
+
+```sh
+node scripts/verify-repository.mjs --default-profile --pi-version=1.0.0
+```
+
+The second command installs verification dependencies in staged package copies. Windows archive-update execution also needs a Windows or PowerShell test environment; Linux-only source checks do not replace it.

@@ -7,6 +7,21 @@ import {
   detectGitOperation,
   parseGitPorcelain,
 } from "../../matugen-footer-core.mjs";
+import { readFileSync } from "node:fs";
+
+test("defaults to theme-driven soft footer chrome without losing factual segments", () => {
+  const config = readFileSync(new URL("../../matugen-footer/config.ts", import.meta.url), "utf8");
+  assert.match(config, /starship: "theme"/);
+  assert.match(config, /separator: "dot"/);
+  assert.match(config, /cwd: "muted"/);
+  assert.match(config, /gitBranch: "muted"/);
+  assert.match(config, /separator: "dim"/);
+  assert.match(config, /contextNormal: "muted"/);
+  assert.match(config, /contextWarning: "warning"/);
+  assert.match(config, /contextError: "error"/);
+  assert.match(config, /footerSegments: \{[\s\S]*?gitBranch: true,[\s\S]*?gitStatus: true,[\s\S]*?context: true,[\s\S]*?tokens: true/);
+  assert.match(config, /\$os  \$cwd\(  \$git_branch\)\( \$git_status\)\(  \$runtime\)\$fill\(\$context\)\(  \$tokens\)\(  \$cost\)/);
+});
 
 test("parses branch divergence and conflicts from porcelain status", () => {
   const status = parseGitPorcelain("## main...origin/main [ahead 2, behind 1]\nUU src/app.ts\n M README.md\n");

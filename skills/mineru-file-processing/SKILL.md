@@ -1,6 +1,6 @@
 ---
 name: mineru-file-processing
-description: Use when processing PDF, image, Word, PowerPoint, Excel, or document files; parsing files for Markdown, OCR, structure, tables, formulas, or agent-readable text.
+description: Extract text, tables, formulas, or structure and run OCR on PDFs, images, and Office documents when the task needs document parsing.
 ---
 
 # MinerU File Processing

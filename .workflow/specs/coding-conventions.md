@@ -14,13 +14,4 @@ keywords:
 
 # Coding Conventions
 
-## Formatting
-
-## Naming
-
-## Imports
-
-## Patterns
-
-## Entries
-
+Read and apply [Project coding rules](../../AGENTS.md), especially **Minimal scope** and **Trust boundaries**. Match the nearest existing code; do not introduce a competing style.

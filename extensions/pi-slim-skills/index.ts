@@ -84,7 +84,7 @@ async function loadSkillBody(filePath: string): Promise<string> {
 
 export function compactBlock(skills: SkillLike[], searchable = false): string {
   const lines = [searchable
-    ? "\n\nSkills: use search_skill_bm25 to discover specialized guidance and load a relevant result. Load only what the task needs; user commands remain available via /skill:<name>."
+    ? "\n\nSkills: use search_skill_bm25 when specialized guidance helps; its tool description covers search and load. Reuse loaded guidance. User commands remain available via /skill:<name>."
     : "\n\nSkills: read the matching file for specialized guidance. User commands are available via /skill:<name>."];
   if (skills.length) lines.push("Resolve relative references against the loaded skill's directory.");
   for (const skill of [...skills].sort((left, right) => left.name.localeCompare(right.name))) {
@@ -138,7 +138,7 @@ export default function slimSkills(pi: ExtensionAPI): void {
       const allowed = config.mode === "all" ? visible : visible.filter((skill) => allowedSet().has(skill.name));
       const searchable = pi.getActiveTools().includes("search_skill_bm25");
       const compact = compactBlock(searchable ? allowed : visible, searchable);
-      if (compact.length < verbose.length) {
+      if (searchable || compact.length < verbose.length) {
         prompt = prompt.replace(verbose, compact);
       }
     }

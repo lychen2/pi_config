@@ -1,5 +1,7 @@
 import type { ExtensionAPI, ExtensionContext, Theme } from "@earendil-works/pi-coding-agent";
 import { Key, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
+import type { VisualTheme } from "./visual-style.ts";
+import { renderSoftLabel } from "./visual-style.ts";
 
 export const PLAN_WIDGET_KEY = "tool-rails-plan";
 // Alt+T is the panel slot's historic key: the Default profile hides the todo tool while
@@ -49,7 +51,7 @@ function stepLine(theme: Theme, step: Step): string {
     return `  ${theme.fg("success", "✓")} ${theme.strikethrough(theme.fg("muted", goal))}`;
   }
   if (step.status === "in_progress") {
-    return `  ${theme.fg("warning", "■")} ${theme.bold(theme.fg("warning", goal))}`;
+    return `${theme.fg("warning", "▏")} ${theme.fg("warning", "■")} ${theme.bold(theme.fg("warning", goal))}`;
   }
   return `  ${theme.fg("dim", "□")} ${theme.fg("text", goal)}`;
 }
@@ -64,9 +66,10 @@ export function renderPlanWidget(
   const done = steps.filter(step => step.status === "completed").length;
   const running = steps.filter(step => step.status === "in_progress").length;
   const toggle = expanded ? "collapse" : "expand";
-  const full = `${theme.bold("Plan")}  ${theme.fg("dim", `${steps.length} steps · ${done} done · ${running} running  (${PLAN_TOGGLE_LABEL} ${toggle})`)}`;
-  const compact = `${theme.bold("Plan")}  ${theme.fg("dim", `${done}/${steps.length}${running ? ` · ${running} running` : ""}  (${PLAN_TOGGLE_LABEL} ${toggle})`)}`;
-  const minimal = `${theme.bold("Plan")}  ${theme.fg("dim", `${done}/${steps.length}`)}`;
+  const badge = renderSoftLabel(theme as unknown as VisualTheme, "Plan", running ? "running" : done === steps.length ? "success" : "idle");
+  const full = `${badge}  ${theme.fg("dim", `${steps.length} steps · ${done} done · ${running} running  (${PLAN_TOGGLE_LABEL} ${toggle})`)}`;
+  const compact = `${badge}  ${theme.fg("dim", `${done}/${steps.length}${running ? ` · ${running} running` : ""}  (${PLAN_TOGGLE_LABEL} ${toggle})`)}`;
+  const minimal = `${badge}  ${theme.fg("dim", `${done}/${steps.length}`)}`;
   const heading = [full, compact, minimal].find(candidate => visibleWidth(candidate) <= Math.max(1, width)) ?? minimal;
   const lines = [heading];
   if (!expanded) return lines.map(line => truncateToWidth(line, width, "…"));

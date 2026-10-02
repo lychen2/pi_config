@@ -1,51 +1,12 @@
 import type {
   ExtensionAPI,
   ExtensionCommandContext,
-  ExtensionContext,
   ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 
 // Keep these definitions dependency-light. The implementation modules are imported only
 // after the corresponding tool is executed.
-const BrowserParams = {
-  type: "object",
-  properties: {
-    action: { type: "string", enum: ["open", "close", "run"], description: "open: launch or attach a tab; close: close one or all tabs; run: execute JavaScript in a tab" },
-    name: { type: "string", description: "Named tab id; defaults to main" },
-    url: { type: "string", description: "URL to navigate on open" },
-    app: {
-      type: "object",
-      properties: {
-        path: { type: "string", description: "Chromium/Chrome/Edge executable path" },
-        cdp_url: { type: "string", description: "Existing browser CDP endpoint" },
-        args: { type: "array", items: { type: "string" }, description: "Extra browser launch arguments" },
-        target: { type: "string", description: "Existing page URL/title substring" },
-      },
-      additionalProperties: false,
-    },
-    visible: { type: "boolean", description: "Launch a headed browser window; default is headless" },
-    viewport: {
-      type: "object",
-      properties: {
-        width: { type: "number", minimum: 1 },
-        height: { type: "number", minimum: 1 },
-        scale: { type: "number", minimum: 0.1, maximum: 10 },
-      },
-      required: ["width", "height"],
-      additionalProperties: false,
-    },
-    wait_until: { type: "string", enum: ["load", "domcontentloaded", "networkidle0", "networkidle2"] },
-    dialogs: { type: "string", enum: ["accept", "dismiss"] },
-    code: { type: "string", minLength: 1, description: "Async JavaScript function body required for run" },
-    timeout: { type: "number", minimum: 1, maximum: 300, description: "Timeout in seconds" },
-    all: { type: "boolean", description: "Close all named tabs" },
-    kill: { type: "boolean", description: "Deprecated close alias" },
-  },
-  required: ["action"],
-  additionalProperties: false,
-} as const;
-
 const BashBgParams = Type.Object({
   action: Type.Union([Type.Literal("run"), Type.Literal("start"), Type.Literal("status"), Type.Literal("wait"), Type.Literal("kill"), Type.Literal("list")]),
   command: Type.Optional(Type.String({ minLength: 1, description: "Shell command, required for run and start" })),
@@ -169,17 +130,6 @@ function registerLazyTool(pi: ExtensionAPI, spec: LazyToolSpec, loader: RuntimeL
 
 export function registerLazyTools(pi: ExtensionAPI): void {
   registerLazyTool(pi, {
-    name: "browser",
-    label: "Browser",
-    description: "Control Chromium through named tabs with trusted host-level JavaScript.",
-    parameters: BrowserParams,
-    executionMode: "sequential",
-  }, async (runtimePi) => {
-    const module = await import("./browser/index.ts");
-    module.default(runtimePi);
-  });
-
-  registerLazyTool(pi, {
     name: "ffgrep",
     label: "FFF Grep",
     description: "Fast indexed literal content search in the current workspace.",
@@ -250,41 +200,4 @@ export function registerLazyPreviewCommands(pi: ExtensionAPI): void {
       },
     });
   }
-}
-
-export function registerLazyLargeCommand(pi: ExtensionAPI): void {
-  let runtime: Promise<{ handler: (args: string, ctx: ExtensionCommandContext) => Promise<void> }> | undefined;
-  const load = async () => runtime ??= runtimeToolCommand(pi);
-  pi.registerCommand("large", {
-    description: "切换纯净 Pi 与完整 pi-maestro-flow 配置档",
-    getArgumentCompletions: () => [
-      { value: "on", label: "完整安装并启用 Flow" },
-      { value: "off", label: "恢复 Large 前 profile" },
-      { value: "status", label: "查看模式和 Flow 版本" },
-      { value: "update", label: "检查 Flow 更新" },
-      { value: "update apply", label: "预安装并应用 Flow 更新" },
-    ],
-    handler: async (args, ctx) => (await load()).handler(args, ctx),
-  });
-}
-
-async function runtimeToolCommand(pi: ExtensionAPI): Promise<{
-  handler: (args: string, ctx: ExtensionCommandContext) => Promise<void>;
-}> {
-  let command: { handler: (args: string, ctx: ExtensionCommandContext) => Promise<void> } | undefined;
-  const runtimePi = new Proxy(pi, {
-    get(target, property, receiver) {
-      if (property === "registerCommand") {
-        return (name: string, definition: { handler: (args: string, ctx: ExtensionCommandContext) => Promise<void> }) => {
-          if (name === "large") command = definition;
-        };
-      }
-      const value = Reflect.get(target, property, receiver);
-      return typeof value === "function" ? value.bind(target) : value;
-    },
-  });
-  const module = await import("./large-mode.ts");
-  module.default(runtimePi as ExtensionAPI);
-  if (!command) throw new Error("Lazy large command did not register an implementation.");
-  return command;
 }

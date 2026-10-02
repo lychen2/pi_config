@@ -11,8 +11,7 @@ import { join } from "node:path";
  *
  * Searches never wait on the network: `loadExtractor` is local-only, so a
  * missing model means an immediate BM25 fallback. `ensureEmbeddingModel`
- * fetches the weights in the background once per machine; the next search
- * after it lands picks the semantic arm up automatically.
+ * downloads only when explicitly opted in and the process is online.
  */
 export const EMBEDDING_MODEL = "Xenova/bge-base-zh-v1.5";
 const MODEL_CACHE_ROOT = process.env.PI_WORKBENCH_MODEL_DIR
@@ -65,12 +64,20 @@ async function loadExtractor(): Promise<Extractor | null> {
   return extractorPromise;
 }
 
+export function shouldDownloadEmbeddingModel(env: NodeJS.ProcessEnv = process.env): boolean {
+  const offline = /^(1|true|yes)$/i.test(env.PI_OFFLINE ?? "");
+  return env.PI_WORKBENCH_DOWNLOAD_EMBEDDINGS === "1"
+    && env.PI_WORKBENCH_NO_EMBEDDING !== "1"
+    && !offline;
+}
+
 /**
- * Kick off a one-time background weight download. Never awaited by a search and
- * never throws — a machine without the model just keeps using BM25.
+ * Kick off a one-time background weight download when explicitly enabled.
+ * Never awaited by a search and never throws — a machine without the model
+ * just keeps using BM25.
  */
 export function ensureEmbeddingModel(): void {
-  if (process.env.NODE_TEST_CONTEXT) return; // no network from tests
+  if (process.env.NODE_TEST_CONTEXT || !shouldDownloadEmbeddingModel()) return;
   void (async () => {
     try {
       await access(MODEL_WEIGHTS);

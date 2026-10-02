@@ -1,5 +1,7 @@
 import type { ExtensionAPI, ExtensionContext, Theme } from "@earendil-works/pi-coding-agent";
 import { Key, Text, matchesKey, truncateToWidth } from "@earendil-works/pi-tui";
+import type { VisualState, VisualTheme } from "./visual-style.ts";
+import { renderSoftLabel } from "./visual-style.ts";
 import { AGENTS_PANEL_TAG } from "./plan-widget.ts";
 
 export const TEAMMATE_PANEL_KEY = "tool-rails-agents";
@@ -79,14 +81,17 @@ export function renderTeammatePanel(store: TeammatePanelStore, theme: Theme, wid
   const running = rows.filter(active).length;
   const done = rows.filter(row => row.status === "completed").length;
   const failed = rows.filter(row => row.status === "failed").length;
-  const lines = [theme.bold("Agents") + theme.fg("dim", `  ${running} active · ${done} done${failed ? ` · ${failed} failed` : ""}  Ctrl+Alt+A`)];
+  const state: VisualState = failed ? "error" : running ? "running" : done ? "success" : "idle";
+  const badge = renderSoftLabel(theme as unknown as VisualTheme, "Agents", state);
+  const lines = [badge + theme.fg("dim", `  ${running} active · ${done} done${failed ? ` · ${failed} failed` : ""}  Ctrl+Alt+A`)];
   if (expanded) {
     for (const row of rows.slice(0, 5)) {
       const color = row.status === "failed" ? "error" : row.status === "completed" ? "success" : active(row) ? "warning" : "muted";
       const icon = row.status === "completed" ? "✓" : row.status === "failed" ? "✗" : row.status === "terminated" ? "–" : row.status === "pending" ? "○" : "●";
       const elapsed = active(row) && row.startedAt ? Math.max(0, now - row.startedAt) : row.durationMs ?? 0;
       const usage = `${row.toolCount === undefined ? "" : ` · ${row.toolCount} tools`}${row.tokens === undefined ? "" : ` · ${row.tokens.toLocaleString("en-US")} tok`}`;
-      lines.push(`  ${theme.fg(color, icon)} ${theme.fg("text", row.name || row.agent)} ${theme.fg("dim", `${row.status} · ${duration(elapsed)}${usage}`)}`);
+      const currentRail = active(row) ? `${theme.fg(color, "▏")} ` : "  ";
+      lines.push(`${currentRail}${theme.fg(color, icon)} ${theme.fg("text", row.name || row.agent)} ${theme.fg("dim", `${row.status} · ${duration(elapsed)}${usage}`)}`);
       if (width >= 65) {
         const detail = row.error || row.lastMessage || row.task || row.resolvedModel;
         if (detail) lines.push(theme.fg("dim", `    ${detail}`));

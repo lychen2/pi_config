@@ -5,6 +5,7 @@ export type ToolPresentation = Readonly<{
 
 export const TOOL_PRESENTATIONS: Readonly<Record<string, ToolPresentation>>;
 export function normalizeToolName(name: string): string;
+export function parseMcpToolName(name: string): { server: string; tool: string } | undefined;
 export function shortToolName(name: string): string;
 export function toolEmoji(name: string): string;
 export function toolIcon(name: string): string;

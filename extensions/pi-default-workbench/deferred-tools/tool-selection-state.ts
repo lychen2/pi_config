@@ -17,6 +17,9 @@ export type ToolSelectionConfig = {
 
 export const DEFAULT_TOOL_MODE: ToolMode = "adaptive";
 export const SEARCH_TOOL_NAME = "search_tool_bm25";
+// The legacy extension loader is not a full-mode capability; native tool_search
+// is host-owned and deliberately remains outside this local-tool filter.
+const FULL_MODE_DISCOVERY_TOOL_NAMES = new Set(["search_tools", SEARCH_TOOL_NAME]);
 
 export const EMPTY_TOOL_SELECTION: ToolSelectionConfig = {
   toolMode: DEFAULT_TOOL_MODE,
@@ -47,6 +50,7 @@ export const TOOL_CAPABILITY_GROUPS = {
 } as const;
 
 export const FAST_TOOL_NAMES: readonly string[] = TOOL_CAPABILITY_GROUPS.core;
+const ALWAYS_ON_TOOL_NAMES = new Set<string>(["codemode"]);
 const ADAPTIVE_DEFAULT_TOOL_NAMES = new Set<string>(TOOL_CAPABILITY_GROUPS.memory);
 
 export function capabilityToolsForMatches(
@@ -251,6 +255,17 @@ export function activeToolsForMode(
       .filter((name) => !disabledByExtension.has(name))
     : baseToolNames.filter((name) => !config.disabledTools.includes(name));
 
+  for (const name of ALWAYS_ON_TOOL_NAMES) {
+    const disabledByExtension = extensionTools.some(({ group, name: toolName }) =>
+      toolName === name && config.disabledExtensions.includes(group.id));
+    if (allToolNames.includes(name)
+      && !config.disabledTools.includes(name)
+      && !disabledByExtension
+      && !desired.includes(name)) {
+      desired.push(name);
+    }
+  }
+
   for (const { group, name } of extensionTools) {
     if (config.disabledTools.includes(name)) continue;
     if (config.disabledExtensions.includes(group.id) && !core.has(name)) continue;
@@ -270,5 +285,6 @@ export function activeToolsForMode(
   const solPlanActive = desired.includes("update_plan") && !config.disabledTools.includes("update_plan");
   return desired.filter((name) => !config.disabledTools.includes(name)
     && (config.toolMode === "adaptive" || name !== SEARCH_TOOL_NAME)
+    && (config.toolMode !== "full" || !FULL_MODE_DISCOVERY_TOOL_NAMES.has(name))
     && (!solPlanActive || (name !== "todo" && name !== "todowrite")));
 }

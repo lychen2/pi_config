@@ -439,17 +439,21 @@ export default function toolSelector(pi: ExtensionAPI): void {
   let configPath: string | undefined;
   let groups: ExtensionGroup[] = [];
   const activatedTools = new Set<string>();
-
-  pi.registerTool(createSearchToolBm25(pi, {
-    canDiscover: (name) => isAllowedTool(config, groups, name)
-      && (!pi.getActiveTools().includes("update_plan") || (name !== "todo" && name !== "todowrite")),
-    canActivate: (name) => config.toolMode === "adaptive"
-      && isAllowedTool(config, groups, name)
-      && groups.some((group) => group.tools.some((tool) => tool.name === name)),
-    onActivated: (names) => {
-      for (const name of names) activatedTools.add(name);
-    },
-  }));
+  let searchToolRegistered = false;
+  const registerAdaptiveSearchTool = (): void => {
+    if (searchToolRegistered || pi.getAllTools().some((tool) => tool.name === SEARCH_TOOL_NAME)) return;
+    pi.registerTool(createSearchToolBm25(pi, {
+      canDiscover: (name) => isAllowedTool(config, groups, name)
+        && (!pi.getActiveTools().includes("update_plan") || (name !== "todo" && name !== "todowrite")),
+      canActivate: (name) => config.toolMode === "adaptive"
+        && isAllowedTool(config, groups, name)
+        && groups.some((group) => group.tools.some((tool) => tool.name === name)),
+      onActivated: (names) => {
+        for (const name of names) activatedTools.add(name);
+      },
+    }));
+    searchToolRegistered = true;
+  };
 
   const refresh = (
     ctx: ExtensionContext,
@@ -468,9 +472,10 @@ export default function toolSelector(pi: ExtensionAPI): void {
     const previousPath = configPath;
     try {
       const nextConfig = nextPath ? loadConfig(nextPath) : { ...EMPTY_TOOL_SELECTION };
-      const nextGroups = discoverExtensionGroups(pi);
       configPath = nextPath;
       config = nextConfig;
+      if (config.toolMode === "adaptive") registerAdaptiveSearchTool();
+      const nextGroups = discoverExtensionGroups(pi);
       groups = nextGroups;
       if (resetActivated || previousPath !== nextPath || previousConfig !== JSON.stringify(nextConfig)) {
         activatedTools.clear();
@@ -481,6 +486,7 @@ export default function toolSelector(pi: ExtensionAPI): void {
       configPath = nextPath;
       config = { ...EMPTY_TOOL_SELECTION };
       groups = discoverExtensionGroups(pi);
+      if (config.toolMode === "adaptive") registerAdaptiveSearchTool();
       activatedTools.clear();
       applyModeSelection(pi, groups, config, activatedTools);
       if (ctx.hasUI) ctx.ui.notify(reason, "error");
@@ -496,6 +502,7 @@ export default function toolSelector(pi: ExtensionAPI): void {
     config = clearDisabled
       ? { toolMode: mode, disabledExtensions: [], disabledTools: [] }
       : setToolMode(config, mode);
+    if (config.toolMode === "adaptive") registerAdaptiveSearchTool();
     activatedTools.clear();
     saveConfig(path, config);
     groups = discoverExtensionGroups(pi);
@@ -513,6 +520,7 @@ export default function toolSelector(pi: ExtensionAPI): void {
     try {
       config = loadConfig(path);
       configPath = path;
+      if (config.toolMode === "adaptive") registerAdaptiveSearchTool();
     } catch (error) {
       notify(ctx, error instanceof Error ? error.message : String(error), "error");
       return;

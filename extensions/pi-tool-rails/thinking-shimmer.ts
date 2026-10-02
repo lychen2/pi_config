@@ -29,16 +29,7 @@ type StreamEvent = {
 
 const GLYPHS = ["·", "✢", "✳", "✶", "✻", "✽"] as const;
 const SPINNER_FRAMES = [...GLYPHS, ...[...GLYPHS].reverse()];
-const SHIMMER_MS_REQUESTING = 80;
-const SHIMMER_MS_WORKING = 80;
-const TOKEN_COUNTER_MS = 40;
-const WAVE_LENGTH = 7;
-const WAVE_SPEED = 0.42;
-const STALL_TIMEOUT_MS = 3_000;
-const STALL_TRANSITION_FRAMES = 28;
-const THINKING_GLOW_DELAY_MS = 1_800;
-const THINKING_GLOW_PERIOD_MS = 1_600;
-const PHASE_ROTATION_MS = 4_500;
+const TOKEN_COUNTER_MS = 125;
 const CJK_CHAR = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u;
 const EMOJI_CHAR = /\p{Extended_Pictographic}/u;
 
@@ -125,18 +116,12 @@ function effortInfo(pi: ExtensionAPI): { tag: string; color: ThemeColor } | unde
   }
 }
 
-export function colorSweep(theme: Theme, text: string, frame: number, _reverse: boolean, stalled: boolean): string {
-  const characters = [...text];
-  if (characters.length === 0) return "";
-  let output = "";
-  for (let index = 0; index < characters.length; index++) {
-    const intensity = (Math.sin(index * (Math.PI * 2 / WAVE_LENGTH) - frame * WAVE_SPEED) + 1) / 2;
-    const color: ThemeColor = stalled
-      ? intensity > 0.82 ? "toolTitle" : intensity > 0.48 ? "accent" : "dim"
-      : intensity > 0.82 ? "toolTitle" : intensity > 0.52 ? "accent" : intensity > 0.24 ? "muted" : "dim";
-    output += theme.fg(color, characters[index]!);
-  }
-  return output;
+export function reducedMotionEnabled(): boolean {
+  return process.env.PI_TOOL_RAILS_REDUCED_MOTION === "1";
+}
+
+export function colorSweep(theme: Theme, text: string, _frame: number, _reverse: boolean, _stalled: boolean): string {
+  return theme.fg("muted", text);
 }
 
 export const PHASE_LINES_HUMOR = {
@@ -379,26 +364,17 @@ function installShimmer(pi: ExtensionAPI): void {
   let mode: SpinnerMode = "requesting";
   let agentStart = 0;
   let turnStart = 0;
-  let thinkingStart = 0;
   let completedOutputTokens = 0;
   let currentEstimatedTokens = 0;
   let currentReportedTokens: number | null = null;
   const currentBlockTokenUnits = new Map<number, number>();
   let currentEstimatedTokenUnits = 0;
-  let lastTokenTime = 0;
   let turnActive = false;
   let activeToolCount = 0;
   const activeTools = new Map<string, string>();
-  let stallFrame = 0;
   let displayedTokens = 0;
-  let tokensMoving = false;
-  let shimmerTimer: ReturnType<typeof setInterval> | null = null;
   let tokenTimer: ReturnType<typeof setInterval> | null = null;
-  let shimmerFrame = 0;
-  let phaseStartedAt = Date.now();
   const phaseOrder: number[] = [];
-  let phaseCycle = -1;
-  let previousPhaseIndex: number | undefined;
   let ctx: ExtensionContext | null = null;
   let sessionGeneration = 0;
   let resizeListening = false;
@@ -406,23 +382,10 @@ function installShimmer(pi: ExtensionAPI): void {
 
   function currentPhaseLine(): string {
     const lines = PHASE_LINES[mode];
-    const slot = Math.floor(Math.max(0, Date.now() - phaseStartedAt) / PHASE_ROTATION_MS);
-    const cycle = Math.floor(slot / lines.length);
-    if (cycle !== phaseCycle) {
-      const next = shuffledPhaseOrder(lines.length);
-      if (next.length > 1 && next[0] === previousPhaseIndex) [next[0], next[1]] = [next[1]!, next[0]!];
-      phaseOrder.splice(0, phaseOrder.length, ...next);
-      phaseCycle = cycle;
+    if (phaseOrder.length !== lines.length) {
+      phaseOrder.splice(0, phaseOrder.length, ...shuffledPhaseOrder(lines.length));
     }
-    const index = phaseOrder[slot % lines.length] ?? 0;
-    previousPhaseIndex = index;
-    return lines[index]!;
-  }
-
-  function resetPhaseRotation(): void {
-    phaseStartedAt = Date.now();
-    phaseCycle = -1;
-    phaseOrder.splice(0, phaseOrder.length);
+    return lines[phaseOrder[0] ?? 0]!;
   }
 
   function themeFg(color: ThemeColor, text: string): string {
@@ -433,12 +396,7 @@ function installShimmer(pi: ExtensionAPI): void {
     const info = effortInfo(pi);
     const tag = info?.tag ?? (mode === "thinking" ? "THINK" : "");
     if (!tag) return undefined;
-    if (mode !== "thinking" || Date.now() - thinkingStart <= THINKING_GLOW_DELAY_MS) {
-      return themeFg(info?.color ?? "thinkingXhigh", tag);
-    }
-    const elapsed = Date.now() - thinkingStart - THINKING_GLOW_DELAY_MS;
-    const phase = (elapsed / THINKING_GLOW_PERIOD_MS) * Math.PI * 2;
-    return themeFg(Math.sin(phase) >= 0 ? info?.color ?? "thinkingXhigh" : "thinkingXhigh", tag);
+    return themeFg(info?.color ?? "thinkingXhigh", tag);
   }
 
   function buildStatusParts(): string[] {
@@ -455,25 +413,13 @@ function installShimmer(pi: ExtensionAPI): void {
     return parts;
   }
 
-  function isStalled(): boolean {
-    return mode !== "tool-use" && mode !== "tool-input" && activeToolCount === 0 && turnActive &&
-      lastTokenTime > 0 && Date.now() - lastTokenTime > STALL_TIMEOUT_MS;
-  }
-
   function updateDisplay(): void {
     const sessionContext = ctx;
     if (!sessionContext) return;
     try {
-      const dots = animatedDots(shimmerFrame);
       const hudParts = buildStatusParts();
       const hud = hudParts.length > 0 ? themeFg("dim", `( ${hudParts.join(" · ")} )`) : "";
-      const message = colorSweep(
-        sessionContext.ui.theme,
-        `${modeLabel(mode, [...activeTools.values()], currentPhaseLine())}${dots}`,
-        shimmerFrame,
-        mode !== "requesting",
-        stallFrame > 0,
-      );
+      const message = themeFg("muted", modeLabel(mode, [...activeTools.values()], currentPhaseLine()));
       widgetText = hud ? `${message} ${hud}` : message;
       // Native Loader owns the animation clock and terminal redraw cycle.
       sessionContext.ui.setWorkingMessage(widgetText);
@@ -490,8 +436,10 @@ function installShimmer(pi: ExtensionAPI): void {
       : "accent";
     try {
       sessionContext.ui.setWorkingIndicator({
-        frames: SPINNER_FRAMES.map((glyph) => themeFg(color, glyph)),
-        intervalMs: 80,
+        frames: reducedMotionEnabled()
+          ? [themeFg(color, GLYPHS[0])]
+          : SPINNER_FRAMES.map((glyph) => themeFg(color, glyph)),
+        intervalMs: 125,
       });
     } catch {
       // A session replacement can invalidate its UI between event dispatches.
@@ -518,49 +466,33 @@ function installShimmer(pi: ExtensionAPI): void {
         const step = distance < 8 ? distance : distance < 40 ? Math.max(2, Math.ceil(distance * 0.28)) :
           distance < 200 ? Math.max(8, Math.ceil(distance * 0.2)) : Math.max(24, Math.ceil(distance * 0.14));
         displayedTokens += Math.sign(gap) * Math.min(distance, step);
-        tokensMoving = true;
-        updateDisplay();
-      } else if (tokensMoving) {
-        tokensMoving = false;
-        updateDisplay();
       }
+      // Factual elapsed time and smoothed token totals keep updating at 8Hz;
+      // this timer never changes decorative text or an ornament phase.
+      updateDisplay();
     }, TOKEN_COUNTER_MS);
   }
 
   function stopShimmer(): void {
-    if (shimmerTimer) {
-      clearInterval(shimmerTimer);
-      shimmerTimer = null;
-    }
     stopTokenCounter();
   }
 
   function startShimmer(): void {
     stopShimmer();
-    shimmerFrame = 0;
     updateDisplay();
-    const generation = sessionGeneration;
-    shimmerTimer = setInterval(() => {
-      if (generation !== sessionGeneration) return;
-      shimmerFrame++;
-      const stalled = isStalled();
-      if (stalled && stallFrame < STALL_TRANSITION_FRAMES) stallFrame++;
-      else if (!stalled && stallFrame > 0) stallFrame--;
-      updateDisplay();
-    }, mode === "requesting" ? SHIMMER_MS_REQUESTING : SHIMMER_MS_WORKING);
     startTokenCounter();
   }
 
   function ensureShimmer(): void {
-    if (turnActive && !shimmerTimer) startShimmer();
+    if (turnActive && !tokenTimer) startShimmer();
   }
 
   function setMode(next: SpinnerMode): void {
     if (mode === next) return;
     mode = next;
-    resetPhaseRotation();
+    phaseOrder.splice(0, phaseOrder.length);
     setGlyphs();
-    if (shimmerTimer) startShimmer();
+    updateDisplay();
   }
 
   function setEstimatedBlock(index: number, units: number): void {
@@ -579,8 +511,8 @@ function installShimmer(pi: ExtensionAPI): void {
     stopShimmer();
     widgetText = "";
     try { ctx?.ui.setWorkingMessage(); } catch { /* session context retired */ }
-    phaseStartedAt = Date.now();
     mode = "requesting";
+    phaseOrder.splice(0, phaseOrder.length);
     currentBlockTokenUnits.clear();
     currentEstimatedTokenUnits = 0;
     currentEstimatedTokens = 0;
@@ -588,7 +520,6 @@ function installShimmer(pi: ExtensionAPI): void {
     if (resetOutput) {
       completedOutputTokens = 0;
       displayedTokens = 0;
-      tokensMoving = false;
     }
     activeToolCount = 0;
     activeTools.clear();
@@ -606,7 +537,7 @@ function installShimmer(pi: ExtensionAPI): void {
 
   function handleTerminalResize(): void {
     if (!ctx || !turnActive) return;
-    startShimmer();
+    updateDisplay();
   }
 
   function setResizeListening(enabled: boolean): void {
@@ -697,17 +628,14 @@ function installShimmer(pi: ExtensionAPI): void {
 
     switch (evt.type) {
       case "thinking_start":
-        thinkingStart = Date.now();
         setMode("thinking");
         break;
       case "thinking_delta":
         setMode("thinking");
-        lastTokenTime = Date.now();
         break;
       case "text_start":
       case "text_delta":
         setMode("responding");
-        lastTokenTime = Date.now();
         break;
       case "toolcall_start":
         setMode("tool-input");
@@ -725,7 +653,6 @@ function installShimmer(pi: ExtensionAPI): void {
     currentEstimatedTokens = 0;
     currentReportedTokens = null;
     displayedTokens = completedOutputTokens;
-    tokensMoving = false;
     updateDisplay();
   });
 
@@ -736,7 +663,7 @@ function installShimmer(pi: ExtensionAPI): void {
     activeTools.set(event.toolCallId, event.toolName);
     activeToolCount = activeTools.size;
     setMode("tool-use");
-    if (!shimmerTimer) startShimmer();
+    if (turnActive && !tokenTimer) startShimmer();
   });
 
   pi.on("tool_execution_end", async (event, sessionContext) => {

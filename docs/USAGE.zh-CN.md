@@ -147,17 +147,17 @@ adaptive/fast 的严格 core 是 `read`、`bash`、`write`、`edit`、`grep`、`
 读取 src/service.py 中 UserStore 的定义和全部引用；只读返回最安全的修改入口。
 ```
 
-## 5. 大型项目模式与 Skills
+## 5. 旁路聊天与 Skills
 
-默认 `pi` 不加载并行委派。需要 GUI、MCP、LSP、browser/web search、FFF、conflict、root `bash_bg`、Goal、Todo、Plan、Loop、Advisor、self-evolve、Maestro skills 和 teammate 时，在当前 Pi 会话输入：
+Default 已包含委派、计划、浏览器、后台命令和工具搜索，大任务直接在当前会话执行。
+
+用 `pi-btw` 临时询问相关问题，主会话可以继续工作：
 
 ```text
-/large on
+/btw:ask 解释刚才的报错，先不要改文件
 ```
 
-`/large on` 会把当前默认 package 边界切换为固定上游 profile：Flow 版本在首次 `/large on` 时从 npm registry 解析并固定，teammate 与 Cockpit 版本由该 Flow 版本的依赖解析固定；用 `/large status` 查看当前固定的版本。然后调用 Pi 的公开 `ctx.reload()`。认证、模型、主题、session 和当前会话都不变，不再创建 `~/.pi/agent-large`。
-
-使用 `/large status` 检查状态，使用 `/large off` 恢复切换前受管 package 的原始顺序与 `autoload`，同时保留 Large 期间新增的无关 package。`/large update` 只注入固定版本检查工作流；需要实际应用通过隔离兼容性验证的新版本时使用 `/large update apply`，不会自动跟随 `latest`。
+`/btw:ask` 使用只读工具集；`/btw` 和 `/side` 使用普通编辑工具。`Alt+/` 切换焦点，`Alt+w` 调整旁路窗宽度，`Esc` 关闭窗口。
 
 ### Skills
 
@@ -275,7 +275,7 @@ node install.mjs --yes
 pi update --all
 ```
 
-Large profile 使用固定版本，不通过独立 profile 更新。先在 Pi 中运行 `/large update` 检查；只有隔离兼容性验证通过后才运行 `/large update apply`。
+Default 包统一由安装器维护；更新 Pi 后运行 `node scripts/verify-repository.mjs --default-profile --skip-install --skip-pack` 检查已加载的本地插件。
 
 检查 package：
 

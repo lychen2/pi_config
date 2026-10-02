@@ -13,7 +13,13 @@ const providerId = process.env[PROVIDER_ENV]?.trim() || "manager";
 const configPath = process.env[CONFIG_ENV]?.trim() || join(getAgentDir(), "models.json");
 const defaultCost = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
 
-type ConfiguredModel = Partial<ProviderModelConfig> & { id: string };
+type ChatModelConfig = Extract<ProviderModelConfig, { type?: "chat" }>;
+type ImageModelConfig = Extract<ProviderModelConfig, { type: "image" }>;
+type ClassifierModelConfig = Extract<ProviderModelConfig, { type: "classifier" }>;
+type ConfiguredModel =
+  | ({ type?: "chat"; id: string } & Partial<Omit<ChatModelConfig, "type" | "id">>)
+  | ({ type: "image"; id: string } & Partial<Omit<ImageModelConfig, "type" | "id">>)
+  | ({ type: "classifier"; id: string } & Partial<Omit<ClassifierModelConfig, "type" | "id">>);
 type ProviderConfig = {
   name?: string;
   baseUrl: string;
@@ -22,7 +28,7 @@ type ProviderConfig = {
   headers?: Record<string, string>;
   authHeader?: boolean;
   modelsEndpoint?: string;
-  compat?: ProviderModelConfig["compat"];
+  compat?: ChatModelConfig["compat"];
   models?: ConfiguredModel[];
 };
 type ModelsFile = { providers?: Record<string, ProviderConfig | undefined> };
@@ -107,16 +113,27 @@ async function loadProviderConfig(optional: boolean): Promise<ProviderConfig | u
   return config;
 }
 
-function completeModel(model: ConfiguredModel, compat?: ProviderModelConfig["compat"]): ProviderModelConfig {
-  return {
-    ...model,
-    ...(compat || model.compat ? { compat: { ...compat, ...model.compat } } : {}),
+function completeModel(model: ConfiguredModel, compat?: ChatModelConfig["compat"]): ProviderModelConfig {
+  const metadata = {
     id: model.id,
     name: model.name ?? model.id,
-    reasoning: model.reasoning ?? true,
-    thinkingLevelMap: model.thinkingLevelMap ?? { xhigh: "xhigh", max: "max" },
     input: model.input ?? ["text"],
     cost: model.cost ?? defaultCost,
+  };
+
+  if (model.type === "image") {
+    return { ...model, ...metadata, type: "image", output: model.output ?? ["image"] };
+  }
+  if (model.type === "classifier") {
+    return { ...model, ...metadata, type: "classifier", contextWindow: model.contextWindow ?? 128_000 };
+  }
+
+  return {
+    ...model,
+    ...metadata,
+    ...(compat || model.compat ? { compat: { ...compat, ...model.compat } } : {}),
+    reasoning: model.reasoning ?? true,
+    thinkingLevelMap: model.thinkingLevelMap ?? { xhigh: "xhigh", max: "max" },
     contextWindow: model.contextWindow ?? 128_000,
     maxTokens: model.maxTokens ?? 16_384,
   };

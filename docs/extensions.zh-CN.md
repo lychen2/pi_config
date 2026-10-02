@@ -11,16 +11,13 @@
 | 扩展 | 解决的问题 | 使用入口 | 配置或开关 |
 | --- | --- | --- | --- |
 | `pi-brand-header` | 品牌标题栏实现，已并入 `pi-tool-rails` | `/logo` | 默认不单独安装 |
-| `pi-deepseek-anchored-standard` | DeepSeek V4 Pro/Flash 的 Minimal bootstrap、锚点和渐进式上下文恢复 | `/dsh-anchor` 查看、`promote` 或 `rearm` 管理 | 仅匹配目标模型；`PI_DEEPSEEK_ANCHORED_STANDARD_DISABLE=1` 禁用 |
-| `pi-default-workbench` | Default 功能工作台：adaptive/fast/full 工具模式、Puppeteer 浏览器、Todo、Todo guard、FFF/后台 Shell/冲突处理、Markdown Preview 和 `/large` | `/tools`、`/todos`、模型调用工具、`/large on|off|status|update` | 四类工作流共用一个根入口 |
+| `pi-default-workbench` | Default 功能工作台：工具发现、浏览器、Todo、FFF、后台 Shell、冲突处理和 Markdown Preview | `/tools`、`/todos`、模型工具 | 共用一个注册入口 |
 | `pi-manager-models` | 从 OpenAI-compatible `/models` 刷新 `manager` 模型目录 | 启动时自动刷新 | `PI_MANAGER_MODELS_PROVIDER`、`PI_MANAGER_MODELS_CONFIG` |
 | `pi-slim-skills` | 压缩模型可见的技能索引，降低提示词体积 | `/slim-skills remove <名称>`、`none`、`reset`、`inject <名称>` | `slim-skills-whitelist.json`；`SLIM_SKILLS_DISABLE=1` 禁用 |
 | `pi-cache-drop-guard` | 连续两次「明显掉缓存」时弹窗询问是否继续；「不再提醒」只对当前会话有效，新会话与 resume 都从默认提醒开始 | `/cache-guard status\|ask\|never\|reset`；弹窗中的「查看状态」 | `cache-drop-guard.json` 记录最后一次选择及其所属会话；`PI_CACHE_DROP_GUARD_*` 调阈值与超时 |
 | `pi-todo-guard` | Todo 仍有未完成项目时，提醒代理继续当前任务 | 自动处理 | `PI_TODO_GUARD_DISABLE=1`；默认兼容 `todo` 工具 |
 | `pi-context-bridge` | 将锁定的 Web Access、manager 模型目录和 continuity 统一接入 Default profile | 模型调用联网工具；启动时注册 manager provider | 不替换 Pi 原生文件工具 |
-| `pi-large-mode` | Large profile 的实现源码，已由 `pi-default-workbench` 聚合；默认不单独安装 | `/large on|off|status|update` | 手动安装旧入口时不要与工作台重复加载 |
 | `pi-tool-rails` | 提供稳定的工具标签、结果面板、diff、输入框样式、步骤化思考轨迹和品牌标题栏 | 自动处理；折叠的思考轨迹显示 `✦ 思考 · N 步 · 18s`，`Ctrl+T` 显示或展开全部步骤；`/logo` 切换标题栏 | Default 与 Large 共用 UI 聚合入口 |
-| `pi-large-beautify` | Large profile 专用的工具栏、消息/输入框框架、品牌头和 Matugen 主题 | 由 Large profile 复制并加载 | Default 安装器跳过；与 `pi-tool-rails`、`pi-brand-header` 保持 profile 隔离 |
 
 
 ### 项目工具选择
@@ -63,7 +60,7 @@
 ## 组合建议
 
 - **常规编码**：Pi 原生 `bash`、`pi-context-bridge` 提供的 Web/manager 能力、Magic Context 的 `ctx_*` 工具、`pi-default-workbench`、`pi-tool-rails`、`pi-slim-skills`、`pi-rtk-optimizer` 与结构化提问 package 构成默认基础。
-- **需要深度项目编排**：在当前 Pi 会话运行 `/large on`；它加载固定版本的完整上游 Flow、teammate 和 Cockpit，包括 GUI、MCP、LSP、browser/web search、FFF、conflict、root `bash_bg`、Advisor、self-evolve、Goal、Todo、Plan、Loop、agents 和 Maestro skills。完成后用 `/large off` 恢复默认 package 边界。
+- **大型任务**：继续使用 Default 的委派、计划、工具发现和后台执行。临时问题用 `/btw:ask` 打开只读旁路聊天；`/btw` 支持编辑。
 - **需要联网资料**：直接要求模型搜索网页、抓取 URL 或克隆 GitHub 仓库；相关工具默认可用。
 
 ## 排障

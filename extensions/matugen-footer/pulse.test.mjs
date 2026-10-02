@@ -34,7 +34,7 @@ async function appendTsExtensions(dir) {
   }
 }
 
-test("footer pulse timer runs only while the agent is active", async (t) => {
+test("footer stays on one row and pulses only while the agent is active", async (t) => {
   t.mock.timers.enable({ apis: ["setInterval"] });
 
   const root = await mkdtemp(join(tmpdir(), "matugen-pulse-test-"));
@@ -53,18 +53,26 @@ test("footer pulse timer runs only while the agent is active", async (t) => {
       `${pathToFileURL(join(root, "footer.ts")).href}?pulse-test=${Date.now()}`
     );
 
+    const { defaultConfig } = await import(pathToFileURL(join(root, "config.ts")).href);
+    const { createInitialState } = await import(pathToFileURL(join(root, "state.ts")).href);
+    const { emptyGitStatus } = await import(pathToFileURL(join(root, "git.ts")).href);
+    const { visibleWidth } = await import(
+      pathToFileURL(join(upstreamScope, "pi-tui", "dist", "index.js")).href
+    );
+
     let renders = 0;
     const tui = { requestRender: () => { renders += 1; } };
     let pulseController;
     let footer;
-    const config = {
-      icons: { mode: "nerd" },
-      contextStyle: "percent",
-      footerSegments: { context: true },
-    };
+    let config = defaultConfig;
+    const extensionStatuses = new Map();
     installFooter(
-      { ui: { setFooter: (component) => { footer = component; } } },
-      {},
+      {
+        cwd: sourceDir,
+        getContextUsage: () => ({ percent: 25, contextWindow: 128000 }),
+        ui: { setFooter: (component) => { footer = component; } },
+      },
+      createInitialState(emptyGitStatus()),
       () => config,
       {
         setRequestRender() {},
@@ -72,8 +80,8 @@ test("footer pulse timer runs only while the agent is active", async (t) => {
         setPulseController(fn) { pulseController = fn; },
       },
     );
-    const footerInstance = footer(tui, {}, {
-      getExtensionStatuses: () => new Map(),
+    const footerInstance = footer(tui, { fg: (_color, text) => text }, {
+      getExtensionStatuses: () => extensionStatuses,
       onBranchChange: () => () => {},
     });
     assert.equal(typeof pulseController, "function");
@@ -81,6 +89,18 @@ test("footer pulse timer runs only while the agent is active", async (t) => {
     // Idle install: no timer, no renders.
     t.mock.timers.tick(1000);
     assert.equal(renders, 0);
+
+    // Reduced motion suppresses the decorative pulse despite active work.
+    const previousMotion = process.env.PI_TOOL_RAILS_REDUCED_MOTION;
+    process.env.PI_TOOL_RAILS_REDUCED_MOTION = "1";
+    pulseController(true);
+    const afterReducedStart = renders;
+    t.mock.timers.tick(1000);
+    assert.equal(renders, afterReducedStart, "reduced motion must not schedule animation");
+    config = { ...defaultConfig, footerFormat: "STATE" };
+    assert.match(footerInstance.render(40)[0], /=\^\.\^=~ /, "busy reduced motion holds a static cat");
+    if (previousMotion === undefined) delete process.env.PI_TOOL_RAILS_REDUCED_MOTION;
+    else process.env.PI_TOOL_RAILS_REDUCED_MOTION = previousMotion;
 
     // agent_start: pulse renders on the 250ms cadence.
     pulseController(true);
@@ -100,10 +120,53 @@ test("footer pulse timer runs only while the agent is active", async (t) => {
     t.mock.timers.tick(1000);
     assert.equal(renders, afterStop);
 
+    // The pet occupies the spare right edge without losing status content.
+    config = { ...defaultConfig, footerFormat: "STATE" };
+    assert.match(footerInstance.render(40)[0], /=-\.-= z $/, "idle cat sleeps at the right edge");
+    assert.doesNotMatch(footerInstance.render(15)[0], /=-\.-= z/, "one column short hides the entire cat");
+    assert.match(footerInstance.render(16)[0], /STATE.*=-\.-= z/, "exact-fit width keeps both status and cat");
+    for (const width of [16, 20, 40, 80]) {
+      pulseController(true);
+      const before = footerInstance.render(width)[0];
+      t.mock.timers.tick(750);
+      const after = footerInstance.render(width)[0];
+      assert.match(before, /=\^\.\^=~ /);
+      assert.match(after, /=\^\.\^=- /);
+      assert.equal(visibleWidth(before), visibleWidth(after), "animation must not change line width");
+      pulseController(false);
+    }
+    extensionStatuses.set("test-status", "IMPORTANT");
+    const crowded = footerInstance.render(24)[0];
+    assert.match(crowded, /STATE/);
+    assert.match(crowded, /IMPORTANT/);
+    assert.doesNotMatch(crowded, /=.*= z/, "extension status takes priority over pet");
+    extensionStatuses.clear();
+    config = { ...defaultConfig, footerFormat: "LEFT${fill}MIDDLE${fill}RIGHT" };
+    const threeSections = footerInstance.render(40)[0];
+    for (const text of ["LEFT", "MIDDLE", "RIGHT", "=-.-= z"]) assert.ok(threeSections.includes(text));
+
+    // ASCII icons and text-only context still animate the ASCII pet.
+    config = { ...defaultConfig, icons: { ...defaultConfig.icons, mode: "ascii" }, contextStyle: "text", footerFormat: "STATE" };
+    pulseController(true);
+    const beforeAsciiTick = renders;
+    t.mock.timers.tick(250);
+    assert.equal(renders - beforeAsciiTick, 1);
+
+    // The real footer must occupy one row at both narrow and wide widths.
+    config = defaultConfig;
+    for (const width of [1, 2, 20, 80, 160]) {
+      const lines = footerInstance.render(width);
+      assert.equal(lines.length, 1, `footer at width ${width} must not add a bottom gutter`);
+      assert.ok(visibleWidth(lines[0]) <= width, `footer must fit width ${width}`);
+      if (width >= 20) assert.ok(lines[0].trim(), "footer content must remain visible");
+    }
+
     // dispose detaches the controller and clears the timer.
     footerInstance.dispose();
     assert.equal(pulseController, undefined);
+    const afterDispose = renders;
     t.mock.timers.tick(1000);
+    assert.equal(renders, afterDispose, "dispose must stop a live animation timer");
   } finally {
     await rm(root, { recursive: true, force: true });
   }

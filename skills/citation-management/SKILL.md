@@ -1,7 +1,7 @@
 ---
 allowed-tools: Read Write Edit Bash WebSearch WebFetch
 compatibility: Requires Python 3.9+ with requests. Google Scholar search additionally needs scholarly. Needs network access to api.openalex.org, api.crossref.org, eutils.ncbi.nlm.nih.gov, export.arxiv.org, and api.datacite.org.
-description: Validate and format scholarly citations. Use when checking DOI metadata, deduplicating references, or producing BibTeX.
+description: Write, validate, and format scholarly citations. Use for DOI metadata, BibTeX, bibliography cleanup, and reference checks.
 license: MIT License
 metadata:
     github-path: skills/citation-management

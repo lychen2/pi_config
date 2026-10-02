@@ -52,7 +52,7 @@ Pi 可以同时使用文件编辑、代码检查、联网、技能和委派能�
 
 ### 每次改变都能检查和恢复
 
-安装前可以用 `--dry-run` 查看计划，安装器会创建备份，代码修改可以通过 Git diff 和测试检查。需要工作区级恢复时使用 `pi-workspace-history`。
+安装前可以用 `--dry-run` 查看计划，代码修改可以通过 Git diff 和测试检查。需要恢复时，请在同一磁盘保存工作区备份。
 
 ## 五分钟上手
 
@@ -139,7 +139,7 @@ pi
 
 ### 并行委派独立任务
 
-默认模式由主 agent 直接执行任务；需要并行委派时使用 Large profile。
+默认模式由主 agent 执行任务；任务适合并行处理时，可以委派相互独立且范围明确的工作。
 
 ## 仓库结构
 
@@ -173,14 +173,18 @@ node install.mjs --yes
 
 配置更新后，在 Pi 中运行 `/reload`；涉及安装器、扩展或仓库配置的变化时，重新启动 Pi 更可靠。
 
-### 清空插件后重装
+### 更新插件
 
-安装器每次都会从干净的插件状态开始，避免旧插件、旧工具 schema 或 package 缓存残留。它会先备份 `~/.pi/agent`，再删除 `extensions/`、`npm/` 和 `settings.json` 中的 `packages`，随后从本仓库和 `config/external-packages.txt` 重装插件。skills、themes、模型配置、provider 凭据、headers 和 sessions 会保留。
-
-应用前先预览清理计划：
+默认安装是增量更新：保留 `settings.json` 中现有的插件选择，并更新已选中的第一方包，不会清空 `extensions/`、`npm/` 或 package 列表。日常更新使用：
 
 ```bash
-node install.mjs --yes --dry-run
+node install.mjs --yes
+```
+
+显式清理重装时传入 `--clean-plugins`。安装器会先备份 `~/.pi/agent`，再删除 `extensions/` 和 `npm/`、清空 package 列表并重新安装所选包。skills、themes、模型配置、provider 凭据、headers 和 sessions 会保留。先预览清理计划：
+
+```bash
+node install.mjs --yes --clean-plugins --dry-run
 ```
 
 ## 安全检查

@@ -1,0 +1,267 @@
+diff --git a/extensions/provider/index.ts b/extensions/provider/index.ts
+index 147a5e4..6370b28 100644
+--- a/extensions/provider/index.ts
++++ b/extensions/provider/index.ts
+@@ -76,13 +76,34 @@ const INPUT_TYPES: { value: string[]; label: string }[] = [
+ 
+ interface ModelConfig {
+   id: string;
+-  name: string;
+-  reasoning: boolean;
++  name?: string;
++  reasoning?: boolean;
+   thinkingLevelMap?: Record<string, string | null>;
+-  input: string[];
+-  contextWindow: number;
+-  maxTokens: number;
+-  cost: { input: number; output: number; cacheRead: number; cacheWrite: number };
++  input?: string[];
++  contextWindow?: number;
++  maxTokens?: number;
++  cost?: { input: number; output: number; cacheRead: number; cacheWrite: number };
++}
++
++// Pi applies these defaults when optional model metadata is omitted.
++const PI_DEFAULT_CONTEXT_WINDOW = 128_000;
++const PI_DEFAULT_MAX_TOKENS = 16_384;
++
++function modelDisplayName(model: ModelConfig): string {
++  return model.name ?? model.id;
++}
++
++function modelDisplayLabel(model: ModelConfig): string {
++  const name = modelDisplayName(model);
++  return name === model.id ? model.id : `${name} (${model.id})`;
++}
++
++function modelContextWindow(model: ModelConfig): number {
++  return model.contextWindow ?? PI_DEFAULT_CONTEXT_WINDOW;
++}
++
++function modelMaxTokens(model: ModelConfig): number {
++  return model.maxTokens ?? PI_DEFAULT_MAX_TOKENS;
+ }
+ 
+ interface ProviderConfig {
+@@ -95,6 +116,13 @@ interface ProviderConfig {
+   models: ModelConfig[];
+ }
+ 
++function prioritizeModel(models: ModelConfig[], modelId?: string): ModelConfig[] {
++  if (!modelId) return models;
++  const selectedIndex = models.findIndex((model) => model.id === modelId);
++  if (selectedIndex <= 0) return models;
++  return [models[selectedIndex], ...models.slice(0, selectedIndex), ...models.slice(selectedIndex + 1)];
++}
++
+ interface ArchivedProviderConfig extends ProviderConfig {
+   archivedAt: string;
+ }
+@@ -661,9 +689,11 @@ async function selfCheckAndAdaptProvider(
+   provider: ProviderConfig,
+   preferredReasoning?: boolean,
+   mode: SelfCheckMode = "full",
++  probeModelId?: string,
+ ): Promise<AdaptResult> {
+   const changes: string[] = [];
+-  const modelId = provider.models[0]?.id;
++  const probeModels = prioritizeModel(provider.models, probeModelId);
++  const modelId = probeModels[0]?.id;
+   if (!modelId) {
+     return { ok: false, message: "No model id to probe", changes };
+   }
+@@ -675,7 +705,7 @@ async function selfCheckAndAdaptProvider(
+   // Anthropic / Google / Mistral: connectivity only (no chat/completions compat).
+   if (!isOpenAiFamily(provider.api)) {
+     if (mode === "quick") {
+-      const quick = await quickConnectivityCheck(provider, timeoutMs);
++      const quick = await quickConnectivityCheck({ ...provider, models: probeModels }, timeoutMs);
+       return {
+         ok: quick.ok,
+         message: quick.ok
+@@ -688,7 +718,7 @@ async function selfCheckAndAdaptProvider(
+       provider.baseUrl,
+       provider.apiKey,
+       provider.api,
+-      provider.models,
++      probeModels,
+       provider.headers,
+     );
+     return {
+@@ -1009,6 +1039,7 @@ interface BgSelfCheckOpts {
+   providerSnapshot: ProviderConfig;
+   preferredReasoning?: boolean;
+   mode?: SelfCheckMode;
++  probeModelId?: string;
+   ui: BgUi;
+   refresh: () => void;
+ }
+@@ -1027,6 +1058,7 @@ function scheduleBackgroundSelfCheck(opts: BgSelfCheckOpts): void {
+     providerSnapshot,
+     preferredReasoning,
+     mode = "quick",
++    probeModelId,
+     ui,
+     refresh,
+   } = opts;
+@@ -1045,7 +1077,12 @@ function scheduleBackgroundSelfCheck(opts: BgSelfCheckOpts): void {
+   void (async () => {
+     try {
+       const draft = deepClone(providerSnapshot);
+-      const adapt = await selfCheckAndAdaptProvider(draft, preferredReasoning, mode);
++      const adapt = await selfCheckAndAdaptProvider(
++        draft,
++        preferredReasoning,
++        mode,
++        probeModelId,
++      );
+ 
+       // Stale generation (newer check scheduled for same name)
+       if (bgSelfCheckGen.get(providerName) !== gen) return;
+@@ -1305,7 +1342,7 @@ export default function providerExtension(pi: ExtensionAPI) {
+       providerName,
+       providerSnapshot: deepClone(newProvider),
+       preferredReasoning: preferReasoning,
+-      mode: "quick",
++      probeModelId: ctx.model?.provider === providerName ? ctx.model.id : undefined,
+       ui: ctx.ui,
+       refresh: () => ctx.modelRegistry.refresh(),
+     });
+@@ -1418,7 +1455,7 @@ export default function providerExtension(pi: ExtensionAPI) {
+       },
+       {
+         label: "Models",
+-        row: () => `Models: ${draft.models.length > 0 ? draft.models.map((m) => `${m.name} (${m.id})`).join(", ") : "<none>"}`,
++        row: () => `Models: ${draft.models.length > 0 ? draft.models.map(modelDisplayLabel).join(", ") : "<none>"}`,
+         edit: async () => {
+           if (draft.models.length === 0) {
+             ctx.ui.notify("No models to edit", "info");
+@@ -1426,32 +1463,32 @@ export default function providerExtension(pi: ExtensionAPI) {
+           }
+           const modelChoice = await enhancedSelect(ctx,
+             "Edit model",
+-            draft.models.map((m, i) => `${i + 1}. ${m.name} (${m.id})`)
++            draft.models.map((m, i) => `${i + 1}. ${modelDisplayLabel(m)}`)
+           );
+           if (!modelChoice) return;
+           const index = Number(modelChoice.split(".")[0]) - 1;
+           const model = draft.models[index];
+           if (!model) { ctx.ui.notify("Model not found", "error"); return; }
+ 
+-          await editDraft(ctx, `Edit model: ${model.name}`, [
++          await editDraft(ctx, `Edit model: ${modelDisplayName(model)}`, [
+             field("ID", () => model.id, async (ctx) => {
+               const val = await ctx.ui.input(`Model ID [${model.id}]:`);
+               if (val) model.id = val.trim();
+             }),
+-            field("Name", () => model.name, async (ctx) => {
+-              const val = await ctx.ui.input(`Display name [${model.name}]:`);
++            field("Name", () => modelDisplayName(model), async (ctx) => {
++              const val = await ctx.ui.input(`Display name [${modelDisplayName(model)}]:`);
+               if (val) model.name = val.trim();
+             }),
+-            field("Context window", () => String(model.contextWindow), async (ctx) => {
+-              const val = await ctx.ui.input(`Context window tokens [${model.contextWindow}]:`);
++            field("Context window", () => String(modelContextWindow(model)), async (ctx) => {
++              const val = await ctx.ui.input(`Context window tokens [${modelContextWindow(model)}]:`);
+               if (val) {
+                 const n = Number(val);
+                 if (!Number.isFinite(n) || n <= 0) ctx.ui.notify("Invalid context window", "warning");
+                 else model.contextWindow = n;
+               }
+             }),
+-            field("Max output", () => String(model.maxTokens), async (ctx) => {
+-              const val = await ctx.ui.input(`Max output tokens [${model.maxTokens}]:`);
++            field("Max output", () => String(modelMaxTokens(model)), async (ctx) => {
++              const val = await ctx.ui.input(`Max output tokens [${modelMaxTokens(model)}]:`);
+               if (val) {
+                 const n = Number(val);
+                 if (!Number.isFinite(n) || n <= 0) ctx.ui.notify("Invalid max output tokens", "warning");
+@@ -1502,7 +1539,7 @@ export default function providerExtension(pi: ExtensionAPI) {
+       providerName: draftName,
+       providerSnapshot: deepClone(toSave),
+       preferredReasoning: preferReasoning,
+-      mode: "quick",
++      probeModelId: ctx.model?.provider === draftName ? ctx.model.id : undefined,
+       ui: ctx.ui,
+       refresh: () => ctx.modelRegistry.refresh(),
+     });
+@@ -1580,7 +1617,7 @@ export default function providerExtension(pi: ExtensionAPI) {
+             `Archived : ${a.archivedAt}`,
+             `Models   : ${modelCount}`,
+             "",
+-            ...a.models.map((m) => `  - ${m.name} (${m.id})`),
++            ...a.models.map((m) => `  - ${modelDisplayLabel(m)}`),
+             "",
+             `Use /provider activate ${name} to reactivate.`,
+           ];
+@@ -1656,7 +1693,10 @@ export default function providerExtension(pi: ExtensionAPI) {
+       provider.baseUrl,
+       provider.apiKey,
+       provider.api,
+-      provider.models,
++      prioritizeModel(
++        provider.models,
++        ctx.model?.provider === name ? ctx.model.id : undefined,
++      ),
+       provider.headers
+     );
+     perf = annotatePerfWithLocalHints(provider.baseUrl, perf);
+@@ -1749,7 +1789,12 @@ export default function providerExtension(pi: ExtensionAPI) {
+         const local = isLocalhostBaseUrl(provider.baseUrl);
+         try {
+           const draft = deepClone(provider);
+-          const adapt = await selfCheckAndAdaptProvider(draft, preferReasoning, "full");
++          const adapt = await selfCheckAndAdaptProvider(
++            draft,
++            preferReasoning,
++            "full",
++            ctx.model?.provider === name ? ctx.model.id : undefined,
++          );
+           let message = adapt.message;
+           if (!adapt.ok && local) {
+             const hints = diagnoseLocalEndpointHints(provider.baseUrl, adapt.message);
+@@ -1834,7 +1879,12 @@ export default function providerExtension(pi: ExtensionAPI) {
+ 
+     ctx.ui.notify(`Full self-checking "${name}"...`, "info");
+     const draft = deepClone(provider);
+-    const adapt = await selfCheckAndAdaptProvider(draft, preferReasoning, "full");
++    const adapt = await selfCheckAndAdaptProvider(
++      draft,
++      preferReasoning,
++      "full",
++      ctx.model?.provider === name ? ctx.model.id : undefined,
++    );
+ 
+     if (!adapt.ok) {
+       const stillSave = await ctx.ui.confirm(
+@@ -1901,13 +1951,13 @@ export default function providerExtension(pi: ExtensionAPI) {
+     lines.push(`── Models (${provider.models.length}) ──`);
+     lines.push("");
+     for (const m of provider.models) {
+-      const inputs = m.input.join(", ");
+-      const ctxWin = fmtContextWindow(m.contextWindow);
+-      lines.push(`  ${m.name} (${m.id})`);
++      const inputs = (m.input ?? ["text"]).join(", ");
++      const ctxWin = fmtContextWindow(modelContextWindow(m));
++      lines.push(`  ${modelDisplayLabel(m)}`);
+       lines.push(`    Reasoning  : ${m.reasoning ? "Yes" : "No"}`);
+       lines.push(`    Input      : ${inputs}`);
+       lines.push(`    Context    : ${ctxWin} tokens`);
+-      lines.push(`    Max output : ${m.maxTokens} tokens`);
++      lines.push(`    Max output : ${modelMaxTokens(m)} tokens`);
+       if (m.thinkingLevelMap) {
+         const levels = Object.entries(m.thinkingLevelMap)
+           .map(([k, v]) => `${k}:${v ?? "-"}`)
+@@ -1942,7 +1992,10 @@ export default function providerExtension(pi: ExtensionAPI) {
+           provider.baseUrl,
+           provider.apiKey,
+           provider.api,
+-          provider.models,
++          prioritizeModel(
++            provider.models,
++            ctx.model?.provider === providerName ? ctx.model.id : undefined,
++          ),
+           provider.headers
+         );
+         perf = annotatePerfWithLocalHints(provider.baseUrl, perf);

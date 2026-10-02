@@ -123,6 +123,45 @@ test("session_start applies adaptive core and BM25 activates an SDK tool", async
   assert.deepEqual(new Set(pi.getActiveTools()), new Set([...core, "search_tool_bm25"]));
 });
 
+test("full mode removes local discovery loaders even when already active", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "pi-full-discovery-tools-"));
+  const configPath = join(cwd, ".pi", "tool-selector.json");
+  await mkdir(dirname(configPath), { recursive: true });
+  await writeFile(configPath, JSON.stringify({
+    toolMode: "full",
+    disabledExtensions: [],
+    disabledTools: [],
+  }), "utf8");
+
+  const tools = initialTools();
+  const legacySearch = tool("search_tools", "Legacy local discovery", "sdk");
+  legacySearch.promptSnippet = "Call search_tools to discover tools.";
+  tools.push(legacySearch, tool("tool_search", "Native host discovery", "builtin"));
+  const pi = fakePi(tools);
+  register(pi);
+  await start(pi, cwd);
+
+  const registeredNames = pi.getAllTools().map((entry) => entry.name);
+  assert.ok(registeredNames.includes("search_tools"), "other extensions own their tool registrations");
+  assert.equal(registeredNames.filter((name) => name === "search_tool_bm25").length, 0, "cold full mode does not register the adaptive loader");
+  assert.ok(!pi.getActiveTools().includes("search_tools"));
+  assert.ok(!pi.getActiveTools().includes("search_tool_bm25"));
+  assert.ok(pi.getActiveTools().includes("tool_search"));
+  const activePromptGuidance = pi.getActiveTools()
+    .map((name) => pi.tools.find((entry) => entry.name === name)?.promptSnippet ?? "")
+    .join(" ");
+  assert.doesNotMatch(activePromptGuidance, /search_tools|search_tool_bm25/);
+
+  const command = pi.commands.get("tools");
+  const ctx = context(cwd);
+  await command.handler("adaptive", ctx);
+  assert.equal(pi.getAllTools().filter((entry) => entry.name === "search_tool_bm25").length, 1);
+  assert.ok(pi.getActiveTools().includes("search_tool_bm25"));
+  await command.handler("full", ctx);
+  assert.equal(pi.getAllTools().filter((entry) => entry.name === "search_tool_bm25").length, 1, "runtime mode switch cannot unregister tools");
+  assert.ok(!pi.getActiveTools().includes("search_tool_bm25"));
+});
+
 test("explicit disables outrank adaptive discovery including SDK tools", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "pi-adaptive-disabled-"));
   const configPath = join(cwd, ".pi", "tool-selector.json");

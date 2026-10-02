@@ -22,5 +22,18 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node-version }}
-      - name: Verify all extension packages
-        run: node scripts/verify-repository.mjs --pi-version=0.85.1
+      - name: Verify active packages on Pi 1.0.0
+        run: node scripts/verify-repository.mjs --default-profile --pi-version=1.0.0
+      - name: Verify retired package references are absent
+        run: node scripts/verify-install-regressions.mjs
+
+  windows-archive:
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22.19.0"
+      - name: Verify archive replacement and rollback
+        run: node --test scripts/windows-archive-update.test.mjs

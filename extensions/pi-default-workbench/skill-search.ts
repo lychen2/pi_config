@@ -167,7 +167,7 @@ export default function registerSkillSearch(pi: ExtensionAPI): void {
     name: "search_skill_bm25",
     label: "Search Skills",
     description: "Search skill metadata with BM25 fused with local semantic embeddings, then explicitly load one previously returned candidate.",
-    promptSnippet: "Use action=search when specialized guidance would help and the matching skill is unknown, then action=load for a relevant candidate. Reuse guidance already in context.",
+    promptSnippet: "For relevant specialized guidance, use action=search with a task-specific query, then action=load with an exact returned name. Reuse already-loaded guidance. Read a known required SKILL.md or an explicitly requested skill audit directly; open references only as needed.",
     parameters: SEARCH_SKILL_PARAMS,
     async execute(_id, params, signal) {
       if (signal?.aborted) throw abortError();

@@ -20,6 +20,7 @@ import {
 } from "./format";
 import { resolveRuntimeSymbol } from "./icons";
 import { pulsePhase } from "./gradient";
+import { PET_GAP, PET_WIDTH, petFrame } from "./pet";
 import type { LiveContextOverride } from "./live-context";
 import type { FooterState } from "./state";
 import { renderStyleForSource } from "./style";
@@ -185,17 +186,20 @@ export function installFooter(
 			tui.requestRender();
 		});
 
-		// Soft macaron pulse — only while the agent is active and phase-tinted
-		// segments exist; idle sessions hold no 4fps timer.
-		const wantsPulse = () => {
-			const cfg = getConfig();
-			if (cfg.icons.mode === "ascii") return false;
-			if (cfg.contextStyle !== "text" && cfg.footerSegments.context) return true;
-			return false;
-		};
+		// Share one busy-only 4fps clock for the pulse and the stationary pet.
+		// Idle sessions and reduced-motion sessions hold no animation timer.
+		let active = false;
+		let petTick = 0;
+		const reducedMotion = () => process.env.PI_TOOL_RAILS_REDUCED_MOTION === "1";
 		let pulseTimer: ReturnType<typeof setInterval> | undefined;
 		const syncPulseTimer = (enabled: boolean): void => {
-			const shouldRun = enabled && wantsPulse();
+			const changed = active !== enabled;
+			active = enabled;
+			if (changed) {
+				petTick = 0;
+				tui.requestRender();
+			}
+			const shouldRun = enabled && !reducedMotion();
 			if (!shouldRun) {
 				if (pulseTimer) {
 					clearInterval(pulseTimer);
@@ -205,6 +209,7 @@ export function installFooter(
 			}
 			if (!pulseTimer) {
 				pulseTimer = setInterval(() => {
+					petTick += 1;
 					tui.requestRender();
 				}, 250) as ReturnType<typeof setInterval> & { unref?: () => void };
 				(pulseTimer as { unref?: () => void }).unref?.();
@@ -609,16 +614,31 @@ export function installFooter(
 				const middleSegments = contentMiddle
 					? [contentMiddle, ...extensionMiddleSegments]
 					: extensionMiddleSegments;
-				const content = composeFooterContent(
+				const leftStatuses = extensionStatuses.left.map(renderExtensionStatus);
+				const rightStatuses = extensionStatuses.right.map(renderExtensionStatus);
+				// Reserve pet space only if every status segment still fits in full.
+				const fullLeft = appendStatusArea(contentLeft, joinStatusTexts(leftStatuses, separator), separator);
+				const fullRight = prependStatusArea(contentRight, joinStatusTexts(rightStatuses, separator), separator);
+				const fullMiddle = joinStatusTexts(middleSegments, separator);
+				const sections = [fullLeft, fullMiddle, fullRight].filter(Boolean);
+				const requiredWidth = sections.reduce((sum, text) => sum + visibleWidth(text), 0)
+					+ Math.max(0, sections.length - 1);
+				const showPet = requiredWidth + PET_GAP + PET_WIDTH <= innerWidth;
+				const petSpace = showPet ? PET_GAP + PET_WIDTH : 0;
+				const baseContent = composeFooterContent(
 					contentLeft,
 					contentRight,
-					extensionStatuses.left.map(renderExtensionStatus),
+					leftStatuses,
 					middleSegments,
-					extensionStatuses.right.map(renderExtensionStatus),
+					rightStatuses,
 					separator,
-					innerWidth,
+					innerWidth - petSpace,
 				);
+				const content = showPet
+					? `${baseContent}${" ".repeat(PET_GAP)}${theme.fg("dim", petFrame(active, petTick, reducedMotion()))}`
+					: baseContent;
 				const body = width > 2 ? ` ${truncateToWidth(content, width - 2, "")} ` : content;
+				// The prompt bottom edge supplies separation; the footer needs no extra row.
 				return [truncateToWidth(body, width, "")];
 			},
 		};

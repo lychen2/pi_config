@@ -28,6 +28,7 @@ test('fresh install, migration, second install and dry run preserve user skills'
 });
 
 test('all release skill files survive deployment and preserve user-owned files', async () => {
+  assert.ok(installedSkills.includes('fuck-my-shit-mountain'), 'audit skill is part of managed release');
   const root = await mkdtemp(path.join(os.tmpdir(), 'release-skills-test-'));
   try {
     const repoDir = fileURLToPath(new URL('../', import.meta.url));

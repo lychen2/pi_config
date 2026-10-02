@@ -52,7 +52,7 @@ Pi can work with file editing, code inspection, web access, skills, and delegati
 
 ### Make every change inspectable and recoverable
 
-Use `--dry-run` before installation, review Git diffs and test results after code changes, and use `pi-workspace-history` when you need workspace-level recovery.
+Use `--dry-run` before installation, review Git diffs and test results after code changes, and keep workspace backups on the same drive when recovery is required.
 
 ## Five-minute setup
 
@@ -139,7 +139,7 @@ For code tasks, ask Pi to report changed files, verification commands, and remai
 
 ### Delegate independent work in parallel
 
-The default profile keeps task execution in the parent agent. The optional Large profile provides teammate-based parallel dispatch when a task needs it.
+The default profile keeps task execution in the parent agent. Delegate independent bounded work when the task benefits from it.
 
 ## Repository map
 
@@ -173,14 +173,18 @@ node install.mjs --yes
 
 Run `/reload` inside Pi after configuration changes. Restart Pi when the installer, an extension, or repository configuration changed.
 
-### Plugin reinstall
+### Plugin updates
 
-The installer always starts from a clean plugin state to eliminate stale extensions, tool schemas, and package caches. It backs up `~/.pi/agent`, removes `extensions/`, `npm/`, and the `packages` list in `settings.json`, then reinstalls plugins from this repository and `config/external-packages.txt`. Skills, themes, model configuration, provider credentials, headers, and sessions are preserved.
-
-Preview the cleanup before applying it:
+The default installer is incremental: it preserves the existing plugin selection in `settings.json` and updates the selected first-party packages without clearing `extensions/`, `npm/`, or the package list. Use this for routine updates:
 
 ```bash
-node install.mjs --yes --dry-run
+node install.mjs --yes
+```
+
+For an explicit clean reinstall, pass `--clean-plugins`. This first backs up `~/.pi/agent`, then removes `extensions/` and `npm/`, clears the `packages` list, and reinstalls the selected packages. Skills, themes, model configuration, provider credentials, headers, and sessions are preserved. Review the cleanup plan first:
+
+```bash
+node install.mjs --yes --clean-plugins --dry-run
 ```
 
 ## Security checks

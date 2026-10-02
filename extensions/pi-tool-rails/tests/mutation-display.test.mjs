@@ -41,7 +41,7 @@ test("native mutation calls show two collapsed rows and one expanded diff", asyn
         for (const width of [40, 100]) {
           component.setExpanded(false);
           const collapsed = component.render(width).map(plain);
-          assert.equal(collapsed.length, 4, collapsed.join("\n"));
+          assert.equal(collapsed.length, width < 48 ? 3 : 4, collapsed.join("\n"));
           assert.match(collapsed[1], /file.txt/);
           assert.match(collapsed[2], /\+1 -1/);
           assert.ok(collapsed.every(line => visibleWidth(line) <= width));

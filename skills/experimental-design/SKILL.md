@@ -229,7 +229,8 @@ Use the stages needed for the requested design. Reuse established factor definit
 ### Related skills
 - **statistical-power** — required sample size / power for the design you've chosen.
 - **statistical-analysis** — running and reporting the analysis after collection.
-- **statsmodels** / **pymc** — fitting the models the design implies.
+- **statsmodels** — use the installed package and its documentation for fitting models used in a planned design.
+- **PyMC** — use the installed package and its documentation for Bayesian models.
 
 ### Key references
 - Fisher, R. A. (1935). *The Design of Experiments*.

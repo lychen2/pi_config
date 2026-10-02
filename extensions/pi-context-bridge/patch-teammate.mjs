@@ -3,7 +3,7 @@ import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-export const TEAMMATE_VERSION = "2.6.2";
+export const TEAMMATE_VERSION = "2.7.2";
 const teammateConfig = JSON.parse(readFileSync(new URL("./teammate-config.json", import.meta.url), "utf8"));
 if (typeof teammateConfig.model !== "string" || !teammateConfig.model.includes("/")) throw new Error("teammate-config.json must define a provider/model identifier");
 export const TEAMMATE_MODEL = teammateConfig.model;

@@ -50,6 +50,14 @@ test("search_skill_bm25 returns metadata before explicitly loading a candidate",
 
   const search = pi.tools.get("search_skill_bm25");
   assert.match(search.promptSnippet, /action=search/);
+  assert.match(search.promptSnippet, /action=load/);
+  assert.match(search.promptSnippet, /exact returned name/i);
+  assert.match(search.promptSnippet, /relevant specialized guidance/i);
+  assert.match(search.promptSnippet, /Reuse already-loaded guidance/i);
+  assert.match(search.promptSnippet, /known required SKILL\.md/i);
+  assert.match(search.promptSnippet, /requested skill audit/i);
+  assert.match(search.promptSnippet, /references only as needed/i);
+  assert.doesNotMatch(search.promptSnippet, /first call|must|always|shell-scanning/i);
   await assert.rejects(
     search.execute("test", { action: "load", name: skills[0].name }),
     /must be returned by search/,

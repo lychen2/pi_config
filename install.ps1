@@ -10,7 +10,8 @@ param(
     [switch]$SkipRtk,
     [switch]$WithModelDefaults,
     [switch]$SkipModelDefaults,
-    [switch]$CleanPlugins
+    [switch]$CleanPlugins,
+    [switch]$TestArchiveUpdate
 )
 
 $ErrorActionPreference = "Stop"
@@ -31,7 +32,9 @@ $PiConfigHome = if ($env:PI_CONFIG_HOME) {
 } else {
     Join-Path $HOME ".pi_config"
 }
-$ArchiveUrl = if ($env:PI_CONFIG_ARCHIVE_URL) {
+$ArchiveUrl = if ($TestArchiveUpdate) {
+    ""
+} elseif ($env:PI_CONFIG_ARCHIVE_URL) {
     $env:PI_CONFIG_ARCHIVE_URL
 } else {
     try {
@@ -214,12 +217,39 @@ function Install-Pi {
     }
 }
 
+function Switch-Repository([string]$Source, [string]$Destination) {
+    $backup = "$Destination.backup-$([guid]::NewGuid().ToString('N'))"
+    $hadDestination = Test-Path $Destination
+
+    if ($hadDestination) {
+        Move-Item -Path $Destination -Destination $backup
+    }
+    try {
+        Move-Item -Path $Source -Destination $Destination
+    } catch {
+        if ($hadDestination -and (Test-Path $backup)) {
+            if (Test-Path $Destination) {
+                $failedSwitch = "$Destination.failed-$([guid]::NewGuid().ToString('N'))"
+                Move-Item -Path $Destination -Destination $failedSwitch
+            }
+            Move-Item -Path $backup -Destination $Destination
+        }
+        throw
+    }
+    if ($hadDestination) {
+        Write-Host "Previous repository preserved at $backup"
+    }
+}
+
 function Sync-Repository([string]$Destination) {
     $action = if (Test-Path $Destination) { "Refreshing" } else { "Downloading" }
     Write-Step "$action pi_config at $Destination"
 
-    # Keep archive extraction below Windows' legacy path-length limit for nested skills.
-    $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("pc-" + [guid]::NewGuid().ToString("N").Substring(0, 8))
+    # Stage beside the destination so extraction and directory moves stay on one volume.
+    $parent = Split-Path -Parent $Destination
+    if (-not $parent) { $parent = (Get-Location).Path }
+    New-Item -ItemType Directory -Path $parent -Force | Out-Null
+    $tempRoot = Join-Path $parent (".pc-stage-" + [guid]::NewGuid().ToString("N"))
     $archive = Join-Path $tempRoot "pi_config.zip"
     New-Item -ItemType Directory -Path $tempRoot | Out-Null
 
@@ -230,14 +260,7 @@ function Sync-Repository([string]$Destination) {
         if (-not $source -or -not (Test-Path (Join-Path $source.FullName "install.mjs"))) {
             throw "The downloaded archive does not contain install.mjs."
         }
-
-        if (Test-Path $Destination) {
-            Get-ChildItem -Path $source.FullName -Force | ForEach-Object {
-                Copy-Item -Path $_.FullName -Destination $Destination -Recurse -Force
-            }
-        } else {
-            Move-Item -Path $source.FullName -Destination $Destination
-        }
+        Switch-Repository -Source $source.FullName -Destination $Destination
     } finally {
         if (Test-Path $tempRoot) {
             Remove-Item -Path $tempRoot -Recurse -Force
@@ -273,6 +296,39 @@ function Find-Repository([bool]$AllowDownload = $true) {
 
     Sync-Repository $PiConfigHome
     return $PiConfigHome
+}
+
+if ($TestArchiveUpdate) {
+    $testRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("pc-archive-test-" + [guid]::NewGuid().ToString("N"))
+    try {
+        $destination = Join-Path $testRoot "checkout"
+        $staged = Join-Path $testRoot "staged"
+        New-Item -ItemType Directory -Path (Join-Path $destination "extensions\pi-retired") -Force | Out-Null
+        Set-Content -Path (Join-Path $destination "install.mjs") -Value "old entry" -NoNewline
+        Set-Content -Path (Join-Path $destination "extensions\pi-retired\package.json") -Value "old package" -NoNewline
+        New-Item -ItemType Directory -Path $staged -Force | Out-Null
+        Set-Content -Path (Join-Path $staged "install.mjs") -Value "new entry" -NoNewline
+        Switch-Repository -Source $staged -Destination $destination
+        if ((Get-Content (Join-Path $destination "install.mjs") -Raw) -ne "new entry") { throw "staged entry was not installed" }
+        if (Test-Path (Join-Path $destination "extensions\pi-retired")) { throw "retired package survived archive refresh" }
+        $backup = Get-ChildItem -Path $testRoot -Directory -Filter "checkout.backup-*" | Select-Object -First 1
+        if (-not $backup -or (Get-Content (Join-Path $backup.FullName "extensions\pi-retired\package.json") -Raw) -ne "old package") { throw "old repository was not preserved as backup" }
+
+        $failureDestination = Join-Path $testRoot "failure-checkout"
+        New-Item -ItemType Directory -Path $failureDestination -Force | Out-Null
+        Set-Content -Path (Join-Path $failureDestination "install.mjs") -Value "preserve me" -NoNewline
+        try {
+            Switch-Repository -Source (Join-Path $testRoot "missing-stage") -Destination $failureDestination
+            throw "injected switch failure unexpectedly succeeded"
+        } catch {
+            if ($_.Exception.Message -eq "injected switch failure unexpectedly succeeded") { throw }
+        }
+        if ((Get-Content (Join-Path $failureDestination "install.mjs") -Raw) -ne "preserve me") { throw "failed switch did not restore the old repository" }
+        Write-Host "Windows archive update regression tests passed"
+    } finally {
+        if (Test-Path $testRoot) { Remove-Item -Path $testRoot -Recurse -Force }
+    }
+    exit 0
 }
 
 Update-ProcessPath

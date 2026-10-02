@@ -1,0 +1,50 @@
+{
+  "generated": {
+    "vars.diffRemoved": "#ffb3ad",
+    "colors.success": "diffAdded",
+    "colors.error": "diffRemoved",
+    "colors.warning": "warningColor",
+    "colors.selectedBg": "surfaceHighest",
+    "colors.userMessageBg": "secondaryContainer",
+    "colors.toolPendingBg": "surfaceBright",
+    "colors.toolSuccessBg": "surfaceVariant",
+    "colors.toolErrorBg": "surfaceVariant",
+    "colors.thinkingMax": "diffRemoved"
+  },
+  "template": {
+    "vars.diffRemoved": "{{colors.diff_removed.default.hex}}",
+    "colors.success": "diffAdded",
+    "colors.error": "diffRemoved",
+    "colors.warning": "warningColor",
+    "colors.selectedBg": "surfaceHighest",
+    "colors.userMessageBg": "secondaryContainer",
+    "colors.toolPendingBg": "surfaceBright",
+    "colors.toolSuccessBg": "surfaceVariant",
+    "colors.toolErrorBg": "surfaceVariant",
+    "colors.thinkingMax": "diffRemoved"
+  },
+  "liveFiles": {
+    "~/.config/matugen/templates/pi-theme.json": "8ecae7f3567bb98347ec6ac9193d89e3f6c98d37569e3dc7cddeb5d78ddc64d3",
+    "~/.pi/agent/themes/matugen.json": "fe56d8e70608fa7474d538e7dd3e9edd8d6988e55ddd3d36911d7e7d6473a396",
+    "themes/matugen.json": "fe56d8e70608fa7474d538e7dd3e9edd8d6988e55ddd3d36911d7e7d6473a396",
+    "extensions/matugen-chrome.ts": "2677bf57a98efb568d94bad357bece80a32b4f323def9a35b68c12a1fa4e26fd",
+    "extensions/matugen-footer-core.mjs": "c5e629b239835836d8a3bf4009f5f35fddc6ba04ec41f7dc0ea18a40978700cc",
+    "extensions/matugen-footer/config.ts": "74937588fe91a9fccda84d08880060c040d19464904069e10f90d06d4461c4fe",
+    "extensions/matugen-footer/extension-status.ts": "390b795c8f2147a8cadfce78244d73abe49355e6f2fb13ee7d69d26721384fd1",
+    "extensions/matugen-footer/footer-format.ts": "a468a2f8d2b85736db8c7625f0f4212a96dbcbe5af59aee1a162f8869c116d87",
+    "extensions/matugen-footer/footer.ts": "b9af0f7d958494fcf9fdaa2375a0ee7b69ba790bec8de341d2fb3cc5a9b9789d",
+    "extensions/matugen-footer/format.ts": "d461976c04cca18d3bffb4bda4a18736b69470912030c22420c602b01de9d0f2",
+    "extensions/matugen-footer/git.ts": "0f9c3552460b4fc7355f6647ac896e68dc6bf2df984925b3721ca7ca6b90c0b2",
+    "extensions/matugen-footer/gradient.ts": "2309b0a3ddfbeb46cb953468815c279e98ed2f89549dc216976fd8be9b305042",
+    "extensions/matugen-footer/icons.ts": "be74fe062fed8841ede8ed5ed6b45c3a287aca74d0ad04d48384cf0c04b00de2",
+    "extensions/matugen-footer/live-context.ts": "f8d2f4f6a7848f661f0af107d9498e732c9672ee975074300cfc23928df91d7b",
+    "extensions/matugen-footer/package-version.ts": "3960722690f718d85c3bb8e9966e3c2416a52c48265bf0490d683c9ea21a9ef1",
+    "extensions/matugen-footer/project-refresh.ts": "9571ce5a4ac3d40c7e841eb33ab452f59587ca76c51737a0266e5fe56db60acf",
+    "extensions/matugen-footer/project-state.ts": "240064433e7fc3946c2de0ec9a550c8694748a61ac4fe9b12cfa545fc30d8b55",
+    "extensions/matugen-footer/pulse.test.mjs": "62a1bcd781a02443edc58649958e10fbb5fa75beb5768e1498eab112b95c617e",
+    "extensions/matugen-footer/runtime.ts": "eab8a6bafb2e814429d509573f463bba07cf9262c0fc9c3931079ea77ae506a3",
+    "extensions/matugen-footer/session-lifecycle.ts": "2961c73e5b72caedbcd84d828a26b2026cabf15d4d5b090090ba84ab1936c647",
+    "extensions/matugen-footer/state.ts": "92648067747a325a9234c24f7fc814d82aef3bfc74ae817ce93e141771e34f3a",
+    "extensions/matugen-footer/style.ts": "ac9582d5a577807d4f86d72f7a0698e708a0e8da5bd00f077d713663f249d2e5"
+  }
+}

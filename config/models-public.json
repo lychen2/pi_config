@@ -1,0 +1,585 @@
+{
+  "providers": {
+    "111": {
+      "baseUrl": "https://api.x5m5x.com/v1",
+      "api": "openai-completions",
+      "apiKey": "PROVIDER_111_API_KEY",
+      "headers": {
+        "User-Agent": "MyCustomClient/1.0"
+      },
+      "compat": {
+        "supportsStore": false,
+        "supportsDeveloperRole": false,
+        "supportsReasoningEffort": true,
+        "supportsUsageInStreaming": true,
+        "maxTokensField": "max_completion_tokens",
+        "requiresReasoningContentOnAssistantMessages": false
+      },
+      "models": [
+        {
+          "id": "glm-5.3",
+          "name": "glm-5.3",
+          "reasoning": true,
+          "input": [
+            "text"
+          ],
+          "contextWindow": 1000000,
+          "maxTokens": 128000,
+          "cost": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0
+          },
+          "thinkingLevelMap": {
+            "minimal": null,
+            "low": null,
+            "medium": null,
+            "high": "high",
+            "xhigh": "max"
+          }
+        }
+      ]
+    },
+    "manager": {
+      "modelOverrides": {
+        "deepseek/deepseek-v4-flash-vision-exp": {
+          "compat": {
+            "requiresReasoningContentOnAssistantMessages": true,
+            "supportsLongCacheRetention": true,
+            "thinkingFormat": "deepseek"
+          }
+        },
+        "deepseek-v4-flash-free": {
+          "compat": {
+            "requiresReasoningContentOnAssistantMessages": true,
+            "supportsLongCacheRetention": true,
+            "thinkingFormat": "deepseek"
+          }
+        },
+        "Qwen3.8-Flash": {
+          "contextWindow": 262144
+        },
+        "Qwen/Qwen3.8-Flash": {
+          "contextWindow": 262144
+        },
+        "qwen3.8-flash": {
+          "contextWindow": 262144
+        },
+        "qwen/qwen3.8-flash": {
+          "contextWindow": 262144
+        }
+      },
+      "baseUrl": "https://cpa.zonazcy.xyz/v1",
+      "api": "openai-responses",
+      "compat": {
+        "supportsDeveloperRole": false
+      },
+      "apiKey": "MANAGER_API_KEY",
+      "headers": {
+        "Accept": "application/json",
+        "User-Agent": "curl/8.5.0"
+      },
+      "models": [
+        {
+          "id": "deepseek-v4-flash",
+          "name": "deepseek-v4-flash",
+          "reasoning": true,
+          "contextWindow": 800000,
+          "maxTokens": 128000,
+          "thinkingLevelMap": {
+            "xhigh": "xhigh",
+            "max": "max"
+          },
+          "compat": {
+            "supportsDeveloperRole": false,
+            "requiresReasoningContentOnAssistantMessages": true,
+            "thinkingFormat": "deepseek",
+            "supportsLongCacheRetention": true
+          },
+          "input": [
+            "text",
+            "image"
+          ]
+        },
+        {
+          "id": "deepseek-v4.1-flash",
+          "name": "deepseek-v4.1-flash",
+          "reasoning": true,
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 800000,
+          "maxTokens": 128000,
+          "thinkingLevelMap": {
+            "xhigh": "xhigh",
+            "max": "max"
+          },
+          "compat": {
+            "supportsDeveloperRole": false,
+            "requiresReasoningContentOnAssistantMessages": true,
+            "thinkingFormat": "deepseek",
+            "supportsLongCacheRetention": true
+          }
+        },
+        {
+          "id": "deepseek/deepseek-v4.1-flash",
+          "name": "deepseek/deepseek-v4.1-flash",
+          "reasoning": true,
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 800000,
+          "maxTokens": 128000,
+          "thinkingLevelMap": {
+            "xhigh": "xhigh",
+            "max": "max"
+          },
+          "compat": {
+            "supportsDeveloperRole": false,
+            "requiresReasoningContentOnAssistantMessages": true,
+            "thinkingFormat": "deepseek",
+            "supportsLongCacheRetention": true
+          }
+        },
+        {
+          "id": "Qwen3.8-Flash",
+          "name": "Qwen3.8-Flash",
+          "reasoning": true,
+          "contextWindow": 262144,
+          "thinkingLevelMap": {
+            "xhigh": "xhigh",
+            "max": "max"
+          },
+          "input": [
+            "text",
+            "image"
+          ]
+        },
+        {
+          "id": "Qwen/Qwen3.8-Flash",
+          "name": "Qwen/Qwen3.8-Flash",
+          "reasoning": true,
+          "contextWindow": 262144,
+          "thinkingLevelMap": {
+            "xhigh": "xhigh",
+            "max": "max"
+          },
+          "input": [
+            "text",
+            "image"
+          ]
+        },
+        {
+          "id": "Qwen3.7-Flash",
+          "name": "Qwen3.7-Flash",
+          "reasoning": true,
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 262144,
+          "thinkingLevelMap": {
+            "xhigh": "xhigh",
+            "max": "max"
+          }
+        },
+        {
+          "id": "Qwen/Qwen3.7-Flash",
+          "name": "Qwen/Qwen3.7-Flash",
+          "reasoning": true,
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 262144,
+          "thinkingLevelMap": {
+            "xhigh": "xhigh",
+            "max": "max"
+          }
+        },
+        {
+          "id": "glm-5.3",
+          "name": "glm-5.3",
+          "reasoning": true,
+          "contextWindow": 1000000,
+          "thinkingLevelMap": {
+            "xhigh": "xhigh",
+            "max": "max"
+          },
+          "input": [
+            "text"
+          ]
+        },
+        {
+          "id": "glm-5.3-flash",
+          "name": "glm-5.3-flash",
+          "reasoning": true,
+          "contextWindow": 1000000,
+          "thinkingLevelMap": {
+            "xhigh": "xhigh",
+            "max": "max"
+          },
+          "input": [
+            "text",
+            "image"
+          ]
+        },
+        {
+          "id": "z-ai/glm-5.3-flash",
+          "name": "z-ai/glm-5.3-flash",
+          "reasoning": true,
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 1000000,
+          "thinkingLevelMap": {
+            "xhigh": "xhigh",
+            "max": "max"
+          }
+        },
+        {
+          "id": "gpt-6-astra",
+          "name": "gpt-6-astra",
+          "reasoning": true,
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 272000,
+          "maxTokens": 128000,
+          "thinkingLevelMap": {
+            "xhigh": "xhigh",
+            "max": "max"
+          }
+        },
+        {
+          "id": "gpt-6-sol",
+          "name": "gpt-6-sol",
+          "reasoning": true,
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 272000,
+          "maxTokens": 128000,
+          "thinkingLevelMap": {
+            "xhigh": "xhigh",
+            "max": "max"
+          }
+        },
+        {
+          "id": "gpt-6.1-sol",
+          "name": "gpt-6.1-sol",
+          "reasoning": true,
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 272000,
+          "maxTokens": 128000,
+          "thinkingLevelMap": {
+            "xhigh": "xhigh",
+            "max": "max"
+          }
+        },
+        {
+          "id": "gpt-5.6-sol",
+          "name": "gpt-5.6-sol",
+          "reasoning": true,
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 1050000,
+          "maxTokens": 128000,
+          "thinkingLevelMap": {
+            "xhigh": "xhigh",
+            "max": "max"
+          }
+        },
+        {
+          "id": "gpt-6-luna",
+          "name": "gpt-6-luna",
+          "reasoning": true,
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 272000,
+          "maxTokens": 128000,
+          "thinkingLevelMap": {
+            "xhigh": "xhigh",
+            "max": "max"
+          }
+        },
+        {
+          "id": "gpt-5.6-terra",
+          "name": "gpt-5.6-terra",
+          "reasoning": true,
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 272000,
+          "maxTokens": 128000,
+          "thinkingLevelMap": {
+            "xhigh": "xhigh",
+            "max": "max"
+          }
+        },
+        {
+          "id": "mimo-v2.5",
+          "name": "mimo-v2.5",
+          "reasoning": true,
+          "input": [
+            "text",
+            "image"
+          ],
+          "thinkingLevelMap": {
+            "xhigh": "xhigh",
+            "max": "max"
+          }
+        },
+        {
+          "id": "xiaomi/mimo-v2.5",
+          "name": "xiaomi/mimo-v2.5",
+          "reasoning": true,
+          "input": [
+            "text",
+            "image"
+          ],
+          "thinkingLevelMap": {
+            "xhigh": "xhigh",
+            "max": "max"
+          }
+        },
+        {
+          "id": "mimo-v2.5-pro",
+          "name": "mimo-v2.5-pro",
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "xhigh": "xhigh",
+            "max": "max"
+          }
+        },
+        {
+          "id": "xiaomi/mimo-v2.5-pro",
+          "name": "xiaomi/mimo-v2.5-pro",
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "xhigh": "xhigh",
+            "max": "max"
+          }
+        },
+        {
+          "id": "LongCat-2.0",
+          "name": "LongCat-2.0",
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "xhigh": "xhigh",
+            "max": "max"
+          }
+        },
+        {
+          "id": "meituan/LongCat-2.0:free",
+          "name": "meituan/LongCat-2.0:free",
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "xhigh": "xhigh",
+            "max": "max"
+          }
+        },
+        {
+          "id": "laguna-s-2.1",
+          "name": "laguna-s-2.1",
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "xhigh": "xhigh",
+            "max": "max"
+          }
+        },
+        {
+          "id": "poolside/laguna-s-2.1-free",
+          "name": "poolside/laguna-s-2.1-free",
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "xhigh": "xhigh",
+            "max": "max"
+          }
+        },
+        {
+          "id": "minimax-m3-free",
+          "name": "minimax-m3-free",
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "xhigh": "xhigh",
+            "max": "max"
+          }
+        },
+        {
+          "id": "minimax/minimax-m3-free",
+          "name": "minimax/minimax-m3-free",
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "xhigh": "xhigh",
+            "max": "max"
+          }
+        },
+        {
+          "id": "grok-4.6",
+          "name": "grok-4.6",
+          "reasoning": true,
+          "contextWindow": 262144,
+          "thinkingLevelMap": {
+            "xhigh": "xhigh",
+            "max": "max"
+          }
+        },
+        {
+          "id": "hy4-preview",
+          "name": "Hy4 preview",
+          "reasoning": true,
+          "input": [
+            "text"
+          ],
+          "contextWindow": 262144,
+          "maxTokens": 235929,
+          "thinkingLevelMap": {
+            "off": "none",
+            "low": "low",
+            "high": "high"
+          },
+          "compat": {
+            "supportsDeveloperRole": false,
+            "thinkingFormat": "openrouter"
+          }
+        },
+        {
+          "id": "kimi-k3",
+          "name": "kimi-k3",
+          "reasoning": true,
+          "contextWindow": 128000,
+          "thinkingLevelMap": {
+            "xhigh": "xhigh",
+            "max": "max"
+          },
+          "compat": {
+            "sendSessionAffinityHeaders": true
+          }
+        },
+        {
+          "id": "mimo-v2.6-pro",
+          "name": "mimo-v2.6-pro",
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "xhigh": "xhigh",
+            "max": "max"
+          }
+        },
+        {
+          "id": "mimo-v2.6-flash",
+          "name": "mimo-v2.6-flash",
+          "reasoning": true,
+          "input": [
+            "text",
+            "image"
+          ],
+          "thinkingLevelMap": {
+            "xhigh": "xhigh",
+            "max": "max"
+          }
+        },
+        {
+          "id": "grok-4.7",
+          "name": "grok-4.7",
+          "reasoning": true,
+          "contextWindow": 262144,
+          "thinkingLevelMap": {
+            "xhigh": "xhigh",
+            "max": "max"
+          }
+        },
+        {
+          "id": "claude-fable-5-1",
+          "name": "claude-fable-5-1",
+          "reasoning": true,
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 1000000,
+          "maxTokens": 128000,
+          "thinkingLevelMap": {
+            "xhigh": "xhigh",
+            "max": "max"
+          }
+        },
+        {
+          "id": "claude-opus-5",
+          "name": "claude-opus-5",
+          "reasoning": true,
+          "contextWindow": 1000000,
+          "input": [
+            "text",
+            "image"
+          ],
+          "thinkingLevelMap": {
+            "xhigh": "xhigh",
+            "max": "max"
+          }
+        },
+        {
+          "id": "claude-opus-5-5",
+          "name": "claude-opus-5-5",
+          "reasoning": true,
+          "contextWindow": 1000000,
+          "input": [
+            "text",
+            "image"
+          ],
+          "thinkingLevelMap": {
+            "xhigh": "xhigh",
+            "max": "max"
+          }
+        },
+        {
+          "id": "stealth/space-bunny-alpha",
+          "name": "stealth/space-bunny-alpha",
+          "reasoning": true,
+          "contextWindow": 272000,
+          "input": [
+            "text"
+          ],
+          "thinkingLevelMap": {
+            "xhigh": "xhigh",
+            "max": "max"
+          }
+        },
+        {
+          "id": "gemini-3.8-flash",
+          "name": "Gemini 3.8 Flash",
+          "reasoning": true,
+          "input": [
+            "text",
+            "image"
+          ],
+          "contextWindow": 1048576,
+          "maxTokens": 65536,
+          "thinkingLevelMap": {
+            "low": "low",
+            "medium": "medium",
+            "high": "high"
+          },
+          "compat": {
+            "supportsFinishReason": false
+          }
+        }
+      ]
+    }
+  },
+  "archivedProviders": {}
+}

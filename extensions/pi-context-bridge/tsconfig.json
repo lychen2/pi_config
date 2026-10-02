@@ -10,5 +10,5 @@
     "allowImportingTsExtensions": true,
     "types": ["node"]
   },
-  "include": ["index.ts", "manager-models.ts", "continuity.ts", "rtk.ts", "rtk-compat.ts", "wire-guard.ts", "teammate.ts"]
+  "include": ["index.ts", "manager-models.ts", "continuity.ts", "rtk.ts", "rtk-compat.ts", "wire-guard.ts", "sol-pi-compat.ts", "sol-cache-compat.ts", "teammate.ts"]
 }

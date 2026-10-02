@@ -1,0 +1,74 @@
+{
+  "mcpServers": {
+    "obsidian-files": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "${HOME}/Documents/文献阅读/obsidian/note"
+      ],
+      "toolExposure": {
+        "read_file": "direct",
+        "read_text_file": "direct",
+        "read_media_file": "direct",
+        "read_multiple_files": "direct",
+        "list_directory": "direct",
+        "list_directory_with_sizes": "direct",
+        "directory_tree": "direct",
+        "search_files": "direct",
+        "get_file_info": "direct",
+        "list_allowed_directories": "direct"
+      },
+      "exposure": "hidden",
+      "enabled": false
+    },
+    "github": {
+      "url": "https://api.githubcopilot.com/mcp/readonly",
+      "headers": {
+        "Authorization": "Bearer ${GITHUB_TOKEN}"
+      },
+      "exposure": "deferred",
+      "enabled": false
+    },
+    "zotero": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "pyzotero[mcp]",
+        "pyzotero-mcp"
+      ],
+      "enabled": false
+    },
+    "blender": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "mcp-for-blender",
+        "mcp-for-blender"
+      ],
+      "env": {
+        "BLENDER_MCP_SAFE_MODE": "1",
+        "DISABLE_TELEMETRY": "true"
+      },
+      "exposure": "deferred",
+      "description": "Control and inspect the local Blender scene; safe mode enabled.",
+      "enabled": false
+    },
+    "jupyter": {
+      "command": "uvx",
+      "description": "Work with local Jupyter notebooks and their live kernels using Datalayer Jupyter MCP. Configure Jupyter on loopback and restrict its notebook root to ~/Notebooks before enabling this server.",
+      "exposure": "codemode",
+      "env": {
+        "JUPYTER_URL": "http://127.0.0.1:8888",
+        "JUPYTER_TOKEN": "${JUPYTER_TOKEN}",
+        "ALLOW_IMG_OUTPUT": "true"
+      },
+      "args": [
+        "--from",
+        "jupyter-mcp-server",
+        "jupyter-mcp-server"
+      ],
+      "enabled": false
+    }
+  }
+}

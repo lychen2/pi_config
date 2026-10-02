@@ -277,7 +277,7 @@ For each formal reviewer request in this workflow:
 2. classify it as editorial, scientific, statistical, policy, or unresolved;
 3. identify affected claims, evidence, methods, results, and displays;
 4. revise the registries before prose when facts change;
-5. re-run every affected audit;
+5. rerun checks affected by the revision; reuse checks whose inputs have not changed;
 6. draft a response that states what changed and where;
 7. obtain any required author approval before submitting the response.
 

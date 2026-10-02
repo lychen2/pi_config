@@ -216,6 +216,15 @@ test("adaptive preserves memory and defers delegation, MCP and browser schemas",
   assert.ok(!activeToolsForMode(["read"], groups, { ...empty, disabledTools: ["mcp"] }, new Set(["mcp"])).includes("mcp"));
 });
 
+test("codemode remains active in adaptive, fast, and full unless explicitly disabled", () => {
+  const groups = [{ id: "npm:codemode", tools: [{ name: "codemode" }] }];
+  for (const toolMode of ["adaptive", "fast", "full"]) {
+    assert.ok(activeToolsForMode(["bash"], groups, { ...empty, toolMode }, new Set(), ["bash", "codemode"]).includes("codemode"));
+  }
+  assert.ok(!activeToolsForMode(["bash"], groups, { ...empty, disabledTools: ["codemode"] }, new Set(), ["bash", "codemode"]).includes("codemode"));
+  assert.ok(!activeToolsForMode(["bash"], [{ id: "npm:codemode", tools: [{ name: "codemode" }] }], { ...empty, disabledExtensions: ["npm:codemode"] }, new Set(), ["bash", "codemode"]).includes("codemode"));
+});
+
 test("fast is fixed and full respects global disabled tools", () => {
   const groups = [
     { id: "local:files", tools: [{ name: "read" }] },
@@ -253,10 +262,17 @@ test("full preserves existing active tools while adding the registered set", () 
   assert.deepEqual(full, ["read", "project_search", "web_search", "legacy_host_tool"]);
 });
 
-test("full removes discovery even from preserved tools and adaptive restores it", () => {
+test("full removes local discovery from registered and preserved tools; adaptive restores BM25", () => {
   const groups = [{ id: "selector", tools: [{ name: SEARCH_TOOL_NAME }, { name: "search_skill_bm25" }] }];
-  const full = activeToolsForMode(["read"], groups, { ...empty, toolMode: "full" }, new Set(), ["read", SEARCH_TOOL_NAME], [SEARCH_TOOL_NAME]);
-  assert.deepEqual(full, ["read", "search_skill_bm25"]);
+  const full = activeToolsForMode(
+    ["read"],
+    groups,
+    { ...empty, toolMode: "full" },
+    new Set(),
+    ["read", "search_tools", SEARCH_TOOL_NAME, "tool_search"],
+    ["legacy_host_tool", "search_tools", SEARCH_TOOL_NAME],
+  );
+  assert.deepEqual(full, ["read", "tool_search", "legacy_host_tool", "search_skill_bm25"]);
   const adaptive = activeToolsForMode(["read"], groups, empty);
   assert.ok(adaptive.includes(SEARCH_TOOL_NAME));
 });

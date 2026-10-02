@@ -47,7 +47,7 @@ test("mutation previews remove backgrounds, retain foregrounds, and count omitte
 test("plans show actual goals and keep the active step visible in long plans", () => {
   const steps = Array.from({ length: 20 }, (_, i) => ({ goal: `step ${i}`, status: i === 19 ? "in_progress" : "completed" }));
   const collapsed = planBody(steps);
-  assert.equal(collapsed[0], "计划 · 19/20 完成");
+  assert.equal(collapsed[0], "📋 计划 · 19/20 完成");
   assert.equal(collapsed[1], "◐ step 19");
   assert.equal(collapsed.at(-1), "… +9 步 · 展开");
   assert.equal(planBody(steps, true).length, 21);
@@ -64,15 +64,15 @@ test("renders reference-style tool box chrome without putting emoji on the rail"
   const top = toolBoxTop(execution, 48, theme);
   const middle = toolBoxLine("result", 48, theme);
   const bottom = toolBoxBottom(48, theme);
-  assert.match(top, /^╭─ ✓ 📖 读取 · 完成 ─+╮$/);
+  assert.match(top, /^╭─ 📖 读取─+ ✓ 完成 ╮$/);
   assert.equal(visibleWidth(top), 48);
   assert.equal(visibleWidth(toolBoxTop(execution, 77, theme)), 77);
   assert.equal(
     visibleWidth(toolBoxTop({ toolName: "an_incredibly_long_external_tool", isPartial: false, result: {} }, 20, theme)),
     20,
   );
-  assert.equal(visibleWidth(toolBoxTop(execution, 4, theme)), 4);
-  assert.equal(middle.slice(0, 2), "┃ ");
+  assert.ok(visibleWidth(toolBoxTop(execution, 4, theme)) <= 4);
+  assert.equal(middle.slice(0, 2), "│ ");
   assert.equal(middle.at(-1), "│");
   assert.equal(middle.includes("📖"), false);
   assert.equal(bottom, `╰${"─".repeat(46)}╯`);

@@ -2,10 +2,9 @@ import { type Theme, type ThemeColor, UserMessageComponent } from "@earendil-wor
 import {
   Markdown,
   type MarkdownTheme,
-  truncateToWidth,
-  visibleWidth,
 } from "@earendil-works/pi-tui";
 import { installPrototypePatch } from "./prototype-patch-registry.ts";
+import { renderSoftFrame, softFrameInnerWidth } from "./visual-style.ts";
 
 const OSC133_ZONE_START = "\x1b]133;A\x07";
 const OSC133_ZONE_END = "\x1b]133;B\x07";
@@ -13,7 +12,6 @@ const OSC133_ZONE_FINAL = "\x1b]133;C\x07";
 
 const USER_PATCH_ADAPTER = "user-message-render";
 const USER_INVALIDATE_ADAPTER = "user-message-invalidate";
-const USER_RAIL = "▐";
 
 type Cleanup = () => void;
 
@@ -93,32 +91,6 @@ function makeMarkdownTheme(theme: Theme | undefined): MarkdownTheme {
   };
 }
 
-function rail(theme: Theme | undefined): string {
-  return `${themeFg(theme, "borderAccent", USER_RAIL)} `;
-}
-
-function frameBorder(width: number, theme: Theme | undefined): string {
-  return truncateToWidth(
-    themeFg(theme, "borderAccent", "─".repeat(Math.max(0, width))),
-    Math.max(0, width),
-    "",
-  );
-}
-
-function fillLine(content: string, width: number): string {
-  const truncated = truncateToWidth(content, Math.max(0, width), "");
-  const pad = " ".repeat(Math.max(0, width - visibleWidth(truncated)));
-  return `${truncated}${pad}`;
-}
-
-function renderBoxLine(line: string, width: number, theme: Theme | undefined): string {
-  if (width <= 0) return "";
-  const railWidth = visibleWidth(rail(theme));
-  const contentWidth = Math.max(0, width - railWidth);
-  const content = fillLine(line, contentWidth);
-  return truncateToWidth(`${rail(theme)}${content}`, width, "");
-}
-
 function renderUserMessage(
   instance: PatchableUserMessagePrototype,
   width: number,
@@ -140,20 +112,16 @@ function renderUserMessage(
     return cached.renderedLines;
   }
 
-  const railWidth = visibleWidth(rail(theme));
-  const contentWidth = Math.max(1, width - railWidth);
+  const contentWidth = softFrameInnerWidth(width);
   const renderer = new Markdown(text, 0, 0, makeMarkdownTheme(theme), {
     color: (content) => themeFg(theme, "userMessageText", content),
   });
   const body = renderer.render(contentWidth);
   const contentLines = body.length > 0 ? body : [""];
-  const lines = [
-    frameBorder(width, theme),
-    renderBoxLine("", width, theme),
-    ...contentLines.map((line) => renderBoxLine(line, width, theme)),
-    renderBoxLine("", width, theme),
-    frameBorder(width, theme),
-  ];
+  const lines = renderSoftFrame({
+    theme: theme ?? { fg: (_color, value) => value },
+    title: "你", lines: contentLines, width, surface: "userMessageBg",
+  });
 
   userMessageRenderCache.set(instance, {
     hasMarkdownText: true,

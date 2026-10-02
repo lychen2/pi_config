@@ -1,3 +1,5 @@
-# Runtime source trees loaded by repository extensions, but not registered twice
-# in Pi's package list. The installer fast-forwards these repositories' default branches.
+# Managed source trees. The installer preserves dirty checkouts and fast-forwards clean ones.
+# Use scripts/update-managed-git.mjs to update while preserving and validating local patches.
+# SoL-Pi loads through the bridge; pi-provider is registered as a local package.
 git:github.com/NVlabs/SoL-Pi
+git:github.com/BevalZ/pi-provider

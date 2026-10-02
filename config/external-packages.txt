@@ -12,5 +12,5 @@ npm:pi-btw
 # pi-mcp-adapter is installed only when a user-configured server requires it.
 # RTK is loaded through pi-context-bridge for evidence safety.
 npm:@victor-software-house/pi-curated-themes
-git:github.com/BevalZ/pi-provider
+# pi-provider is a managed runtime checkout, registered locally to preserve patches.
 git:github.com/ayghri/i-have-adhd

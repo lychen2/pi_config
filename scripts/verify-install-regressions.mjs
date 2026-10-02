@@ -8,13 +8,23 @@
 // - Retired workspace history and Large features stay out of the default install.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, mkdir, writeFile } from "node:fs/promises";
+import { configurePortable } from "./configure-portable.mjs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const repoRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const installMjs = path.join(repoRoot, "install.mjs");
+const readme = await readFile(path.join(repoRoot, "README.md"), "utf8");
+const readmeZh = await readFile(path.join(repoRoot, "README.zh-CN.md"), "utf8");
+for (const [label, content] of [["README.md", readme], ["README.zh-CN.md", readmeZh]]) {
+  assert.match(content, /incremental|增量更新/i, `${label} must describe the default incremental update`);
+  assert.match(content, /--clean-plugins/, `${label} must identify explicit clean install semantics`);
+  assert.match(content, /--clean-plugins --dry-run/, `${label} must show how to preview cleanup`);
+}
+assert.doesNotMatch(readme, /installer always starts from a clean plugin state/i);
+assert.doesNotMatch(readmeZh, /每次都会从干净的插件状态开始/);
 
 const tempRoot = await mkdtemp(path.join(tmpdir(), "pi-install-regression-"));
 try {
@@ -51,13 +61,49 @@ try {
     "npm:@cortexkit/pi-magic-context", "npm:@narumitw/pi-plan-mode",
     "npm:@juicesharp/rpiv-ask-user-question", "npm:pi-slopchop", "npm:pi-btw",
     "npm:@victor-software-house/pi-curated-themes",
-    "git:github.com/BevalZ/pi-provider", "git:github.com/ayghri/i-have-adhd",
+    "git:github.com/ayghri/i-have-adhd",
   ]);
   assert.ok(!externalPackages.some(entry => /^npm:.*@\d/.test(entry)), "npm sources must not pin a version");
   const runtimeSources = (await readFile(path.join(repoRoot, "config", "runtime-git-sources.txt"), "utf8"))
     .split(/\r?\n/).map(line => line.trim()).filter(line => line && !line.startsWith("#"));
-  assert.deepEqual(runtimeSources, ["git:github.com/NVlabs/SoL-Pi"]);
+  assert.deepEqual(runtimeSources, ["git:github.com/NVlabs/SoL-Pi", "git:github.com/BevalZ/pi-provider"]);
+  assert.match(installMjsSource, /await configureManagedGit\(agentDir\)/);
   assert.doesNotMatch(f01.stdout, /pi-workspace-history/i, "retired workspace history package must not be offered by the installer");
+
+  // Public templates restore a fresh host without embedding secrets or starting optional services.
+  const portableHome = path.join(tempRoot, "portable-home");
+  const portableAgent = path.join(portableHome, ".pi", "agent");
+  configurePortable({ repoDir: repoRoot, agentDir: portableAgent, homeDir: portableHome, customAgentDir: false, xdgConfigHome: undefined });
+  const restoredMcp = JSON.parse(await readFile(path.join(portableAgent, "mcp.json"), "utf8"));
+  assert.ok(Object.values(restoredMcp.mcpServers).every(server => server.enabled === false));
+  assert.equal(restoredMcp.mcpServers.github.headers.Authorization, "Bearer ${GITHUB_TOKEN}");
+  assert.equal(restoredMcp.mcpServers.jupyter.env.JUPYTER_TOKEN, "${JUPYTER_TOKEN}");
+  assert.equal(restoredMcp.mcpServers["obsidian-files"].args.at(-1), path.join(portableHome, "Documents", "文献阅读", "obsidian", "note"));
+  const restoredModels = JSON.parse(await readFile(path.join(portableAgent, "models.json"), "utf8"));
+  assert.equal(restoredModels.providers.manager.apiKey, "MANAGER_API_KEY");
+  assert.equal(restoredModels.providers["111"].apiKey, "PROVIDER_111_API_KEY");
+  const restoredWeb = JSON.parse(await readFile(path.join(portableHome, ".pi", "web-search.json"), "utf8"));
+  assert.deepEqual(restoredWeb.ssrf.allowRanges, ["198.18.0.0/15"]);
+  assert.deepEqual(JSON.parse(await readFile(path.join(portableHome, ".pi", "tool-selector.json"), "utf8")).disabledTools, ["todowrite"]);
+
+  // Incremental restoration keeps credentials, machine paths, and explicit /mcp choices.
+  const customAgent = path.join(tempRoot, "custom-agent");
+  await mkdir(customAgent);
+  await writeFile(path.join(customAgent, "models.json"), JSON.stringify({ providers: { manager: { apiKey: "local-model-secret", baseUrl: "https://local.example/v1" } } }));
+  await writeFile(path.join(customAgent, "mcp.json"), JSON.stringify({ mcpServers: { zotero: { enabled: true, command: "custom-uvx" }, github: { headers: { Authorization: "Bearer local-secret" } } } }));
+  await writeFile(path.join(customAgent, "web-search.json"), JSON.stringify({ exaApiKey: "local-web-secret" }));
+  configurePortable({ repoDir: repoRoot, agentDir: customAgent, homeDir: portableHome, customAgentDir: true });
+  const incrementalModels = JSON.parse(await readFile(path.join(customAgent, "models.json"), "utf8"));
+  assert.equal(incrementalModels.providers.manager.apiKey, "local-model-secret");
+  assert.equal(incrementalModels.providers.manager.baseUrl, "https://local.example/v1");
+  const incrementalMcp = JSON.parse(await readFile(path.join(customAgent, "mcp.json"), "utf8"));
+  assert.equal(incrementalMcp.mcpServers.zotero.enabled, true);
+  assert.equal(incrementalMcp.mcpServers.zotero.command, "custom-uvx");
+  assert.equal(incrementalMcp.mcpServers.github.headers.Authorization, "Bearer local-secret");
+  assert.equal(JSON.parse(await readFile(path.join(customAgent, "web-search.json"), "utf8")).exaApiKey, "local-web-secret");
+  const xdgRoot = path.join(tempRoot, "xdg");
+  configurePortable({ repoDir: repoRoot, agentDir: portableAgent, homeDir: portableHome, customAgentDir: false, xdgConfigHome: xdgRoot });
+  assert.deepEqual(JSON.parse(await readFile(path.join(xdgRoot, "pi", "web-search.json"), "utf8")).ssrf, restoredWeb.ssrf);
 
   // F-02: a hanging command must fail on deadline instead of blocking.
   const { run } = await import(pathToFileURL(installMjs).href);

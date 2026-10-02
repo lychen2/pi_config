@@ -1,0 +1,9 @@
+{
+  "workflow": "summary-review",
+  "summaryModel": "manager/glm-5.3-flash",
+  "ssrf": {
+    "allowRanges": [
+      "198.18.0.0/15"
+    ]
+  }
+}

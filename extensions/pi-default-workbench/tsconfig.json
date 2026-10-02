@@ -19,8 +19,6 @@
     "browser/**/*.ts",
     "todo/**/*.ts",
     "maestro/**/*.ts",
-    "preview/**/*.ts",
-    "large-mode.ts",
-    "large-mode-core.ts"
+    "preview/**/*.ts"
   ]
 }

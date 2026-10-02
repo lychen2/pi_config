@@ -1,6 +1,6 @@
 ---
 name: optics-research
-description: Guide optics and photonics research with traceable literature, explicit physical conventions, verified derivations and simulations, and critical evidence review. Use for optical research planning, diffraction or imaging calculations, photonics simulations, optical experiments, paper reproduction, and reviewing optics claims (光学科研、衍射、成像、光子学、光学仿真、论文复现). Reuse specialized skills for individual operations; do not load for unrelated tasks or simple factual optics questions.
+description: Guide optics and photonics research when planning experiments, calculating diffraction or imaging, simulating photonic systems, reproducing a paper, or reviewing optics claims. Covers traceable evidence, physical conventions, derivations, and scientific checks.
 ---
 
 # Optics research

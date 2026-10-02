@@ -7,9 +7,12 @@
   },
   "theme": "matugen",
   "quietStartup": true,
-  "tuiMode": "regular",
+  "tuiMode": "fullscreen",
   "hideThinkingBlock": true,
   "enableSkillCommands": true,
+  "defaultTools": [
+    "+codemode"
+  ],
   "desktopSkillOverrides": {
     "name:alphafold2": false,
     "name:boltz": false,
@@ -70,32 +73,17 @@
     "name:seaborn": false
   },
   "enabledModels": [
-    "manager/Qwen/Qwen3.7-Flash",
-    "manager/Qwen/Qwen3.8-Flash",
-    "manager/Qwen3.7-Flash",
-    "manager/Qwen3.8-Flash",
-    "manager/claude-opus-5",
-    "manager/claude-sonnet-5",
-    "manager/deepseek-v4-flash",
-    "manager/deepseek-v4.1-flash",
-    "manager/deepseek/deepseek-v4.1-flash",
-    "manager/glm-5.3",
-    "manager/glm-5.3-flash",
-    "manager/glm-5.3-flashx",
-    "manager/gpt-5.6-terra",
-    "manager/gpt-6-astra",
     "manager/gpt-6-luna",
-    "manager/grok-4.6",
-    "manager/laguna-s-2.1",
-    "manager/mimo-v2.5",
-    "manager/mimo-v2.5-pro",
-    "manager/poolside/laguna-s-2.1-free",
-    "manager/qwen3.8-flash",
-    "manager/qwen3.8-max-0902",
-    "manager/stealth/union-alpha",
-    "manager/xiaomi/mimo-v2.5",
-    "manager/xiaomi/mimo-v2.5-pro",
-    "manager/z-ai/glm-5.3-flash",
-    "manager/z-ai/glm-5.3-flashx"
-  ]
+    "manager/gemini-3.8-flash",
+    "manager/gpt-6.1-sol",
+    "manager/gpt-6-astra"
+  ],
+  "retry": {
+    "enabled": true,
+    "maxRetries": 3,
+    "baseDelayMs": 2000,
+    "provider": {
+      "maxRetryDelayMs": 16000
+    }
+  }
 }

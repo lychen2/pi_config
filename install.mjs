@@ -12,14 +12,17 @@ import {
   writeFile,
 } from "node:fs/promises";
 import os from "node:os";
+import { configureManagedGit, managedGitSources, restoreManagedPatch } from "./scripts/configure-managed-git.mjs";
 import path from "node:path";
 import process from "node:process";
 import readline from "node:readline/promises";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
+import { createPrivateBackup } from "./scripts/private-backup.mjs";
 import { configureRtkCompat } from "./scripts/configure-rtk-compat.mjs";
 import { configureTeammate } from "./scripts/configure-teammate.mjs";
 import { configureMcpProxy } from "./scripts/configure-mcp-proxy.mjs";
+import { configurePortable } from "./scripts/configure-portable.mjs";
 import { deploySkills } from "./scripts/deploy-skills.mjs";
 
 const repoDir = path.dirname(fileURLToPath(import.meta.url));
@@ -55,7 +58,7 @@ const retiredDefaultPackageNames = new Set([
   "pi-large-beautify",
 ]);
 const retiredExternalPackageSources = new Set(["npm:pi-workspace-history"]);
-const managedExternalGitSources = new Set(["git:github.com/NVlabs/SoL-Pi"]);
+const managedExternalGitSources = new Set(managedGitSources.map(spec => spec.source));
 
 // Local packages that ship in this repository but stay out of the default profile;
 // install them explicitly with `pi install <dir>` when the profile needs them.
@@ -430,14 +433,11 @@ async function backupExistingConfig() {
     return backupDir;
   }
 
-  await mkdir(backupDir, { recursive: true });
-  if (hasAgentConfig) {
-    await cp(agentDir, path.join(backupDir, "agent"), {
-      recursive: true,
-      force: false,
-      errorOnExist: true,
-    });
+  if (installerOptions.dryRun) {
+    return backupDir;
   }
+
+  await createPrivateBackup({ source: agentDir, target: backupDir, platform: process.platform });
   return backupDir;
 }
 
@@ -472,6 +472,11 @@ async function restoreFiles() {
 
   await deploySkills({ repoDir, agentDir, otherRoots: externalSkillRoots(), dryRun: installerOptions.dryRun });
   await mergeMissingTree(path.join(repoDir, "themes"), path.join(agentDir, "themes"));
+  const matugenTemplate = path.join(process.env.XDG_CONFIG_HOME || path.join(homeDir, ".config"), "matugen", "templates", "pi-theme.json");
+  if (await pathExists(matugenTemplate) || await pathExists(path.join(agentDir, "themes", "matugen.json"))) {
+    console.log("  Matugen Pi files detected; check the proposed migration: node scripts/configure-matugen-tui.mjs --check");
+    console.log("  Explicit soft-palette migration: node scripts/configure-matugen-tui.mjs --apply (backups support --rollback)");
+  }
 
   const configFiles = [
     "APPEND_SYSTEM.md",
@@ -644,6 +649,11 @@ async function installRuntimeGitSources() {
         run(commandName("git"), ["merge", "--ff-only", defaultRef], { cwd: target });
       }
     }
+    const patchPath = path.join(repoDir, "config", "managed-patches", `${repository}.patch`);
+    if (await pathExists(patchPath)) {
+      if (installerOptions.dryRun && !(await pathExists(target))) console.log(`  would restore managed patch: ${patchPath}`);
+      else restoreManagedPatch(target, patchPath, { dryRun: installerOptions.dryRun });
+    }
     if (owner === "NVlabs" && repository === "SoL-Pi") {
       const solConfigPath = path.join(agentDir, "sol-pi.json");
       const sourceConfigPath = path.join(repoDir, "config", "sol-pi.json");
@@ -703,7 +713,7 @@ async function installOptionalTools(choices) {
   }
 }
 
-async function securePrivateFiles(backupDir) {
+async function securePrivateFiles() {
   if (installerOptions.dryRun) return;
 
   for (const entry of await readdir(agentDir, { withFileTypes: true })) {
@@ -711,21 +721,7 @@ async function securePrivateFiles(backupDir) {
       await chmod(path.join(agentDir, entry.name), 0o600);
     }
   }
-
-  async function secureTree(root) {
-    if (!(await pathExists(root))) return;
-    await chmod(root, 0o700);
-    for (const entry of await readdir(root, { withFileTypes: true })) {
-      const target = path.join(root, entry.name);
-      if (entry.isDirectory()) {
-        await secureTree(target);
-      } else if (entry.isFile()) {
-        await chmod(target, 0o600);
-      }
-    }
-  }
-
-  if (backupDir) await secureTree(path.join(backupDir, "agent"));
+  // Backup credentials are protected as part of creation, before any later install step can fail.
 }
 
 function verifyPi() {
@@ -762,16 +758,22 @@ async function main() {
     await cleanPlugins();
   }
   await restoreFiles();
+  configurePortable({ repoDir, agentDir, dryRun: installerOptions.dryRun });
   await mergeModelOverrides();
   await mergePublicSettings(choices.modelDefaults);
   await installLocalPackages();
   await installRuntimeGitSources();
+  if (installerOptions.dryRun) {
+    console.log("  protect pi-provider as a local package (no native Git reset)");
+  } else {
+    await configureManagedGit(agentDir);
+  }
   await installExternalPackages(choices.external);
   await configureRtkCompat(agentDir, { dryRun: installerOptions.dryRun });
   configureTeammate(agentDir, { dryRun: installerOptions.dryRun });
   configureMcpProxy(agentDir, { dryRun: installerOptions.dryRun });
   await installOptionalTools(choices);
-  await securePrivateFiles(backupDir);
+  await securePrivateFiles();
 
   if (installerOptions.dryRun) {
     console.log("\nDry run complete. No changes were made.");

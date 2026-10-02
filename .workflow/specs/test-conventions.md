@@ -14,13 +14,4 @@ keywords:
 
 # Test Conventions
 
-## Framework
-
-## Directory Structure
-
-## Naming Conventions
-
-## Patterns
-
-## Entries
-
+Read and apply **Test discipline** in [Project coding rules](../../AGENTS.md). Extend the nearest existing suite and use its runner; each new case must cover a distinct observable contract or regression.

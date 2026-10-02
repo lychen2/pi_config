@@ -14,6 +14,7 @@ test("tracks graph tasks, duplicate starts, completion, cancellation and usage",
   ] });
   assert.equal(store.visible().length, 2);
   const lines = renderTeammatePanel(store, theme, 100, true, 5000);
+  assert.match(lines.join("\n"), /▏ ● general/);
   assert.match(lines.join("\n"), /2 active.*4s.*2 tools.*1,400 tok/s);
   store.apply("complete", { correlationId: "a", agent: "general", exitCode: 0, durationMs: 4500, structuredResults: [{ correlationId: "a", output: "Verified result" }] });
   assert.equal(store.rows.get("a").lastMessage, "Verified result");

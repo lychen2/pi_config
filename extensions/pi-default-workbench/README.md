@@ -2,23 +2,21 @@
 
 Default-profile functional workbench with one registration entry:
 
-- `deferred-tools/`: adaptive, fast, and full project tool modes; adaptive uses hybrid BM25/local embedding discovery with up to three matches by default. Full omits tool search. SoL's `update_plan` replaces duplicate active Todo tools, and `obs_recall` remains available in every mode.
+- `deferred-tools/`: adaptive, fast, and full project tool modes; adaptive uses hybrid BM25/local embedding discovery with up to three matches by default. Semantic ranking uses cached local weights when available; downloading them is opt-in with `PI_WORKBENCH_DOWNLOAD_EMBEDDINGS=1` and is disabled under Pi offline mode. Without weights, search falls back to lexical BM25. Full omits tool search. SoL's `update_plan` replaces duplicate active Todo tools, and `obs_recall` remains available in every mode.
 - `skill-search.ts`: metadata-first search over installed, model-invocable skills, followed by explicit loading with source and reference paths
-- `browser/`: trusted Puppeteer browser control through the `browser` tool
 - `todo/`: persistent Todo state, commands, and terminal panel
 - `maestro/`: FFF search, background shell, and Git conflict tools
 - `preview/`: validated Markdown Preview PNG exports
-- `session-tools/`: memory-only draft stash, read-only history copying, and local Markdown export
+- `session-tools/`: memory-only draft stash and local Markdown export
 - `code-outline/`: on-demand TypeScript/JavaScript declaration outlines
 
-`index.ts` registers these surfaces plus the optional `/large` profile switcher in one package while preserving their existing tool names, commands, and configuration files. Large-profile beautification remains separate in `pi-large-beautify`, and Default profile context/network integration remains in `pi-context-bridge`.
+`index.ts` registers these surfaces in one package while preserving their existing tool names, commands, and configuration files. For network research, use host-provided `web_search` and `fetch_content` when available; MCP tools are available only when configured and exposed by the host. Default profile context/network integration remains in `pi-context-bridge`.
 
 ## Drafts and session export
 
-These features do not call a model, send messages, navigate the session tree, or add prompt instructions. History formatting modules load only when a command is used.
+These features do not call a model, send messages, navigate the session tree, or add prompt instructions.
 
 - **Ctrl+Alt+S** stashes the current input and clears the editor. Press again to restore it; when both the editor and slot contain text, they swap. `/stash` also restores a stored draft. Slots are isolated by session ID and kept in memory only; restarting or reloading extensions loses them. Existing editor components are not replaced.
-- **Ctrl+Alt+Y** or **`/anycopy`** opens the current branch's history without changing the input draft. `/anycopy all` includes other branches in session-file order. Type to search the short visible labels; use arrows/PageUp/PageDown to move, Ctrl+Space to toggle a selection, Ctrl+R to select the range from the last selection, Tab to preview, Enter to copy, and Esc to cancel. With no selection, Enter copies the focused record. Selections survive filtering and copy in history order. Preview is capped at 100,000 characters; copying retains full text. Tool results include their original call arguments when available. Custom records (including SoL metadata) are available as raw JSON; this does not reconstruct content removed by compaction.
 - **`/md`** copies the current branch as Markdown, excluding thinking, tool calls/results, and internal extension metadata. `custom_message`, compaction summaries and branch summaries are retained. Images become placeholders.
 - **`/md 3`** exports the last three user turns and their following records.
 - **`/md tc +bash`** includes bash calls/results; `-tool` excludes a tool. Filters match exact names, case-insensitively, and require `tc`.

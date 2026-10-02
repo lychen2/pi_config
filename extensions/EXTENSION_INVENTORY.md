@@ -1,67 +1,57 @@
 # Pi Extension Inventory
 
-Audited against Pi 0.85.1 extension, package, TUI, keybinding, provider, and lifecycle documentation.
+The default profile targets **Pi 1.0.x** and is verified against Pi 1.0.0. `install.mjs` owns package selection; `config/external-packages.txt` owns rolling external sources. Source-only compatibility packages are not extra runtime registrations.
 
-## Hand-Crafted Distributable Packages
+## Default local runtime packages
 
-| Package | Purpose | Source |
+| Package | Responsibility | Entry points |
 | --- | --- | --- |
-| `pi-default-workbench` | Unified Default functional workbench: adaptive tool selection, bash-to-tool guard, Puppeteer browser control, persistent Todo, Todo guard, FFF/background shell/conflict tools, Markdown Preview, and `/large` profile switching | `pi-default-workbench/index.ts`, `pi-default-workbench/{bash-guard,deferred-tools,browser,todo,maestro,preview,large-mode}.ts` |
-| `pi-context-bridge` | Sole Default registration entry for Web Access, configurable provider model refresh, bounded checkpoint context continuity, and last-mile empty-content wire sanitizing | `pi-context-bridge/index.ts`, `pi-context-bridge/{manager-models,continuity,wire-guard}.ts` |
-| `pi-large-mode` | Large profile switching implementation, aggregated by `pi-default-workbench` | `pi-default-workbench/large-mode.ts`, `pi-default-workbench/large-mode-core.ts` |
-| `pi-brand-header` | Responsive themed startup header, aggregated by `pi-tool-rails` | `pi-tool-rails/brand-header.ts` |
-| `pi-deepseek-anchored-standard` | DeepSeek V4 Pro/Flash bootstrap, anchoring, and progressive promotion; source-only specialist package | `pi-deepseek-anchored-standard/{index,core,minimal-editor}.ts` |
-| `pi-manager-models` | Configurable provider model-catalog refresh, aggregated by `pi-context-bridge` | `pi-context-bridge/manager-models.ts` |
-| `pi-slim-skills` | Compressed skill index and deduplicated full-body injection | `pi-slim-skills/index.ts` |
-| `pi-cache-drop-guard` | Detects consecutive prompt-cache drops, asks whether to continue or inspect status, and scopes the silent mode to the session that chose it | `pi-cache-drop-guard/index.ts` |
-| `pi-todo-guard` | Continue settled runs while Todo tasks remain; aggregated by `pi-default-workbench` | `pi-default-workbench/todo/guard.ts` |
-| `pi-tool-rails` | Soft tool rails, verified 41-tool emoji/label registry, semantic tool headers, user-message frame, persistent prompt frame, and brand header | `pi-tool-rails/compact-shell.ts`, `pi-tool-rails/tool-presentations.mjs`, `pi-tool-rails/index.ts`, `pi-tool-rails/brand-header.ts` |
-| `pi-compaction-model` | Pins context compaction to a chosen provider/model with bounded exponential backoff for transient upstream failures; opt-in package, not installed by the default installer | `pi-compaction-model/index.ts` |
-| `pi-large-beautify` | Large-only beautification bundle (tool rails, message/input framing, brand header, Matugen footer, Matugen theme) that also re-exports the Flow companion surface; not installed by the default installer, copied into the isolated Large profile | `pi-large-beautify/index.ts`, `pi-large-beautify/vendor/`, `pi-large-beautify/themes/` |
-Twelve package directories are maintained in this repository; the installer enables five of them by default (`pi-context-bridge`, `pi-default-workbench`, `pi-slim-skills`, `pi-tool-rails`, `pi-cache-drop-guard`) and keeps the other package sources available for Large profiles, opt-in installation, or explicit manual installation. `pi-zh-localizer` is run as an installer patcher rather than installed as a runtime extension.
+| `pi-context-bridge` | SoL registration, Web Access, provider-model refresh, context continuity, wire compatibility, RTK and bounded teammate contracts | `pi-context-bridge/index.ts`, `rtk.ts`, `teammate.ts` |
+| `pi-default-workbench` | Project tool policy, skill search, lazy implementation modules, session helpers, guards, background shell and preview | `pi-default-workbench/index.ts` |
+| `pi-slim-skills` | Compressed skill metadata and explicitly configured body injection | `pi-slim-skills/index.ts` |
+| `pi-tool-rails` | Tool cards, actual call trees, thinking presentation, prompt frame, brand header and plan/agent panels | Manifest entries in `pi-tool-rails/package.json` |
+| `pi-cache-drop-guard` | Session-scoped checks for consecutive prompt-cache drops | `pi-cache-drop-guard/index.ts` |
 
-## Standalone Extensions
+`pi-zh-localizer` runs as an installer patcher. Brand-header, model-discovery and Todo-guard sources are aggregated into the packages above. `pi-compaction-model` is opt-in; it is not part of the default profile. The standalone `matugen-chrome` extension supplies the footer and chrome presentation.
 
-| Extension | Purpose | Source |
+## Native and local discovery
+
+| Capability | Owner | Reason to retain local code |
 | --- | --- | --- |
-| `matugen-chrome` | Matugen footer with live context, Git operation state, and sanitized extension statuses | `matugen-chrome.ts` + `matugen-footer-core.mjs` |
+| Tool BM25 and deferred schema discovery | Native Pi `tool_search` / `codemode` | Project modes and disabled-tool policy remain local |
+| MCP transport and tool exposure | Native Pi | Legacy adapter configuration is conditional, not a default duplicate registration |
+| Skill-body loading | Native resources plus explicit workbench load | Workbench searches the skill catalog and deduplicates selected body loads |
+| Extension implementation import | Workbench lazy wrappers | Schema deferral alone does not defer JavaScript imports |
+| Skill-directory prompt size | Slim-skills | Metadata compression is separate from instruction loading |
 
-## Locally Wrapped Runtime Dependencies
+The default injection allowlist is empty. Skill search, tool discovery and the global prompt should not repeat the same multi-step routing instructions.
 
-These packages are pinned production dependencies of local compatibility entries and are not installed as independent Pi registration sources.
+## Wrapped runtime dependencies
 
-| Package | Pinned version | Registration entry |
-| --- | ---: | --- |
-| `pi-markdown-preview` | 0.16.0 | `pi-default-workbench` |
-| `pi-web-access` | 0.29.0 | `pi-context-bridge` |
+| Dependency | Registration owner |
+| --- | --- |
+| `pi-web-access` | `pi-context-bridge` |
+| `pi-rtk-optimizer` | Bridge compatibility wrapper |
+| SoL-Pi runtime checkout | Bridge factory; avoid simultaneous standalone registration |
+| `pi-maestro-teammate` | Bridge teammate contract and policy wrapper |
+| `pi-markdown-preview` | Workbench lazy preview entry |
 
-## Configured Third-Party Extensions
+Exact dependency versions belong in the owning package manifest and lockfile. External-source versions are intentionally rolling; this inventory does not freeze a historical installed version as the current one.
 
-| Package | Installed version | Purpose |
-| --- | ---: | --- |
-| `@cortexkit/pi-magic-context` | 0.42.1 | Persistent memory, conversation-history search, and `ctx_*` tools |
-| `@narumitw/pi-plan-mode` | 0.58.0 | Read-only planning mode |
-| `@juicesharp/rpiv-ask-user-question` | 2.10.1 | Structured user questions |
-| `pi-slopchop` | 0.10.1 | Terminal code review and annotations |
-| `pi-workspace-history` | 0.4.2 | Workspace undo/redo history |
-| `pi-rtk-optimizer` | 0.9.0 | RTK command rewriting and generic output compaction |
-| `pi-provider` | 1.3.1 | Interactive custom-provider configuration and capability checks |
-| `@dietrichgebert/ponytail` | 4.9.0 | Lazy senior developer mode, mode persistence, and focused review/audit skills |
+## External packages and resources
 
-## Resource-Only Package
+The configured sources include notification, persistent knowledge, plan mode, structured questions, terminal review, side conversations, provider configuration, ADHD presentation preferences and curated themes. Consult `config/external-packages.txt` for the authoritative list.
 
-`@victor-software-house/pi-curated-themes` 0.2.1 provides themes and does not register an extension entry point.
+Workspace History, Large-profile packages and Ponytail are absent from the default source list. Installing an optional package separately does not make it part of the default profile. Curated themes are resource-only; they do not register an extension entry point.
 
-## Distribution Checks
+## Distribution and lifecycle checks
 
-- Every hand-crafted package has a `pi.extensions` manifest and `pi-package` keyword.
-- Pi core imports are declared as `peerDependencies` with the explicit range `>=0.85.0 <0.86.0`, which `scripts/verify-repository.mjs` enforces.
-- Runtime package contents are constrained with `files`; development dependencies are excluded.
-- Global config paths use Pi's exported `getAgentDir()`.
-- TUI-only behavior is mode-guarded; dialogs are UI-guarded.
-- Project tool selection is stored as disabled extension/tool rules; missing config keeps Pi's default active tools.
-- Tool overrides skip built-ins already owned by another extension.
-- Long generic tool output is bounded and uses the configured expansion key hint.
-- The installer verifies compact labels and dedicated emoji for 41 known registry entries; optional and compatibility entries are included, so this is not the active-tool count.
-- Session-scoped compatibility patches restore original methods on shutdown.
-- The installer enables exactly five local packages by default: `pi-context-bridge`, `pi-default-workbench`, `pi-slim-skills`, `pi-tool-rails`, and `pi-cache-drop-guard`. Duplicate or profile-specific packages remain source-only unless explicitly installed.
+- Default Pi core peer ranges are `>=1.0.0 <2.0.0`; CI compiles and tests against 1.0.0.
+- Package `files` lists constrain shipped runtime content. Development dependencies are excluded from package payloads.
+- User config paths use the Pi agent directory; private values do not belong in this repository.
+- Tool overrides preserve ownership, deferred exposure and raw errors; presentation keeps mutation ratio bars and measured timing.
+- Session resources have cleanup paths; optional feature failures should not suppress unrelated bridge functionality.
+- Label/emoji registry size is a presentation inventory, not the number of active tools.
+- `scripts/verify-repository.mjs --default-profile` covers the default runtime packages and the installer-only localizer.
+
+See `docs/default-profile.md` for startup measurements, source ownership and verification commands.
