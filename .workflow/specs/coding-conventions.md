@@ -14,4 +14,4 @@ keywords:
 
 # Coding Conventions
 
-Read and apply [Project coding rules](../../AGENTS.md), especially **Minimal scope** and **Trust boundaries**. Match the nearest existing code; do not introduce a competing style.
+Read and apply [Global working rules](../../config/APPEND_SYSTEM.md), especially **Work and evidence** and **Trust boundaries**. Match the nearest existing code; do not introduce a competing style.

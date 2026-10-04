@@ -13,4 +13,4 @@ keywords:
 
 # Review Standards
 
-Read and apply **Required finishing pass** in [Project coding rules](../../AGENTS.md). Execute the [cleanup checklist](../../.pi/prompts/deslop.md), then report actual verification and unresolved risks; do not require redundant tests or defenses.
+Read and apply **Required finishing pass** in [Global working rules](../../config/APPEND_SYSTEM.md). Use the [cleanup checklist](../../.pi/prompts/deslop.md) in audit mode for read-only reviews and apply mode for authorized changes. Report actual verification and unresolved risks.

@@ -102,7 +102,7 @@ pi
 ```text
 /tools adaptive # fast core + search_tool_bm25，按需成组追加能力
 /tools fast     # 固定最小集合，不提供 BM25 动态追加
-/tools full     # 全部注册工具，但仍服从显式禁用规则
+/tools full     # 直接工具全部启用；延迟工具按需加载，服从显式禁用规则
 /tools reset    # 清空显式禁用规则并进入 full
 ```
 
@@ -115,6 +115,8 @@ adaptive/fast 的严格 core 是 `read`、`bash`、`write`、`edit`、`grep`、`
   "disabledTools": ["web_search"]
 }
 ```
+
+`full` 会保留通过原生 `tool_search` 明确加载的工具；MCP 连接完成或开始新一轮对话时，尚未加载的延迟工具保持未启用。`hidden` 工具保持不可用。已有会话若保留了旧版本全量启用的延迟工具，先 `/reload`，再依次执行 `/tools fast` 和 `/tools full`，可清除这次全量启用。
 
 `/tools list` 可直接查看当前项目选择。这个开关只改变模型可调用的工具；需要禁用整个扩展、命令或主题资源时，在终端运行 `pi config -l`。修改 package 安装状态后再执行 `/reload`。
 

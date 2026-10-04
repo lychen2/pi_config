@@ -10,7 +10,7 @@ import { activeToolsForMode } from "../../deferred-tools/tool-selection-state.ts
 test("outline activates through discovery or full mode only", () => {
   const groups = [{ id: "local:pi-default-workbench", tools: [{ name: "code_outline" }] }];
   const config = { toolMode: "adaptive", disabledExtensions: [], disabledTools: [] };
-  const select = (mode, activated = new Set()) => activeToolsForMode(["read"], groups, { ...config, toolMode: mode }, activated, ["read", "code_outline"]);
+  const select = (mode, activated = new Set()) => activeToolsForMode(["read"], groups, { ...config, toolMode: mode }, activated, [{ name: "read" }, { name: "code_outline" }]);
   assert.ok(!select("adaptive").includes("code_outline"));
   assert.ok(!select("fast").includes("code_outline"));
   assert.ok(select("full").includes("code_outline"));

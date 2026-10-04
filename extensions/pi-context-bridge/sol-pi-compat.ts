@@ -1,4 +1,10 @@
-import type { ExtensionAPI, ExtensionFactory } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, ExtensionContext, ExtensionFactory } from "@earendil-works/pi-coding-agent";
+
+function isClaudeModel(model: { id?: string; name?: string; provider?: string } | undefined): boolean {
+  if (!model) return false;
+  return model.provider?.toLowerCase() === "anthropic"
+    || `${model.provider ?? ""} ${model.id ?? ""} ${model.name ?? ""}`.toLowerCase().includes("claude");
+}
 
 export type SolPiExtensionLoader = (agentDir: string) => Promise<ExtensionFactory>;
 
@@ -43,6 +49,21 @@ export function normalizeLegacyUpdatePlanArgs(args: unknown): unknown {
 /** Load SoL-Pi through a facade that normalizes legacy update_plan calls. */
 export async function registerSolPiCompatibility(pi: ExtensionAPI, solPi: ExtensionFactory): Promise<void> {
   const facade = Object.create(pi) as ExtensionAPI;
+  if (typeof pi.on === "function") {
+    const originalOn = pi.on.bind(pi) as unknown as (
+      event: string,
+      handler: (payload: unknown, context: ExtensionContext) => unknown,
+    ) => () => void;
+    facade.on = ((event: string, handler: (payload: unknown, context: ExtensionContext) => unknown) => {
+      if (event === "context" || event === "tool_result" || event === "turn_end") {
+        return originalOn(event, (payload, context) => {
+          if (isClaudeModel(context.model)) return;
+          return handler(payload, context);
+        });
+      }
+      return originalOn(event, handler);
+    }) as ExtensionAPI["on"];
+  }
   facade.registerTool = ((tool) => {
     if (tool.name !== "update_plan") return pi.registerTool(tool);
 

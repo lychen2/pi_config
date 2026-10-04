@@ -14,4 +14,4 @@ keywords:
 
 # Test Conventions
 
-Read and apply **Test discipline** in [Project coding rules](../../AGENTS.md). Extend the nearest existing suite and use its runner; each new case must cover a distinct observable contract or regression.
+Read and apply **Test discipline** in [Global working rules](../../config/APPEND_SYSTEM.md). Use existing script tests in `scripts/*.test.mjs` and each extension's existing layout and runner.

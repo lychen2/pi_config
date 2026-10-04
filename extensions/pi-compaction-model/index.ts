@@ -8,7 +8,7 @@ const RETRIES_ENV = "PI_COMPACTION_RETRIES";
 const DELAY_ENV = "PI_COMPACTION_RETRY_DELAY_MS";
 
 const DEFAULT_PROVIDER = "manager";
-const DEFAULT_MODEL = "deepseek-v4-flash";
+const DEFAULT_MODEL = "gpt-6-luna";
 const DEFAULT_RETRIES = 3;
 const DEFAULT_DELAY_MS = 2000;
 const MAX_DELAY_MS = 30_000;

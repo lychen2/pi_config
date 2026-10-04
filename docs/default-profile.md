@@ -56,7 +56,7 @@ The migration accepts either the bridge-owned registration or one standalone SoL
 
 ## Rules and skills
 
-`config/APPEND_SYSTEM.md` is the source for the global working rules copied into the agent directory. There is no required global `AGENTS.md` in this repository. Keep only broadly applicable instructions global; task-specific procedures belong in the relevant skill.
+`config/APPEND_SYSTEM.md` is the source for the global working rules copied into the agent directory. Coding, trust-boundary, test, and finishing-pass rules apply across projects; this repository has no root `AGENTS.md`. Repository-specific test guidance remains in [test conventions](../.workflow/specs/test-conventions.md). Keep only broadly applicable instructions global; task-specific procedures belong in the relevant skill.
 
 `scripts/deploy-skills.mjs` owns the managed skill list. It preserves user-added skills and archives only explicitly retired managed names. Scientific calculations retain their relevant unit, approximation, numerical and evidence checks. Skill metadata should describe the task that benefits from the guidance; references are opened when needed for that task.
 

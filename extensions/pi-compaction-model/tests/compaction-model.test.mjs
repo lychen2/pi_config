@@ -14,7 +14,7 @@ import {
 test("resolveCompactionTarget falls back to the pinned defaults", () => {
   assert.deepEqual(resolveCompactionTarget({}), {
     provider: "manager",
-    model: "deepseek-v4-flash",
+    model: "gpt-6-luna",
     retries: 3,
     baseDelayMs: 2000,
   });

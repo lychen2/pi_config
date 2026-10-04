@@ -6,11 +6,12 @@ import test from "node:test";
 
 import register from "../../deferred-tools/deferred-tools.ts";
 
-function tool(name, description, source, path = `${name}.ts`) {
+function tool(name, description, source, path = `${name}.ts`, exposure = "direct") {
   return {
     name,
     label: name,
     description,
+    exposure,
     parameters: { type: "object", properties: {} },
     sourceInfo: {
       source,
@@ -28,7 +29,9 @@ function fakePi(initialTools) {
   const handlers = new Map();
   const commands = new Map();
   const shortcuts = new Map();
-  let active = tools.map((entry) => entry.name);
+  let active = tools
+    .filter((entry) => entry.exposure === "direct" || entry.exposure === "model-only")
+    .map((entry) => entry.name);
 
   return {
     tools,
@@ -44,7 +47,9 @@ function fakePi(initialTools) {
           origin: "package",
         },
       });
-      active.push(definition.name);
+      if (!definition.exposure || definition.exposure === "direct" || definition.exposure === "model-only") {
+        active.push(definition.name);
+      }
     },
     registerCommand(name, definition) { commands.set(name, definition); },
     registerShortcut(key, definition) { shortcuts.set(key, definition); },
@@ -162,6 +167,57 @@ test("full mode removes local discovery loaders even when already active", async
   assert.ok(!pi.getActiveTools().includes("search_tool_bm25"));
 });
 
+test("full keeps late MCP tools deferred across resource and turn refreshes while preserving discovered tools", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "pi-full-mcp-tools-"));
+  const configPath = join(cwd, ".pi", "tool-selector.json");
+  await mkdir(dirname(configPath), { recursive: true });
+  await writeFile(configPath, JSON.stringify({
+    toolMode: "full",
+    disabledExtensions: [],
+    disabledTools: [],
+  }), "utf8");
+
+  const deferred = (name) => tool(name, "MCP tool", "builtin:mcp", "mcp.ts", "deferred");
+  const first = deferred("mcp__github__get_me");
+  const pi = fakePi([...initialTools(), tool("tool_search", "Native discovery", "builtin"), first]);
+  register(pi);
+  await start(pi, cwd);
+  const baseline = pi.getActiveTools();
+  assert.ok(baseline.includes("tool_search"));
+  assert.ok(!baseline.includes(first.name));
+
+  const late = [
+    deferred("mcp__github__get_commit"),
+    deferred("list_mcp_resources"),
+    tool("script_query", "Script-only tool", "builtin:mcp", "mcp.ts", "codemode"),
+    tool("removed_query", "Hidden tool", "builtin:mcp", "mcp.ts", "hidden"),
+  ];
+  for (const definition of late) pi.registerTool(definition);
+  for (const event of ["resources_discover", "before_agent_start"]) {
+    for (const handler of pi.handlers.get(event)) await handler({}, context(cwd));
+    assert.deepEqual(pi.getActiveTools(), baseline, `${event} must not declare late indirect tools`);
+  }
+
+  // Native discovery declares one matched tool; the selector must retain it on the next turn.
+  pi.setActiveTools([...baseline, first.name]);
+  for (const handler of pi.handlers.get("before_agent_start")) await handler({}, context(cwd));
+  assert.deepEqual(new Set(pi.getActiveTools()), new Set([...baseline, first.name]));
+
+  await writeFile(configPath, JSON.stringify({
+    toolMode: "full",
+    disabledExtensions: [],
+    disabledTools: [first.name],
+  }), "utf8");
+  for (const handler of pi.handlers.get("before_agent_start")) await handler({}, context(cwd));
+  assert.deepEqual(pi.getActiveTools(), baseline);
+
+  // Existing sessions can retain a loadout declared by an older full-mode selector.
+  pi.setActiveTools([...baseline, first.name, ...late.slice(0, 3).map((entry) => entry.name)]);
+  await pi.commands.get("tools").handler("fast", context(cwd));
+  await pi.commands.get("tools").handler("full", context(cwd));
+  assert.deepEqual(pi.getActiveTools(), baseline);
+});
+
 test("explicit disables outrank adaptive discovery including SDK tools", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "pi-adaptive-disabled-"));
   const configPath = join(cwd, ".pi", "tool-selector.json");
@@ -209,17 +265,17 @@ test("tools commands provide mode argument completions", () => {
   assert.deepEqual(tools.getArgumentCompletions(""), [
     { value: "adaptive", label: "adaptive", description: "先启用核心工具，按需发现其他工具" },
     { value: "fast", label: "fast", description: "仅保留最小核心工具集" },
-    { value: "full", label: "full", description: "启用全部已注册工具，明确禁用的除外" },
+    { value: "full", label: "full", description: "启用直接工具，延迟工具按需加载，服从禁用规则" },
     { value: "reset", label: "reset", description: "清除禁用规则并切换到完整模式" },
     { value: "list", label: "list", description: "显示当前工具选择和已启用工具" },
   ]);
   assert.deepEqual(tools.getArgumentCompletions("f"), [
     { value: "fast", label: "fast", description: "仅保留最小核心工具集" },
-    { value: "full", label: "full", description: "启用全部已注册工具，明确禁用的除外" },
+    { value: "full", label: "full", description: "启用直接工具，延迟工具按需加载，服从禁用规则" },
   ]);
   assert.equal(tools.getArgumentCompletions("unknown"), null);
   assert.deepEqual(tools.getArgumentCompletions("full "), [
-    { value: "full", label: "full", description: "启用全部已注册工具，明确禁用的除外" },
+    { value: "full", label: "full", description: "启用直接工具，延迟工具按需加载，服从禁用规则" },
   ]);
   assert.deepEqual(legacy.getArgumentCompletions("a"), [
     { value: "adaptive", label: "adaptive", description: "先启用核心工具，按需发现其他工具" },

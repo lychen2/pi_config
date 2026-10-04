@@ -1,5 +1,5 @@
 // Project-scoped tool modes: adaptive starts with the fast core and loads
-// registered tools through BM25 discovery; fast and full remain fixed presets.
+// registered tools through BM25 discovery; full respects host tool exposure.
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 import {
@@ -49,7 +49,7 @@ const MAX_VISIBLE_ITEMS = 12;
 const TOOL_COMMAND_ARGUMENTS = [
   { value: "adaptive", description: "先启用核心工具，按需发现其他工具" },
   { value: "fast", description: "仅保留最小核心工具集" },
-  { value: "full", description: "启用全部已注册工具，明确禁用的除外" },
+  { value: "full", description: "启用直接工具，延迟工具按需加载，服从禁用规则" },
   { value: "reset", description: "清除禁用规则并切换到完整模式" },
   { value: "list", description: "显示当前工具选择和已启用工具" },
 ] as const;
@@ -170,14 +170,14 @@ function applyModeSelection(
   config: ToolSelectionConfig,
   activatedTools: ReadonlySet<string>,
 ): void {
-  const allToolNames = pi.getAllTools().map((tool) => tool.name);
+  const allTools = pi.getAllTools();
   const preservedActiveTools = config.toolMode === "full" ? pi.getActiveTools() : [];
   const next = activeToolsForMode(
     baseToolNames(pi),
     groups,
     config,
     activatedTools,
-    allToolNames,
+    allTools,
     preservedActiveTools,
   );
   if (!sameTools(pi.getActiveTools(), next)) pi.setActiveTools(next);

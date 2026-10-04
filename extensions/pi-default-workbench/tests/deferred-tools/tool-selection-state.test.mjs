@@ -219,10 +219,10 @@ test("adaptive preserves memory and defers delegation, MCP and browser schemas",
 test("codemode remains active in adaptive, fast, and full unless explicitly disabled", () => {
   const groups = [{ id: "npm:codemode", tools: [{ name: "codemode" }] }];
   for (const toolMode of ["adaptive", "fast", "full"]) {
-    assert.ok(activeToolsForMode(["bash"], groups, { ...empty, toolMode }, new Set(), ["bash", "codemode"]).includes("codemode"));
+    assert.ok(activeToolsForMode(["bash"], groups, { ...empty, toolMode }, new Set(), [{ name: "bash" }, { name: "codemode" }]).includes("codemode"));
   }
-  assert.ok(!activeToolsForMode(["bash"], groups, { ...empty, disabledTools: ["codemode"] }, new Set(), ["bash", "codemode"]).includes("codemode"));
-  assert.ok(!activeToolsForMode(["bash"], [{ id: "npm:codemode", tools: [{ name: "codemode" }] }], { ...empty, disabledExtensions: ["npm:codemode"] }, new Set(), ["bash", "codemode"]).includes("codemode"));
+  assert.ok(!activeToolsForMode(["bash"], groups, { ...empty, disabledTools: ["codemode"] }, new Set(), [{ name: "bash" }, { name: "codemode" }]).includes("codemode"));
+  assert.ok(!activeToolsForMode(["bash"], [{ id: "npm:codemode", tools: [{ name: "codemode" }] }], { ...empty, disabledExtensions: ["npm:codemode"] }, new Set(), [{ name: "bash" }, { name: "codemode" }]).includes("codemode"));
 });
 
 test("fast is fixed and full respects global disabled tools", () => {
@@ -256,7 +256,7 @@ test("full preserves existing active tools while adding the registered set", () 
     groups,
     { toolMode: "full", disabledExtensions: [], disabledTools: [] },
     new Set(),
-    ["read", "project_search", "web_search"],
+    [{ name: "read" }, { name: "project_search" }, { name: "web_search" }],
     ["legacy_host_tool", "web_search"],
   );
   assert.deepEqual(full, ["read", "project_search", "web_search", "legacy_host_tool"]);
@@ -269,7 +269,7 @@ test("full removes local discovery from registered and preserved tools; adaptive
     groups,
     { ...empty, toolMode: "full" },
     new Set(),
-    ["read", "search_tools", SEARCH_TOOL_NAME, "tool_search"],
+    ["read", "search_tools", SEARCH_TOOL_NAME, "tool_search"].map((name) => ({ name })),
     ["legacy_host_tool", "search_tools", SEARCH_TOOL_NAME],
   );
   assert.deepEqual(full, ["read", "tool_search", "legacy_host_tool", "search_skill_bm25"]);
@@ -285,6 +285,29 @@ test("SoL plan and observation recall stay active without duplicate task tools",
   }
   const disabled = activeToolsForMode(["read", "todo"], groups, { ...empty, disabledTools: ["update_plan"] });
   assert.deepEqual(disabled, ["read", "todo", "obs_recall"]);
+});
+
+test("full respects exposure and preserves discovered tools while disabled rules remain authoritative", () => {
+  const tools = [
+    { name: "read", exposure: "direct" },
+    { name: "question", exposure: "model-only" },
+    { name: "legacy_direct" },
+    { name: "mcp_query", exposure: "deferred" },
+    { name: "script_query", exposure: "codemode" },
+    { name: "removed_query", exposure: "hidden" },
+  ];
+  const groups = [{ id: "integrations", tools: tools.slice(3) }];
+  const full = { ...empty, toolMode: "full" };
+  const select = (config = full, preserved = []) =>
+    activeToolsForMode(["read"], groups, config, new Set(), tools, preserved);
+
+  assert.deepEqual(select(), ["read", "question", "legacy_direct"]);
+  assert.deepEqual(select(full, ["mcp_query", "script_query", "removed_query"]),
+    ["read", "question", "legacy_direct", "mcp_query", "script_query"]);
+  assert.deepEqual(select({ ...full, disabledTools: ["mcp_query"] }, ["mcp_query", "script_query"]),
+    ["read", "question", "legacy_direct", "script_query"]);
+  assert.deepEqual(select({ ...full, disabledExtensions: ["integrations"] }, ["mcp_query", "script_query"]),
+    ["read", "question", "legacy_direct"]);
 });
 
 test("disabling an extension does not remove same-named core tools", () => {

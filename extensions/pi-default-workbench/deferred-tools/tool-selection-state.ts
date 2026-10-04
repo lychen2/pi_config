@@ -1,5 +1,8 @@
+import type { ToolExposure } from "@earendil-works/pi-coding-agent";
+
 export type ToolRef = {
   name: string;
+  exposure?: ToolExposure;
 };
 
 export type ToolGroupRef = {
@@ -240,9 +243,13 @@ export function activeToolsForMode(
   groups: readonly ToolGroupRef[],
   config: ToolSelectionConfig,
   activatedTools: ReadonlySet<string> = new Set(),
-  allToolNames: readonly string[] = baseToolNames,
+  allTools: readonly ToolRef[] = baseToolNames.map((name) => ({ name })),
   preservedActiveTools: readonly string[] = [],
 ): string[] {
+  const allToolNames = allTools.map((tool) => tool.name);
+  const exposures = new Map([...groups.flatMap((group) => group.tools), ...allTools]
+    .map((tool) => [tool.name, tool.exposure ?? "direct"]));
+  const preserved = new Set(preservedActiveTools);
   const extensionTools = groups.flatMap((group) => group.tools.map((tool) => ({ group, name: tool.name })));
   const core = new Set(FAST_TOOL_NAMES);
   const disabledByExtension = new Set(
@@ -282,8 +289,15 @@ export function activeToolsForMode(
     if (enabled && !desired.includes(name)) desired.push(name);
   }
 
-  const solPlanActive = desired.includes("update_plan") && !config.disabledTools.includes("update_plan");
-  return desired.filter((name) => !config.disabledTools.includes(name)
+  const exposed = desired.filter((name) => {
+    const exposure = exposures.get(name) ?? "direct";
+    return exposure !== "hidden" && (config.toolMode !== "full"
+      || exposure === "direct"
+      || exposure === "model-only"
+      || preserved.has(name));
+  });
+  const solPlanActive = exposed.includes("update_plan") && !config.disabledTools.includes("update_plan");
+  return exposed.filter((name) => !config.disabledTools.includes(name)
     && (config.toolMode === "adaptive" || name !== SEARCH_TOOL_NAME)
     && (config.toolMode !== "full" || !FULL_MODE_DISCOVERY_TOOL_NAMES.has(name))
     && (!solPlanActive || (name !== "todo" && name !== "todowrite")));

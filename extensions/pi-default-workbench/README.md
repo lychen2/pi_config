@@ -2,7 +2,7 @@
 
 Default-profile functional workbench with one registration entry:
 
-- `deferred-tools/`: adaptive, fast, and full project tool modes; adaptive uses hybrid BM25/local embedding discovery with up to three matches by default. Semantic ranking uses cached local weights when available; downloading them is opt-in with `PI_WORKBENCH_DOWNLOAD_EMBEDDINGS=1` and is disabled under Pi offline mode. Without weights, search falls back to lexical BM25. Full omits tool search. SoL's `update_plan` replaces duplicate active Todo tools, and `obs_recall` remains available in every mode.
+- `deferred-tools/`: adaptive, fast, and full project tool modes; adaptive uses hybrid BM25/local embedding discovery with up to three matches by default. Semantic ranking uses cached local weights when available; downloading them is opt-in with `PI_WORKBENCH_DOWNLOAD_EMBEDDINGS=1` and is disabled under Pi offline mode. Without weights, search falls back to lexical BM25. Full enables direct and model-only tools while respecting explicit disables. Deferred and codemode tools stay available through native `tool_search` or codemode scripts; a tool explicitly declared by discovery remains active across refreshes. Hidden tools remain inactive. Full omits the local discovery loaders and retains native `tool_search`. SoL's `update_plan` replaces duplicate active Todo tools, and `obs_recall` remains available in every mode.
 - `skill-search.ts`: metadata-first search over installed, model-invocable skills, followed by explicit loading with source and reference paths
 - `todo/`: persistent Todo state, commands, and terminal panel
 - `maestro/`: FFF search, background shell, and Git conflict tools
@@ -33,4 +33,4 @@ The existing tool selector exposes it through discovery in adaptive mode and imm
 
 Limits: 2 MiB per regular file, 80 declarations per page by default (maximum 200), approximately 24,000 output characters, and 300 characters per signature. Continue with the returned `nextOffset` when truncated. Syntax errors are reported as a warning and the outline may be incomplete. Signatures are syntactic excerpts, not inferred types; only the requested source file is read. Small files may be cheaper to read directly.
 
-Reload Pi extensions or restart Pi after updating this package. No additional package needs to be enabled.
+Reload Pi extensions or restart Pi after updating this package. No additional package needs to be enabled. If an existing session retained MCP tools automatically declared by an older full-mode selector, run `/reload`, `/tools fast`, then `/tools full` to clear that loadout; subsequent discovery can declare individual tools again.

@@ -19,7 +19,7 @@ unavailable, rate-limited, or a poor summarizer.
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `PI_COMPACTION_MODEL_PROVIDER` | `manager` | Provider name passed to `ctx.modelRegistry.find`. |
-| `PI_COMPACTION_MODEL` | `deepseek-v4-flash` | Model id used for compaction. |
+| `PI_COMPACTION_MODEL` | `gpt-6-luna` | Model id used for compaction. |
 | `PI_COMPACTION_MODEL_DISABLE` | unset | `1`, `true`, or `yes` disables the extension and restores Pi's default compaction. |
 | `PI_COMPACTION_RETRIES` | `3` | Retries after the first attempt, clamped to 10. |
 | `PI_COMPACTION_RETRY_DELAY_MS` | `2000` | Base backoff delay, clamped to 30000. |

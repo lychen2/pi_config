@@ -109,3 +109,44 @@ test("leaves an omitted prepareArguments absent for canonical calls", async () =
 
   assert.equal(registered[0].prepareArguments({ value: 1 }).value, 1);
 });
+
+test("bypasses SoL-Pi context-rewriting hooks for Claude models", async () => {
+  const handlers = new Map();
+  const api = {
+    on: (event, handler) => {
+      handlers.set(event, handler);
+      return () => handlers.delete(event);
+    },
+  };
+  const invoked = [];
+  await registerSolPiCompatibility(api, (facade) => {
+    for (const event of ["context", "tool_result", "turn_end"]) {
+      facade.on(event, () => invoked.push(event));
+    }
+    facade.on("session_start", () => invoked.push("session_start"));
+  });
+
+  const context = { model: { provider: "anthropic", id: "claude-sonnet-4", name: "Claude Sonnet" } };
+  for (const event of ["context", "tool_result", "turn_end", "session_start"]) {
+    await handlers.get(event)({ type: event }, context);
+  }
+
+  assert.deepEqual(invoked, ["session_start"]);
+});
+
+test("runs SoL-Pi context-rewriting hooks for non-Claude models", async () => {
+  const handlers = new Map();
+  const api = { on: (event, handler) => handlers.set(event, handler) };
+  const invoked = [];
+  await registerSolPiCompatibility(api, (facade) => {
+    for (const event of ["context", "tool_result", "turn_end"]) {
+      facade.on(event, () => invoked.push(event));
+    }
+  });
+
+  await handlers.get("context")({ type: "context" }, {
+    model: { provider: "openai", id: "gpt-5", name: "GPT-5" },
+  });
+
+  assert.deepEqual(invoked, ["context"]);
+});
