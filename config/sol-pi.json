@@ -2,6 +2,7 @@
   "version": 1,
   "actionFusion": true,
   "observationPack": true,
+  "observationPackFullSends": 0,
   "evidencePreservingReducer": true,
   "evidencePreservingReducerProvider": "manager",
   "evidencePreservingReducerModel": "gpt-6-luna",

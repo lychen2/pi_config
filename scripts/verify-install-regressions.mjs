@@ -66,7 +66,7 @@ try {
   assert.ok(!externalPackages.some(entry => /^npm:.*@\d/.test(entry)), "npm sources must not pin a version");
   const runtimeSources = (await readFile(path.join(repoRoot, "config", "runtime-git-sources.txt"), "utf8"))
     .split(/\r?\n/).map(line => line.trim()).filter(line => line && !line.startsWith("#"));
-  assert.deepEqual(runtimeSources, ["git:github.com/NVlabs/SoL-Pi", "git:github.com/BevalZ/pi-provider"]);
+  assert.deepEqual(runtimeSources, ["git:github.com/BevalZ/pi-provider"]);
   assert.match(installMjsSource, /await configureManagedGit\(agentDir\)/);
   assert.doesNotMatch(f01.stdout, /pi-workspace-history/i, "retired workspace history package must not be offered by the installer");
 

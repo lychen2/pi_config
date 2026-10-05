@@ -5,7 +5,6 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 export const managedGitSources = [
-  { id: "sol-pi", source: "git:github.com/NVlabs/SoL-Pi", owner: "NVlabs", repository: "SoL-Pi", branch: "main" },
   { id: "pi-provider", source: "git:github.com/BevalZ/pi-provider", owner: "BevalZ", repository: "pi-provider", branch: "master" },
 ];
 export const checkoutPath = (agentDir, spec) => join(agentDir, "git", "github.com", spec.owner, spec.repository);
@@ -13,7 +12,7 @@ export const checkoutPath = (agentDir, spec) => join(agentDir, "git", "github.co
 export function managedPackages(packages, agentDir) {
   const provider = managedGitSources.find(spec => spec.id === "pi-provider");
   const local = checkoutPath(agentDir, provider);
-  const sources = new Set(managedGitSources.map(spec => spec.source));
+  const sources = new Set([...managedGitSources.map(spec => spec.source), "git:github.com/NVlabs/SoL-Pi"]);
   let registered = false;
   const result = [];
   for (const entry of packages) {

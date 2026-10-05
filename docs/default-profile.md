@@ -42,9 +42,9 @@ The benchmark requires a TTY. Its reported timing is more useful than shell proc
 
 ## SoL and persistent knowledge
 
-The default bridge registers SoL-Pi from its runtime source checkout at `~/.pi/agent/git/github.com/NVlabs/SoL-Pi`. Do not also register that checkout as a standalone Pi package in the same profile. A failed optional SoL initialization must leave independent bridge features available and report the failure.
+The default bridge registers the maintained source package at `vendor/sol-pi` through a local npm file dependency. The original `~/.pi/agent/git/github.com/NVlabs/SoL-Pi` checkout remains untouched and is no longer loaded or automatically updated. Do not register either source as a second standalone Pi package in this profile. Provenance, selected PRs, cache limits and the maintenance procedure are in [FORK.md](../vendor/sol-pi/FORK.md). A failed optional SoL initialization must leave independent bridge features available and report the failure.
 
-`config/sol-pi.json` controls artifact reduction, turn folding, online compaction and tool selection. It is copied to the agent directory; project `.pi/sol-pi.json` overrides require explicit reconciliation. RTK uses the bridge compatibility entry and only rewrites supported Git overview commands, preserving tool-result evidence for SoL.
+`config/sol-pi.json` controls artifact reduction, turn folding, online compaction and tool selection. This profile sets `observationPackFullSends: 0`: large results use the same placeholder from the first request, and `obs_recall` retrieves archived content. Native compaction still rewrites history; actual provider cache hits also depend on tools, system prompts, model and provider cache lifetime. It is copied to the agent directory; project `.pi/sol-pi.json` overrides require explicit reconciliation. RTK uses the bridge compatibility entry and only rewrites supported Git overview commands, preserving tool-result evidence for SoL.
 
 Magic Context retains its knowledge and history role. Turning its compaction off affects every host sharing that user configuration, so the migration requires explicit approval:
 
@@ -68,19 +68,19 @@ Installation is incremental by default. `--clean-plugins` is an explicit cleanup
 
 ### Safely update patched Git plugins
 
-SoL-Pi and pi-provider are managed runtime sources in `config/runtime-git-sources.txt`. `config/managed-patches/pi-provider.patch` restores the local provider metadata fixes on a fresh clone; an already applied patch is preserved, and a conflict stops installation without replacing local edits. This patch does not pin the upstream revision. The installer preserves dirty checkouts. pi-provider is registered as a local absolute path, so native `pi update --extensions` cannot reset its Git checkout. SoL-Pi remains bridge-loaded, not a second package registration.
+pi-provider is the managed runtime source in `config/runtime-git-sources.txt`. SoL-Pi is maintained in this repository under `vendor/sol-pi`. `config/managed-patches/pi-provider.patch` restores the local provider metadata fixes on a fresh clone; an already applied patch is preserved, and a conflict stops installation without replacing local edits. This patch does not pin the upstream revision. The installer preserves dirty checkouts. pi-provider is registered as a local absolute path, so native `pi update --extensions` cannot reset its Git checkout. SoL-Pi remains bridge-loaded.
 
-From this repository, explicitly update both plugins:
+From this repository, explicitly update pi-provider:
 
 ```sh
 node scripts/update-managed-git.mjs
 ```
 
-Pass `sol-pi` or `pi-provider` to update only that plugin. `PI_CODING_AGENT_DIR` selects another agent directory. The command requires Git, npm/npx, installed bridge development dependencies, and network access. It does not run automatically during installation.
+The optional `pi-provider` argument selects the same plugin. The command rejects `sol-pi`; review and merge upstream changes into the local fork using its maintenance guide. `PI_CODING_AGENT_DIR` selects another agent directory. The command requires Git, npm/npx, installed bridge development dependencies, and network access. It does not run automatically during installation.
 
-Each run archives the local binary patch, stages an independent checkout of the configured upstream branch, applies tracked changes using a three-way merge, and preserves untracked/ignored ordinary files except `node_modules`. Extra-file symlinks or collisions with upstream files stop the update. SoL-Pi runs its complete tests and typecheck under npm 11.6.2; pi-provider compares strict TypeScript diagnostics with an independent pristine checkout of the exact upstream revision, blocking any new diagnostic while reporting unchanged upstream errors. It also runs the upstream API-error tests and exercises the public status command with sparse-model fixtures, an isolated HOME, and simulated network responses. Both plugins receive a Pi 1.0 load/registration smoke test; no real credentials or provider endpoints are used.
+Each run archives the local binary patch, stages an independent checkout of the configured upstream branch, applies tracked changes using a three-way merge, and preserves untracked/ignored ordinary files except `node_modules`. Extra-file symlinks or collisions with upstream files stop the update. pi-provider compares strict TypeScript diagnostics with an independent pristine checkout of the exact upstream revision, blocking any new diagnostic while reporting unchanged upstream errors. It also runs the upstream API-error tests and exercises the public status command with sparse-model fixtures, an isolated HOME, and simulated network responses. pi-provider receives a Pi 1.0 load/registration smoke test; no real credentials or provider endpoints are used.
 
-All selected candidates must pass before any checkout is switched. Conflicts, failed validation, or observed source changes stop activation. Failed switches attempt to restore already-switched directories. Registration protection happens before staging and can remain in place after a failed update; its settings backup is printed. Do not edit or reload these plugins while an update runs. Directory switching is sequential, not an atomic filesystem operation across both plugins.
+All selected candidates must pass before any checkout is switched. Conflicts, failed validation, or observed source changes stop activation. Failed switches attempt to restore already-switched directories. Registration protection happens before staging and can remain in place after a failed update; its settings backup is printed. Do not edit or reload these plugins while an update runs. Directory switching preserves the previous checkout for recovery.
 
 Successful runs retain each complete old checkout in:
 

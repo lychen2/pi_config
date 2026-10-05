@@ -1,0 +1,11 @@
+{
+	"version": 1,
+	"actionFusion": false,
+	"observationPack": false,
+	"evidencePreservingReducer": false,
+	"evidencePreservingReducerProvider": "provider-id",
+	"evidencePreservingReducerModel": "model-id",
+	"onlineContextCompact": false,
+	"observationPackFullSends": 2,
+	"cacheWriteReadRatio": 12.5
+}

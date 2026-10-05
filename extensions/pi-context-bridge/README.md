@@ -8,7 +8,7 @@ Default-profile bridge for the locked upstream implementations:
 - SoL-Pi, loaded by the bridge so the former `update_plan` `summary`/`plan` payload is normalized before schema validation
 - `wire-guard.ts`: last-mile 清理出站 provider payload 里的空内容块
 
-The package loads SoL-Pi from `~/.pi/agent/git/github.com/NVlabs/SoL-Pi` through `sol-pi-compat.ts`; do not install SoL-Pi as a separate package alongside this bridge. Legacy `update_plan` calls are converted from `summary`/`plan` to `steps`/`progress` before schema validation. The package also loads `pi-rtk-optimizer@0.9.0` through the first-party `rtk.ts` compatibility entry. Checkpoints are stored in the Pi session branch and only the latest bounded snapshot is added before a model call; they do not replace Pi or Magic Context compaction and do not append to the global system prompt.
+The package loads the maintained `vendor/sol-pi` fork through its `file:../../vendor/sol-pi` dependency and `sol-pi-compat.ts`. Pi owns peer-module resolution. Do not install SoL-Pi as a separate package alongside this bridge; see `../../vendor/sol-pi/FORK.md` for upstream provenance and maintenance. Legacy `update_plan` calls are converted from `summary`/`plan` to `steps`/`progress` before schema validation. The package also loads `pi-rtk-optimizer@0.9.0` through the first-party `rtk.ts` compatibility entry. Checkpoints are stored in the Pi session branch and only the latest bounded snapshot is added before a model call; they do not replace Pi or Magic Context compaction and do not append to the global system prompt.
 
 Use `checkpoint` for a meaningful verified decision, failed approach, or phase handoff. Do not use it for every tool call.
 

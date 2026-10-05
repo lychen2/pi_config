@@ -13,7 +13,7 @@ const skipPack = process.argv.includes("--skip-pack");
 const piRange = ">=1.0.0 <2.0.0";
 const legacyPiRange = ">=0.85.0 <0.86.0";
 const defaultOnly = process.argv.includes("--default-profile");
-const defaultPackages = new Set(["pi-context-bridge", "pi-default-workbench", "pi-slim-skills", "pi-tool-rails", "pi-cache-drop-guard", "pi-zh-localizer"]);
+const defaultPackages = new Set(["sol-pi", "pi-context-bridge", "pi-default-workbench", "pi-slim-skills", "pi-tool-rails", "pi-cache-drop-guard", "pi-zh-localizer"]);
 const nodeRange = ">=22.19.0";
 const piVersion = process.argv.find((argument) => argument.startsWith("--pi-version="))?.slice("--pi-version=".length);
 
@@ -89,15 +89,29 @@ for (const entry of names) {
   packages.push({ name: entry.name, dir: packageDir, manifest });
 }
 
+// The bridge owns loading; the fork is verified as its own maintained source package.
+const solDir = path.join(repoRoot, "vendor", "sol-pi");
+const solManifest = JSON.parse(await readFile(path.join(solDir, "package.json"), "utf8"));
+checkManifest("sol-pi", solManifest);
+packages.unshift({ name: "sol-pi", dir: solDir, manifest: solManifest });
+
 let stagingRoot;
 let stagedRepo;
 if (piVersion) ({ stagingRoot, stagedRepo } = await stageRepositoryForPiVersion(packages, piVersion));
 try {
+  // Bridge integration tests import Workbench, so install all owners before checking any.
+  for (const { name, dir } of packages) {
+    const cwd = stagedRepo ? path.join(stagedRepo, path.relative(repoRoot, dir)) : dir;
+    if (piVersion) run("npm", ["install", "--package-lock-only", "--ignore-scripts", "--no-audit", "--no-fund"], cwd);
+    if (!skipInstall || piVersion) {
+      run("npm", ["ci", "--ignore-scripts"], cwd);
+      // Keep third-party install scripts disabled; run our required policy patch explicitly.
+      if (name === "pi-context-bridge") run(process.execPath, ["patch-teammate.mjs"], cwd);
+    }
+  }
   for (const { name, dir, manifest } of packages) {
     console.log(`\n== ${name}${piVersion ? ` (Pi ${piVersion})` : ""} ==`);
     const cwd = stagedRepo ? path.join(stagedRepo, path.relative(repoRoot, dir)) : dir;
-    if (piVersion) run("npm", ["install", "--package-lock-only", "--ignore-scripts", "--no-audit", "--no-fund"], cwd);
-    if (!skipInstall || piVersion) run("npm", ["ci", "--ignore-scripts"], cwd);
     if (manifest.scripts?.test) run("npm", ["run", "test"], cwd);
     if (manifest.scripts?.typecheck) run("npm", ["run", "typecheck"], cwd);
     if (!skipPack) run("npm", ["pack", "--dry-run"], cwd);

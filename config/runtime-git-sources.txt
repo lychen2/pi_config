@@ -1,5 +1,5 @@
 # Managed source trees. The installer preserves dirty checkouts and fast-forwards clean ones.
 # Use scripts/update-managed-git.mjs to update while preserving and validating local patches.
-# SoL-Pi loads through the bridge; pi-provider is registered as a local package.
-git:github.com/NVlabs/SoL-Pi
+# SoL-Pi is maintained in vendor/sol-pi and loaded through the bridge.
+# pi-provider is registered as a local package.
 git:github.com/BevalZ/pi-provider

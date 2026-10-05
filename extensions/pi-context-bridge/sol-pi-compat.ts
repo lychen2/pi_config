@@ -96,13 +96,11 @@ export async function tryRegisterSolPiCompatibility(
   }
 }
 
-export const SOL_PI_ENTRYPOINT = "git/github.com/NVlabs/SoL-Pi/src/sol-pi/index.ts";
+export const SOL_PI_ENTRYPOINT = "sol-pi/src/sol-pi/index.ts";
 
-export async function loadSolPiExtension(agentDir: string): Promise<ExtensionFactory> {
-  const { createJiti } = await import("jiti");
-  const { join } = await import("node:path");
-  const jiti = createJiti(import.meta.url, { interopDefault: true });
-  const loaded = await jiti.import(join(agentDir, SOL_PI_ENTRYPOINT)) as { default?: ExtensionFactory };
+export async function loadSolPiExtension(_agentDir: string): Promise<ExtensionFactory> {
+  // Let Pi's module loader map host-provided peers for the local fork too.
+  const loaded = await import("sol-pi/src/sol-pi/index.ts");
   if (typeof loaded.default !== "function") {
     throw new Error(`SoL-Pi entrypoint ${SOL_PI_ENTRYPOINT} has no default extension factory`);
   }

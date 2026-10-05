@@ -627,6 +627,11 @@ async function installLocalPackages() {
 
 async function installRuntimeGitSources() {
   const manifestPath = path.join(repoDir, "config", "runtime-git-sources.txt");
+  const solConfigPath = path.join(agentDir, "sol-pi.json");
+  if (!(await pathExists(solConfigPath))) {
+    await copyPath(path.join(repoDir, "config", "sol-pi.json"), solConfigPath);
+    if (!installerOptions.dryRun) await chmod(solConfigPath, 0o600);
+  }
   const sources = (await readFile(manifestPath, "utf8"))
     .split(/\r?\n/).map(line => line.trim()).filter(line => line && !line.startsWith("#"));
   for (const source of sources) {
@@ -653,14 +658,6 @@ async function installRuntimeGitSources() {
     if (await pathExists(patchPath)) {
       if (installerOptions.dryRun && !(await pathExists(target))) console.log(`  would restore managed patch: ${patchPath}`);
       else restoreManagedPatch(target, patchPath, { dryRun: installerOptions.dryRun });
-    }
-    if (owner === "NVlabs" && repository === "SoL-Pi") {
-      const solConfigPath = path.join(agentDir, "sol-pi.json");
-      const sourceConfigPath = path.join(repoDir, "config", "sol-pi.json");
-      if (!(await pathExists(solConfigPath))) {
-        await copyPath(sourceConfigPath, solConfigPath);
-        if (!installerOptions.dryRun) await chmod(solConfigPath, 0o600);
-      }
     }
   }
 }

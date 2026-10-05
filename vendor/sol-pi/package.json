@@ -1,0 +1,63 @@
+{
+	"name": "sol-pi",
+	"version": "0.1.0",
+	"description": "pi_config maintained SoL-Pi fork with cache-stable observation projection",
+	"type": "module",
+	"private": true,
+	"files": [
+		"src/sol-pi",
+		"FORK.md",
+		"assets",
+		"docs/compatibility.md",
+		"docs/configuration.md",
+		"scripts/check-sol-pi-config.mjs",
+		"agents-install.md",
+		"README.md",
+		"LICENSE",
+		"CONTRIBUTING.md",
+		"SECURITY.md",
+		"THIRD_PARTY_NOTICES.md",
+		"sol-pi.example.json"
+	],
+	"scripts": {
+		"test": "vitest run",
+		"typecheck": "tsc --noEmit",
+		"check": "npm run typecheck && npm test && npm pack --dry-run"
+	},
+	"keywords": [
+		"pi-package",
+		"pi-extension",
+		"context-management"
+	],
+	"pi": {
+		"extensions": [
+			"./src/sol-pi/index.ts"
+		]
+	},
+	"peerDependencies": {
+		"@earendil-works/pi-agent-core": ">=1.0.0 <2.0.0",
+		"@earendil-works/pi-ai": ">=1.0.0 <2.0.0",
+		"@earendil-works/pi-coding-agent": ">=1.0.0 <2.0.0",
+		"@earendil-works/pi-tui": ">=1.0.0 <2.0.0",
+		"typebox": "*"
+	},
+	"devDependencies": {
+		"@earendil-works/pi-agent-core": "1.0.0",
+		"@earendil-works/pi-ai": "1.0.0",
+		"@earendil-works/pi-coding-agent": "1.0.0",
+		"@earendil-works/pi-tui": "1.0.0",
+		"@types/node": "24.12.4",
+		"typebox": "1.3.7",
+		"typescript": "5.9.3",
+		"vitest": "4.1.9"
+	},
+	"engines": {
+		"node": ">=22.19.0"
+	},
+	"overrides": {
+		"nanoid": "3.3.18",
+		"postcss": "8.5.26",
+		"protobufjs": "7.6.5"
+	},
+	"license": "MIT"
+}

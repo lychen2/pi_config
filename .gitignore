@@ -27,6 +27,8 @@
 
 # Generated or machine-specific material
 **/assets/
+!vendor/sol-pi/assets/
+!vendor/sol-pi/assets/sol-pi-hero.png
 # Curated source templates with reviewed deliverable-content guidance.
 !skills/scientific-writing/assets/
 skills/scientific-writing/assets/*

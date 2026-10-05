@@ -40,6 +40,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "sol-pi": "file:../../vendor/sol-pi",
     "jiti": "^2.7.0",
     "pi-maestro-teammate": "^2.7.2",
     "pi-rtk-optimizer": "^0.9.0",
