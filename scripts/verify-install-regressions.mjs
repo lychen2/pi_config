@@ -73,7 +73,7 @@ try {
   // Public templates restore a fresh host without embedding secrets or starting optional services.
   const portableHome = path.join(tempRoot, "portable-home");
   const portableAgent = path.join(portableHome, ".pi", "agent");
-  configurePortable({ repoDir: repoRoot, agentDir: portableAgent, homeDir: portableHome, customAgentDir: false, xdgConfigHome: undefined });
+  configurePortable({ repoDir: repoRoot, agentDir: portableAgent, homeDir: portableHome, customAgentDir: false, xdgConfigHome: null });
   const restoredMcp = JSON.parse(await readFile(path.join(portableAgent, "mcp.json"), "utf8"));
   assert.ok(Object.values(restoredMcp.mcpServers).every(server => server.enabled === false));
   assert.equal(restoredMcp.mcpServers.github.headers.Authorization, "Bearer ${GITHUB_TOKEN}");
