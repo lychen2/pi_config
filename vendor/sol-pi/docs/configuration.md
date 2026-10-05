@@ -53,11 +53,13 @@ This preflight does not make every valid SoL-Pi configuration all-enabled. Witho
 
 ## observationPackFullSends
 
-The Observation Pack projection sends a tool result larger than 10 KB in full for its first `observationPackFullSends` provider requests and then replaces it with a short placeholder for every later request. The default is `2`.
+Observation Pack archives tool results larger than 16 KiB (16,384 bytes). It sends the full result for the first `observationPackFullSends` provider requests, then uses a stable placeholder. The default is `2`. Results at or below 16 KiB stay visible.
+
+Direct `obs_recall` pages share the 16 KiB limit, including headers, so they cannot be archived again. A codemode script that combines several pages can exceed this limit; print only the required evidence.
 
 The first replacement changes a message that has already participated in a provider request, so every prompt-cache prefix from that point onward is invalidated and re-billed at the provider's non-cached input rate. The replacement is not free even though it shrinks the context: it trades a one-time re-bill of the remaining context against keeping those tokens in context for the rest of the session.
 
-Set `0` when the provider bills prompt caching and the context is large. The placeholder is then projected from the very first request, so the projected message never changes after it has been sent and no cached prefix is invalidated. The observation stays archived and `obs_recall` still returns the original bytes; the model simply never sees the raw payload inside the provider context.
+Set `0` when the provider bills prompt caching and the context is large. The placeholder is then projected from the very first request, so the projected message never changes after it has been sent and no cached prefix is invalidated. The original result stays archived. The model sees its full content only when it requests recall pages.
 
 Local measurements from one user-wide install with a 400k-500k token context on an OpenAI-compatible gateway, taken over 61 sessions and 215-1580 provider requests each:
 

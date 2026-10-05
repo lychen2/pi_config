@@ -18,7 +18,9 @@ The copy preserves the previous checkout's local compaction test changes. Additi
 
 `extensions/pi-context-bridge/package.json` owns a `file:../../vendor/sol-pi` dependency. `sol-pi-compat.ts` imports its entrypoint through Pi's normal module loader so host-provided peers share the host runtime. The bridge retains its legacy-plan normalization, Claude-model rewriting bypass, and reported optional-load failures. Do not add a second standalone SoL-Pi package registration.
 
-`config/sol-pi.json` sets `observationPackFullSends: 0`. Results over the Observation Pack threshold (10 KiB) are archived and projected as a stable placeholder, including bounded head/tail excerpts, from the first model request. The model must use `obs_recall` for omitted content. Stored session history and archived bytes remain available. Changing this policy mid-session or encountering an archive failure can change the projected history.
+`config/sol-pi.json` sets `observationPackFullSends: 0`. Results above 16 KiB are archived before the first model request. Every request receives a stable placeholder with bounded head and tail excerpts. Results at or below 16 KiB stay visible. The model uses `obs_recall` for omitted content. Stored session history and archived bytes remain available. Changing this policy mid-session or encountering an archive failure can change the projected history.
+
+The fork raises the upstream 10 KiB threshold to the existing 16 KiB recall limit. Direct recall pages share that limit, including headers, so they cannot be archived again. Codemode scripts that combine multiple pages can still exceed it.
 
 This policy removes Observation Pack's delayed full-result-to-placeholder transition. It does not guarantee provider cache hits. Native online compaction changes the history prefix, and model, tool declarations, system prompts, provider routing and cache lifetime also affect reuse. PR #90 evaluates compaction economics using the configured ratio; it cannot preserve an already changed prefix.
 

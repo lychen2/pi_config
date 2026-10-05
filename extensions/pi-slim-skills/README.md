@@ -16,7 +16,7 @@ Without the search tool, visible skill descriptions and exact file paths remain 
 
 State lives in Pi's agent directory as `slim-skills-whitelist.json`. `SLIM_SKILLS_DISABLE=1` disables rewriting and injection for one process.
 
-The extension uses `before_agent_start` and Pi's public `formatSkillsForPrompt` helper. If the generated block is absent from the prompt, replacement leaves the prompt intact. No keyword-triggered preloading or tool blocking is performed.
+The extension uses `before_agent_start` to update Pi 1.x's structured `skills` section while retaining the full skill catalog for search. It matches the trimmed output of the public `formatSkillsForPrompt` helper, including bash-only sessions. Explicitly injected bodies use a separate `slim_skill_bodies` section; existing bodies are not duplicated. Earlier full-prompt overrides retain their surrounding text. If the generated block is absent, the index is left intact. No keyword-triggered preloading or tool blocking is performed.
 
 ## Development
 

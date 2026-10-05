@@ -9,8 +9,8 @@ import { dirname, join } from "node:path";
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
 import type { TextContent, ToolResultMessage } from "@earendil-works/pi-ai";
 
-/** Only tool results larger than this participate. */
-export const THRESHOLD_BYTES = 10 * 1024;
+/** Only larger results are archived. Recall output shares this limit and stays visible. */
+export const THRESHOLD_BYTES = 16 * 1024;
 /**
  * Default provider requests that still carry the full payload before the
  * placeholder takes over. Configurable with `observationPackFullSends` in

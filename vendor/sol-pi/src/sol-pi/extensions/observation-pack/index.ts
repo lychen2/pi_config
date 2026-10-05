@@ -44,9 +44,10 @@ import {
 	placeholderFor,
 	type RecallChunk,
 	readRecallChunk,
+	THRESHOLD_BYTES,
 } from "./observation.ts";
 
-const RECALL_MAX_BYTES = 16 * 1024;
+const RECALL_MAX_BYTES = THRESHOLD_BYTES;
 const RECALL_MAX_LINES = 400;
 const RECALL_HEADER_RESERVE_BYTES = 512;
 const RECALL_HEADER_LINES = 2;

@@ -125,21 +125,26 @@ export default function slimSkills(pi: ExtensionAPI): void {
   };
 
   pi.on("before_agent_start", async (event) => {
-    const skills = (event.systemPromptOptions?.skills ?? []) as SkillLike[];
+    const options = event.systemPromptOptions;
+    const skills = options.skills;
     knownSkills = skills;
     if (process.env[DISABLE_ENV] === "1") return;
 
-    let prompt = event.systemPrompt;
-
-    // Compact the skill index.
+    // Pi trims the generated skill section. Keep the catalog for skill discovery
+    // and replace only its presentation, preserving independently updated sections.
     const visible = skills.filter((skill) => !skill.disableModelInvocation);
-    const verbose = formatSkillsForPrompt(skills as Parameters<typeof formatSkillsForPrompt>[0]);
-    if (verbose && prompt.includes(verbose)) {
+    const readTool = options.selectedTools.includes("read") ? "read" : "bash";
+    const verbose = formatSkillsForPrompt(skills, readTool).trim();
+    if (verbose && event.systemPrompt.includes(verbose)) {
       const allowed = config.mode === "all" ? visible : visible.filter((skill) => allowedSet().has(skill.name));
       const searchable = pi.getActiveTools().includes("search_skill_bm25");
-      const compact = compactBlock(searchable ? allowed : visible, searchable);
+      const compact = compactBlock(searchable ? allowed : visible, searchable).trim();
       if (searchable || compact.length < verbose.length) {
-        prompt = prompt.replace(verbose, compact);
+        if (options.forceSystemPrompt !== undefined) {
+          options.forceSystemPrompt = options.forceSystemPrompt.replace(verbose, compact);
+        } else {
+          options.sections.skills = (options.sections.skills ?? verbose).replace(verbose, compact);
+        }
       }
     }
 
@@ -151,7 +156,7 @@ export default function slimSkills(pi: ExtensionAPI): void {
       for (const skill of toInject) {
         try {
           const body = await loadSkillBody(skill.filePath);
-          if (!prompt.includes(body) && !bodies.includes(body)) {
+          if (!event.systemPrompt.includes(body) && !bodies.includes(body)) {
             bodies.push(body);
           }
         } catch {
@@ -159,12 +164,12 @@ export default function slimSkills(pi: ExtensionAPI): void {
         }
       }
       if (bodies.length) {
-        prompt += "\n\n" + bodies.join("\n\n");
+        if (options.forceSystemPrompt !== undefined) {
+          options.forceSystemPrompt += "\n\n" + bodies.join("\n\n");
+        } else {
+          options.sections.slim_skill_bodies = bodies.join("\n\n");
+        }
       }
-    }
-
-    if (prompt !== event.systemPrompt) {
-      return { systemPrompt: prompt };
     }
   });
 
