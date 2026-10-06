@@ -5,6 +5,8 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth, visibleWidth, type EditorComponent } from "@earendil-works/pi-tui";
 
+import { dashboard } from "./dashboard-state.ts";
+
 const ANSI_ESCAPE = /\x1B(?:\][^\x07\x1B]*(?:\x07|\x1B\\)|\[[0-?]*[ -/]*[@-~]|[@-Z\\-_])/g;
 const FRAMED_EDITOR = Symbol.for("pi.toolRails.framedEditor");
 const SET_EDITOR_PATCH = Symbol.for("pi.toolRails.setEditorPatch");
@@ -113,7 +115,7 @@ function renderFramed(
   const completions = base.slice(bottomRule + 1);
   const body = base.slice(1, bottomRule);
   const railed = (content: string) => `${rail(theme)}${fillLine(content, innerWidth)}`;
-  const meta = metaLabel(theme, getMeta(), getThinking());
+  const meta = dashboard.active ? undefined : metaLabel(theme, getMeta(), getThinking());
   const lines = [
     frameBorder(width, theme),
     railed(""),
@@ -167,6 +169,7 @@ export default function promptFrame(pi: ExtensionAPI, installDefaultEditor = tru
   function disposeSessionEditor(): void {
     restoreSetEditor();
     restoreSetEditor = () => {};
+    dashboard.modelLine = undefined;
   }
 
   pi.on("session_start", (_event, ctx) => {
@@ -181,6 +184,7 @@ export default function promptFrame(pi: ExtensionAPI, installDefaultEditor = tru
     };
     const getMeta = () => meta;
     const getThinking = () => (typeof pi.getThinkingLevel === "function" ? pi.getThinkingLevel() : undefined);
+    dashboard.modelLine = () => metaLabel(ctx.ui.theme, getMeta(), getThinking());
 
     type Setter = typeof ctx.ui.setEditorComponent;
     type Patch = { original: Setter; wrapped: Setter };

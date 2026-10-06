@@ -1,0 +1,354 @@
+#!/usr/bin/env python3
+"""Draw a portrait set for a pi agent and install it.
+
+Sends the built-in default set as a 5x5 reference sheet to an image model,
+asks for its 19 poses plus 11 newer ones (30 cells, 6 by 5) drawn as a new
+character, cuts the answer into
+128px frames and installs it as an emote set with a config that selects it.
+
+usage:
+  draw-portrait --name NAME --role "what the agent does" [--dest DIR]
+                [--backend auto|codex|azure]
+  draw-portrait --name NAME --role "..." --photo face.jpg   (look like a person)
+                [--photo-style]   (draw in the photo's style, not the default set's)
+                [--direction "..."]  (extra art direction, e.g. gestures)
+  draw-portrait --name NAME --variant 2   (a second drawing of every frame,
+                picked at random each time a state starts)
+  draw-portrait --name NAME --sheet my-sheet.png [--dest DIR]
+  draw-portrait --print-prompt --name NAME --role "..."   (for ChatGPT etc.)
+  draw-portrait --print-reference out.png                 (the sheet to attach)
+
+--dest is the pi-emote config folder, default ./.pi/extensions/pi-emote.
+
+Backends:
+  codex  the Codex CLI's built-in image tool, on your ChatGPT login
+  azure  an Azure OpenAI image deployment; set AZURE_IMAGE_ENDPOINT (the full
+         .../openai/v1/images/edits URL), AZURE_IMAGE_KEY, AZURE_IMAGE_MODEL
+  auto   codex when it is installed, else azure; azure is also tried when
+         codex fails and the Azure variables are set
+"""
+import argparse, base64, fcntl, json, os, re, shutil, subprocess, sys, tempfile, urllib.request
+
+from PIL import Image
+import numpy as np
+
+ROOT = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+# The 19 frames of the default set, in the order they sit on the sheet.
+FRAMES = ["idle/idle.png", "idle/idle_blink.png", "hi/hi1.png", "hi/hi2.png", "talk/talk_close.png",
+          "talk/talk_small.png", "talk/talk_mid.png", "talk/talk_wide.png", "think/think.png",
+          "think/think_hard.png", "read/read1.png", "read/read2.png", "write/write1.png",
+          "write/write2.png", "tool/tool1.png", "tool/tool2.png", "failure/failure1.png",
+          "failure/failure2.png", "compact/compact1.png"]
+# Newer states, drawn in the 11 cells after the original 19.
+NEW_FRAMES = ["success/success1.png", "success/success2.png", "sleep/sleep1.png", "sleep/sleep2.png",
+              "wait/wait1.png", "wait/wait2.png", "interrupted/interrupted1.png", "search/search1.png",
+              "bash/bash1.png", "error/error1.png", "heard/heard1.png"]
+# Sheets made before the newer states were 5 by 4 with 19 cells.
+LAYOUTS = {"30": (FRAMES + NEW_FRAMES, 6, 5), "19": (FRAMES, 5, 4)}
+
+PROMPT = """The attached image is a pixel-art emote sheet on a 6 by 5 grid of 30 cells, read left to right, top to bottom. It shows one character in the poses listed below; any empty cells are poses still to be drawn. Make a new sheet with exactly the same 6 by 5 grid, all 30 cells filled with the 30 poses below, in order. Use the same framing in every cell (head and shoulders, centred, same size), the same pixel-art style, and the same dark navy tiled background.
+
+The new character is {name}, an assistant whose job is: {role}
+Design a distinct, appealing character that suits that job, with a clear look (hair, clothing, one accessory) that stays identical in every cell. Do not copy the original character's face, hair, hair clip or clothes.
+
+Cells, in order:
+{cells}
+
+Continuity: the cells are frames of one animated character, and cells of the same situation (blink, wave, talk, think, read, type, phone, fail, it worked, sleep, wait) play one after another. Between them change only what the cell describes. Keep the same props, held the same way and facing the same direction, and the same eye colour, glasses, clothes and lighting.
+Props work as they do in real life: someone reading faces the page, so the viewer sees the cover of a book or the back of a clipboard or sheet, never the side being read.
+
+No text, letters, numbers or logos anywhere."""
+
+CELLS = """1 idle, relaxed neutral face, eyes open
+2 same as 1 with eyes closed (blink)
+3 smiling, waving hello with one hand
+4 smiling wider, hand waving in a different position
+5 talking, mouth closed
+6 talking, mouth slightly open
+7 talking, mouth half open
+8 talking, mouth wide open
+9 thinking, looking up, hand on chin, small thought bubble
+10 thinking hard, frowning, hand on temple
+11 reading a small book, wearing reading glasses
+12 reading, eyes moved further down the page
+13 typing on a laptop seen from behind its lid, screen glow on the face
+14 typing, slightly different pose
+15 using a phone, screen glow on the face
+16 using a phone, slightly different pose
+17 something failed: wincing, hand on forehead
+18 something failed: sighing, eyes closed
+19 tidying up: tired but content, eyes half closed
+20 it worked: pleased, small fist pump
+21 it worked: satisfied smile and a nod, eyes closed
+22 asleep: dozing, eyes closed, head tilted, a small sleep bubble
+23 asleep: deeper sleep, head lower, mouth slightly open
+24 waiting for an answer: looking straight out, eyebrows raised, expectant
+25 waiting for an answer: patient, glancing at a wristwatch
+26 interrupted: startled, eyes wide, both hands up
+27 searching the web: peering through a magnifying glass
+28 running a command: typing on a small retro terminal, green screen glow on the face
+29 connection error: frowning at a broken cable and a burst of static
+30 heard you: attentive, small nod, hand cupped to the ear"""
+
+# Different poses for the same 30 situations, used to draw variants.
+ALT_CELLS = """1 idle, chin resting on one hand, relaxed
+2 same as 1 with eyes closed (blink)
+3 hello: a casual two-finger salute from the brow
+4 hello: a big wave with both hands
+5 talking with an open palm, explaining, mouth closed
+6 talking with an open palm, mouth slightly open
+7 talking, counting on their fingers, mouth half open
+8 talking excitedly, both hands up, mouth wide open
+9 thinking: looking sideways, one finger tapping the lips, small thought bubble
+10 thinking hard: both hands on the temples, eyes squeezed shut
+11 reading a tablet held up close
+12 reading a sheet of paper, eyebrows raised
+13 writing in a notebook with a pen
+14 writing, pen resting on the lips, looking at the page
+15 working on a small gadget with a screwdriver
+16 working on the gadget, holding it up to inspect it
+17 something failed: both hands on the cheeks, shocked
+18 something failed: forehead down on folded arms
+19 tidying up: stacking papers neatly
+20 it worked: a thumbs up and a grin
+21 it worked: both arms raised, cheering
+22 asleep: head tipped back, mouth open
+23 asleep: wrapped in a small blanket
+24 waiting for an answer: drumming the fingers on the chin
+25 waiting for an answer: arms crossed, one eyebrow raised
+26 interrupted: jolted, a coffee cup splashing
+27 searching the web: looking through binoculars
+28 running a command: typing fast on a glowing keyboard, focused
+29 connection error: holding up an unplugged plug, sighing
+30 heard you: leaning in, eyebrows raised, smiling"""
+
+PHOTO = """
+
+The second attached image is a photo of a real person. Draw the character as a pixel-art likeness of that person: same hair colour and style, face shape, eye colour, and facial hair or none. Match their apparent age: an adult must look like an adult, not a child or teenager. Take only the poses, framing and pixel style from the reference sheet, not its face proportions: its large eyes and round face belong to that character only. For an adult draw smaller, narrower eyes, a longer face, visible cheekbones, a defined jaw and chin, an adult nose, and an adult neck and shoulders. Keep the eye colour the same in every cell, including those lit by a screen. Keep it friendly and flattering."""
+
+PHOTO_STYLE = """
+
+Art style: copy the style of the second image, not the reference sheet's. Match its realistic proportions, pixel size, shading and colours, so every cell looks like that image with a different pose and expression. From the reference sheet take only the grid, the order of poses, the framing and the dark navy background.
+
+Likeness matters most. In every cell copy the face from the second image exactly: the same face shape and jawline, eye shape, eye size and spacing, eyebrow shape, nose, lips, skin tone, hairline, hair parting, hair length and hair volume. Do not prettify, smooth, enlarge the eyes or make the face rounder or younger. Someone who knows this person must recognise them in every cell. Change only the expression, the head angle and the hands."""
+
+CODEX_ASK = """Use your image generation tool. Pass the attached images to it as reference images, not just as context: ref.png is the pose sheet{photo_note}.
+
+{prompt}
+
+Save the result in the current folder as sheet.png, landscape, with the same 6 by 5 cell layout as ref.png."""
+
+
+def reference_sheet(path, template=None):
+    """A 6 by 5 grid of reference poses. By default the 19 default frames,
+    with the 11 newer cells left as plain background for the model to fill;
+    with a template (a folder holding a full 30-frame set) every cell."""
+    cell, size = 204, 1224
+    sheet = Image.new("RGB", (size, 1020), (18, 20, 33))
+    for i, f in enumerate(FRAMES + NEW_FRAMES if template else FRAMES):
+        src = os.path.join(template or os.path.join(ROOT, "emotes/default"), f)
+        if not os.path.exists(src):  # a 19-frame set leaves the newer cells empty
+            continue
+        im = Image.open(src).convert("RGBA")
+        im = im.resize((cell, cell), Image.NEAREST)
+        bg = Image.new("RGBA", (cell, cell), (255, 255, 255, 255))
+        bg.alpha_composite(im)
+        sheet.paste(bg.convert("RGB"), ((i % 6) * cell, (i // 6) * cell))
+    sheet.save(path)
+
+
+def draw_codex(work, prompt, photo):
+    images = ["-i", "ref.png"] + (["-i", "photo.png"] if photo else [])
+    note = ", photo.png is the person to draw" if photo else ""
+    subprocess.run(["codex", "exec", "--skip-git-repo-check", "-s", "workspace-write", *images, "-"],
+                   input=CODEX_ASK.format(prompt=prompt, photo_note=note), text=True, cwd=work, check=True,
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=900)
+    if not os.path.isfile(os.path.join(work, "sheet.png")):
+        raise RuntimeError("codex finished without saving sheet.png")
+
+
+def draw_azure(work, prompt, photo):
+    url, key, model = (os.environ.get(k) for k in ("AZURE_IMAGE_ENDPOINT", "AZURE_IMAGE_KEY", "AZURE_IMAGE_MODEL"))
+    if not (url and key and model):
+        raise RuntimeError("set AZURE_IMAGE_ENDPOINT, AZURE_IMAGE_KEY and AZURE_IMAGE_MODEL")
+    boundary = "drawportrait"
+    parts = []
+    for k, v in (("model", model), ("prompt", prompt), ("size", "1536x1024"), ("quality", "high"), ("n", "1")):
+        parts.append(f'--{boundary}\r\nContent-Disposition: form-data; name="{k}"\r\n\r\n{v}\r\n'.encode())
+    for f in ["ref.png"] + (["photo.png"] if photo else []):
+        parts.append(f'--{boundary}\r\nContent-Disposition: form-data; name="image[]"; filename="{f}"\r\n'
+                     f"Content-Type: image/png\r\n\r\n".encode() + open(os.path.join(work, f), "rb").read() + b"\r\n")
+    parts.append(f"--{boundary}--\r\n".encode())
+    req = urllib.request.Request(url, data=b"".join(parts), headers={
+        "api-key": key, "Content-Type": f"multipart/form-data; boundary={boundary}"})
+    with urllib.request.urlopen(req, timeout=600) as r:
+        data = json.load(r)
+    open(os.path.join(work, "sheet.png"), "wb").write(base64.b64decode(data["data"][0]["b64_json"]))
+
+
+def draw(work, prompt, backend, photo):
+    azure_ready = all(os.environ.get(k) for k in ("AZURE_IMAGE_ENDPOINT", "AZURE_IMAGE_KEY", "AZURE_IMAGE_MODEL"))
+    if backend == "azure" or (backend == "auto" and not shutil.which("codex")):
+        print("drawing with Azure, about two minutes...", flush=True)
+        return draw_azure(work, prompt, photo)
+    print("drawing with Codex, about two minutes...", flush=True)
+    try:
+        draw_codex(work, prompt, photo)
+    except Exception as e:
+        if backend == "codex" or not azure_ready:
+            raise
+        print(f"codex failed ({e}), trying Azure...", flush=True)
+        draw_azure(work, prompt, photo)
+
+
+def labelled_sheet(set_dir, path):
+    """The 30 frames with each state's file name under it, for people."""
+    from PIL import ImageDraw, ImageFont
+    cell, label = 256, 40
+    try:
+        font = ImageFont.truetype("DejaVuSans.ttf", 20)
+    except OSError:
+        font = ImageFont.load_default(size=20)
+    sheet = Image.new("RGB", (6 * cell, 5 * (cell + label)), (255, 255, 255))
+    draw = ImageDraw.Draw(sheet)
+    for i, f in enumerate(FRAMES + NEW_FRAMES):
+        x, y = (i % 6) * cell, (i // 6) * (cell + label)
+        sheet.paste(Image.open(os.path.join(set_dir, f)).convert("RGB").resize((cell, cell), Image.NEAREST), (x, y))
+        draw.text((x + 8, y + cell + 8), f"{i + 1}. {os.path.basename(f)[:-4]}", fill=(20, 20, 20), font=font)
+    sheet.save(path)
+
+
+def cut(sheet_path, dst, layout="30"):
+    """Image models keep the grid; its extent is where the dark background
+    ends (older 19-cell sheets have white empty cells at the end). Frames are
+    square crops centred in each grid slot."""
+    im = Image.open(sheet_path).convert("RGB")
+    a = np.asarray(im).astype(int)
+    dark = a.mean(axis=2) <= 200
+    margin = im.width // 20
+    bottom = np.where(dark[:, margin])[0].max() + 1
+    right = np.where(dark[im.height // 10, :])[0].max() + 1
+    frames, cols, rows = LAYOUTS[layout]
+    cw, ch = right / cols, bottom / rows
+    side = int(min(cw, ch) * 0.97)
+    for i, f in enumerate(frames):
+        cx, cy = (i % cols + 0.5) * cw, (i // cols + 0.5) * ch
+        left, top = round(cx - side / 2), round(cy - side / 2)
+        os.makedirs(os.path.dirname(os.path.join(dst, f)), exist_ok=True)
+        im.crop((left, top, left + side, top + side)).resize((128, 128), Image.LANCZOS).save(os.path.join(dst, f))
+
+
+def main():
+    p = argparse.ArgumentParser(description="Draw a portrait set for a pi agent.")
+    p.add_argument("--name")
+    p.add_argument("--role", default="")
+    p.add_argument("--dest", default=".pi/extensions/pi-emote")
+    p.add_argument("--backend", choices=["auto", "codex", "azure"], default="auto")
+    p.add_argument("--sheet", help="cut and install a sheet you already made")
+    p.add_argument("--layout", choices=["30", "19"], default="30",
+                   help="cells on a --sheet: 30 (6 by 5, default) or 19 (older 5 by 4 sheets)")
+    p.add_argument("--photo", help="photo of a person the character should look like")
+    p.add_argument("--variant", type=int, metavar="N",
+                   help="add a second (third, ...) drawing of every frame to an existing set,"
+                        " as file_vN.png; the set itself is the reference, so the character stays the same")
+    p.add_argument("--direction", default="",
+                   help="extra art direction, e.g. how the character gestures")
+    p.add_argument("--photo-style", action="store_true",
+                   help="draw in the photo's realistic style instead of the default set's")
+    p.add_argument("--print-prompt", action="store_true")
+    p.add_argument("--print-reference", metavar="PNG")
+    p.add_argument("--template", metavar="SET_DIR",
+                   help="use a finished 30-frame set as the pose reference instead of the default set")
+    p.add_argument("--print-guide", nargs=2, metavar=("SET_DIR", "PNG"),
+                   help="save a labelled sheet of a 30-frame set, one state name per cell")
+    a = p.parse_args()
+
+    if a.print_guide:
+        return labelled_sheet(*a.print_guide)
+    if a.print_reference:
+        return reference_sheet(a.print_reference, a.template)
+    if not a.name or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", a.name):
+        sys.exit("--name is needed: letters, digits, . _ - only")
+    prompt = PROMPT.format(name=a.name, role=a.role or "a helpful assistant",
+                           cells=ALT_CELLS if a.variant else CELLS) + (PHOTO if a.photo else "")
+    if a.photo_style:
+        if not a.photo:
+            sys.exit("--photo-style needs --photo")
+        prompt += PHOTO_STYLE
+    if a.direction:
+        prompt += ("\n\nExtra direction, which overrides the generic pose descriptions above while keeping"
+                   " what each cell means (blink, wave, talk, think, read, type, phone, fail, tidy): " + a.direction)
+    existing = os.path.join(a.dest, "emotes", a.name)
+    if a.variant is not None:
+        if a.variant < 2:
+            sys.exit("--variant starts at 2; the first drawing is the set itself")
+        if not os.path.isdir(existing):
+            sys.exit(f"--variant needs an existing set at {existing}")
+        # Take 1's full sheet shows the character in every situation, so
+        # face, clothes and details carry over; the first image only gives
+        # the grid, and the poses come from ALT_CELLS. Given take 1 as the
+        # pose reference instead, the model copied its poses almost exactly.
+        if a.photo:
+            sys.exit("--variant draws from the set's own frames; --photo is not used with it")
+        a.photo = os.path.join(existing, "sheet.png")
+        if not os.path.exists(a.photo):
+            # Sets installed without their sheet: rebuild one from the frames.
+            a.photo = os.path.join(tempfile.mkdtemp(prefix="draw-portrait-"), "sheet.png")
+            reference_sheet(a.photo, existing)
+        prompt = PROMPT.format(name=a.name, role=a.role or "a helpful assistant", cells=ALT_CELLS)
+        prompt += """
+
+The character is not the one in the first image. The second image is take 1 of this character: a finished sheet of the same 30 situations. Draw take 2.
+Copy from take 1 exactly, in every cell: the face and its proportions, hair, skin, eye colour, clothes, accessories, jewellery, tattoos and any other markings, colours, pixel size and shading. Someone who has seen take 1 must see the same character.
+Do not copy take 1's poses, and ignore the poses in the first image too: use the new poses in the cell list above."""
+        if a.direction:
+            prompt += "\n\nExtra direction: " + a.direction
+    if a.print_prompt:
+        return print(prompt)
+
+    emotes = os.path.join(a.dest, "emotes")
+    os.makedirs(emotes, exist_ok=True)
+    # One drawing per destination at a time; a second run waits.
+    lock = open(os.path.join(a.dest, ".lock"), "w")
+    fcntl.flock(lock, fcntl.LOCK_EX)
+    work = tempfile.mkdtemp(prefix=".work-", dir=a.dest)
+    try:
+        sheet = os.path.join(work, "sheet.png")
+        if a.sheet:
+            shutil.copy(a.sheet, sheet)
+        else:
+            reference_sheet(os.path.join(work, "ref.png"), a.template)
+            if a.photo:
+                photo = Image.open(a.photo).convert("RGB")
+                if photo.width < 512:  # a 128px frame: enlarge so the model sees it clearly
+                    photo = photo.resize((512, 512 * photo.height // photo.width), Image.NEAREST)
+                photo.save(os.path.join(work, "photo.png"))
+            draw(work, prompt, a.backend, bool(a.photo))
+        # Build the whole new set first, so a bad sheet leaves the old one.
+        new = os.path.join(work, "set")
+        cut(sheet, new, a.layout if a.sheet else "30")
+        shutil.copy(sheet, os.path.join(new, "sheet.png"))
+        shutil.copy(os.path.join(ROOT, "emotes/default/emotes.json"), new)
+        dst = os.path.join(emotes, a.name)
+        if a.variant is not None:
+            # Add the new drawing next to the existing files, as name_vN.png.
+            for f in LAYOUTS[a.layout][0]:
+                stem, ext = os.path.splitext(f)
+                os.makedirs(os.path.dirname(os.path.join(dst, f)), exist_ok=True)
+                shutil.copy(os.path.join(new, f), os.path.join(dst, f"{stem}_v{a.variant}{ext}"))
+            shutil.copy(sheet, os.path.join(dst, f"sheet_v{a.variant}.png"))
+        else:
+            if os.path.isdir(dst):
+                os.rename(dst, os.path.join(work, "old"))
+            os.rename(new, dst)
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+    config_path = os.path.join(a.dest, "config.json")
+    config = json.load(open(config_path)) if os.path.isfile(config_path) else {}
+    config["emotes"] = [{"model": "*", "emote-set": a.name}]
+    json.dump(config, open(config_path, "w"), indent=2)
+    sheet_name = f"sheet_v{a.variant}.png" if a.variant is not None else "sheet.png"
+    print(f"portrait ready: {os.path.join(dst, sheet_name)}")
+
+
+main()

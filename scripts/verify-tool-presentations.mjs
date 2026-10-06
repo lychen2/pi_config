@@ -96,7 +96,7 @@ assert.equal(toolEmoji("mcp__new_server__custom_action"), "🔌");
 
 const packageRoot = new URL("../extensions/pi-tool-rails/", import.meta.url);
 const manifest = JSON.parse(readFileSync(new URL("package.json", packageRoot), "utf8"));
-for (const file of ["visual-style.ts", "user-message.ts", "compact-shell.ts", "tool-card-summary.ts", "mcp-tool-summary.ts", "codemode-tree.ts"]) {
+for (const file of ["visual-style.ts", "user-message.ts", "compact-shell.ts", "tool-card-summary.ts", "mcp-tool-summary.ts", "codemode-tree.ts", "portrait-dashboard.ts", "dashboard-state.ts", "portrait"]) {
   assert.ok(manifest.files.includes(file), `rendering module missing from package files: ${file}`);
   assert.ok(existsSync(new URL(file, packageRoot)), `packaged rendering module does not exist: ${file}`);
 }

@@ -1,0 +1,107 @@
+# ASCII Bot emote set — 8x4 multi-line ASCII art with ANSI color.
+# Uses \x1b[32m (green) for the robot body and \x1b[33m (yellow) for eyes.
+
+hi:
+  default:
+    - "\x1b[32m.------.\x1b[0m"
+    - "\x1b[32m|\x1b[0m  \x1b[33m^o^\x1b[0m \x1b[32m|\x1b[0m"
+    - "\x1b[32m'--++--'\x1b[0m"
+    - "\x1b[32m===++===\x1b[0m"
+
+idle:
+  default:
+    - "\x1b[32m.------.\x1b[0m"
+    - "\x1b[32m|\x1b[0m  \x1b[33m•_•\x1b[0m \x1b[32m|\x1b[0m"
+    - "\x1b[32m'--++--'\x1b[0m"
+    - "\x1b[32m===++===\x1b[0m"
+  blink:
+    - "\x1b[32m.------.\x1b[0m"
+    - "\x1b[32m|\x1b[0m  \x1b[33m-_-\x1b[0m \x1b[32m|\x1b[0m"
+    - "\x1b[32m'--++--'\x1b[0m"
+    - "\x1b[32m ==++== \x1b[0m"
+
+think:
+  default:
+    - "\x1b[32m.------.\x1b[0m"
+    - "\x1b[32m|\x1b[0m  \x1b[33m•_•\x1b[0m?\x1b[32m|\x1b[0m"
+    - "\x1b[32m'--++--'\x1b[0m"
+    - "\x1b[32m===??===\x1b[0m"
+  hard:
+    - "\x1b[32m.------.\x1b[0m"
+    - "\x1b[32m|\x1b[0m  \x1b[33m-᷅_-᷄\x1b[0m \x1b[32m|\x1b[0m"
+    - "\x1b[32m'--++--'\x1b[0m"
+    - "\x1b[32m===++===\x1b[0m"
+
+talk:
+  close:
+    - "\x1b[32m.------.\x1b[0m"
+    - "\x1b[32m|\x1b[0m  \x1b[33m•_•\x1b[0m \x1b[32m|\x1b[0m"
+    - "\x1b[32m'--++--'\x1b[0m"
+    - "\x1b[32m  =++=  \x1b[0m"
+  open_small:
+    - "\x1b[32m.------.\x1b[0m"
+    - "\x1b[32m|\x1b[0m  \x1b[33m•.•\x1b[0m \x1b[32m|\x1b[0m"
+    - "\x1b[32m'--++--'\x1b[0m"
+    - "\x1b[32m  =++=  \x1b[0m"
+  open_medium:
+    - "\x1b[32m.------.\x1b[0m"
+    - "\x1b[32m|\x1b[0m  \x1b[33m•o•\x1b[0m \x1b[32m|\x1b[0m"
+    - "\x1b[32m'--++--'\x1b[0m"
+    - "\x1b[32m ==++== \x1b[0m"
+  open_wide:
+    - "\x1b[32m.------.\x1b[0m"
+    - "\x1b[32m|\x1b[0m  \x1b[33m•O•\x1b[0m \x1b[32m|\x1b[0m"
+    - "\x1b[32m'--++--'\x1b[0m"
+    - "\x1b[32m===++===\x1b[0m"
+
+read:
+  - - "\x1b[32m.------.\x1b[0m"
+    - "\x1b[32m|\x1b[0m  \x1b[33m•_•\x1b[0m \x1b[32m|\x1b[0m"
+    - "\x1b[32m'--++--'\x1b[0m"
+    - "\x1b[32m===..===\x1b[0m"
+  - - "\x1b[32m.------.\x1b[0m"
+    - "\x1b[32m|\x1b[0m  \x1b[33m=_=\x1b[0m \x1b[32m|\x1b[0m"
+    - "\x1b[32m'--++--'\x1b[0m"
+    - "\x1b[32m ==..== \x1b[0m"
+  - - "\x1b[32m.------.\x1b[0m"
+    - "\x1b[32m|\x1b[0m  \x1b[33m•_•\x1b[0m \x1b[32m|\x1b[0m"
+    - "\x1b[32m'--++--'\x1b[0m"
+    - "\x1b[32m  =..=  \x1b[0m"
+
+write:
+  - - "\x1b[32m.------.\x1b[0m"
+    - "\x1b[32m|\x1b[0m  \x1b[33m-᷅_-᷄\x1b[0m \x1b[32m|\x1b[0m"
+    - "\x1b[32m'--++--'\x1b[0m"
+    - "\x1b[32m===**===\x1b[0m"
+  - - "\x1b[32m.------.\x1b[0m"
+    - "\x1b[32m|\x1b[0m  \x1b[33m-᷅_-᷄\x1b[0m \x1b[32m|\x1b[0m"
+    - "\x1b[32m'--++--'\x1b[0m"
+    - "\x1b[32m ==**== \x1b[0m"
+
+tool:
+  - - "\x1b[32m.------.\x1b[0m"
+    - "\x1b[32m|\x1b[0m  \x1b[33m=_=\x1b[0m \x1b[32m|\x1b[0m"
+    - "\x1b[32m'--++--'\x1b[0m"
+    - "\x1b[32m===++===\x1b[0m"
+  - - "\x1b[32m.------.\x1b[0m"
+    - "\x1b[32m|\x1b[0m  \x1b[33m=_=\x1b[0m \x1b[32m|\x1b[0m"
+    - "\x1b[32m'--++--'\x1b[0m"
+    - "\x1b[32m===++===\x1b[0m"
+
+success:
+  - - "\x1b[32m.------.\x1b[0m"
+    - "\x1b[32m|\x1b[0m  \x1b[33m^o^\x1b[0m \x1b[32m|\x1b[0m"
+    - "\x1b[32m'--++--'\x1b[0m"
+    - "\x1b[32m ==++== \x1b[0m"
+
+failure:
+  - - "\x1b[32m.------.\x1b[0m"
+    - "\x1b[32m|\x1b[0m  \x1b[33m>_<\x1b[0m \x1b[32m|\x1b[0m"
+    - "\x1b[32m'--++--'\x1b[0m"
+    - "\x1b[32m===!!===\x1b[0m"
+
+compact:
+  - - "\x1b[32m.------.\x1b[0m"
+    - "\x1b[32m|\x1b[0m  \x1b[33m-᷅_-᷄\x1b[0m;\x1b[32m|\x1b[0m"
+    - "\x1b[32m'--++--'\x1b[0m"
+    - "\x1b[32m  =@@=  \x1b[0m"

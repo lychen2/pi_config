@@ -2,6 +2,7 @@ import type { ExtensionAPI, ExtensionContext, Theme } from "@earendil-works/pi-c
 import { Key, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 import type { VisualTheme } from "./visual-style.ts";
 import { renderSoftLabel } from "./visual-style.ts";
+import { dashboard } from "./dashboard-state.ts";
 
 export const PLAN_WIDGET_KEY = "tool-rails-plan";
 // Alt+T is the panel slot's historic key: the Default profile hides the todo tool while
@@ -61,6 +62,7 @@ export function renderPlanWidget(
   theme: Theme,
   width: number,
   expanded = true,
+  maxRows = Infinity,
 ): string[] {
   if (!steps.length || width <= 0) return [];
   const done = steps.filter(step => step.status === "completed").length;
@@ -74,8 +76,18 @@ export function renderPlanWidget(
   const lines = [heading];
   if (!expanded) return lines.map(line => truncateToWidth(line, width, "…"));
 
-  // Keep the current step visible without allowing a large plan to fill the TUI.
+  // A shared dashboard allocates fewer rows than the standalone panel.
+  // Reserve an omission row and center the slice on the current step.
   const active = steps.findIndex(step => step.status === "in_progress");
+  if (Number.isFinite(maxRows)) {
+    const count = Math.max(0, Math.min(steps.length, maxRows - (steps.length + 1 > maxRows ? 2 : 1)));
+    const start = Math.max(0, Math.min(active - Math.floor(count / 2), steps.length - count));
+    for (const step of steps.slice(start, start + count)) lines.push(stepLine(theme, step));
+    if (count < steps.length) lines.push(theme.fg("dim", `  … ${steps.length - count} more · Alt+T`));
+    return lines.map(line => truncateToWidth(line, width, "…"));
+  }
+
+  // Keep the current step visible without allowing a large plan to fill the TUI.
   const start = Math.max(0, Math.min(active - 3, steps.length - MAX_VISIBLE_STEPS));
   if (start > 0) lines.push(theme.fg("dim", `  … ${start} earlier steps`));
   for (const step of steps.slice(start, start + MAX_VISIBLE_STEPS)) lines.push(stepLine(theme, step));
@@ -199,6 +211,7 @@ export function installPlanWidget(pi: ExtensionAPI): void {
   function refresh(ctx: ExtensionContext): void {
     if (!ctx.hasUI || ctx.mode !== "tui") return;
     if (!steps.length) {
+      dashboard.setPanel("plan");
       if (mountedContext) ctx.ui.setWidget(PLAN_WIDGET_KEY, undefined);
       mountedContext = undefined;
       mountedTui = undefined;
@@ -208,8 +221,13 @@ export function installPlanWidget(pi: ExtensionAPI): void {
     const snapshot = steps;
     ctx.ui.setWidget(PLAN_WIDGET_KEY, (tui, theme) => {
       mountedTui = tui as { requestRender?: (force?: boolean) => void };
+      dashboard.setPanel("plan", {
+        render: (width: number, maxRows?: number) => renderPlanWidget(snapshot, theme, width, expanded, maxRows),
+        invalidate() {},
+      });
       const component = {
         render: (width: number): string[] => {
+          if (dashboard.active) return [];
           const lines = renderPlanWidget(snapshot, theme, width, expanded);
           if (lines.length && syncPlanLayout(tui, component, memory)) tui.requestRender?.();
           return lines;
@@ -246,6 +264,7 @@ export function installPlanWidget(pi: ExtensionAPI): void {
     refresh(ctx);
   });
   pi.on("session_shutdown", () => {
+    dashboard.setPanel("plan");
     mountedContext?.ui.setWidget(PLAN_WIDGET_KEY, undefined);
     mountedContext = undefined;
     mountedTui = undefined;

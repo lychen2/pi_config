@@ -60,7 +60,7 @@ test("mounts with UI, toggles, opens details, resets and releases ownership", as
     registerCommand: (name, value) => commands.set(name, value),
   });
   let detailLines = [], renders = 0;
-  const ctx = { hasUI: true, ui: { setWidget: (key, factory) => widgets.push({ key, factory }), select: async (_title, labels) => labels[0], notify() {}, custom: async factory => {
+  const ctx = { mode: "tui", hasUI: true, ui: { setWidget: (key, factory) => widgets.push({ key, factory }), select: async (_title, labels) => labels[0], notify() {}, custom: async factory => {
     const detail = factory({ requestRender() {}, terminal: { rows: 24 } }, theme, {}, () => {});
     detailLines = detail.render(80);
     detail.handleInput("q");

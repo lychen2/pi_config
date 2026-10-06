@@ -24,14 +24,32 @@ Quiet TUI styling for Pi:
 - a pinned `Plan` panel above the editor follows successful `update_plan` calls and restores from the current session branch; it starts collapsed to a heading that counts steps, and `Alt+T` expands up to eight steps around the current step or collapses it again, without registering another task tool and without letting Pi's working-status line cover the plan
 - numbered, side-by-side `replace` diffs with old lines on the left, new lines on the right, multiple change groups, and shared indentation removed from each visible hunk
 - one blank line between tool blocks
-- a compact rounded prompt with model/provider/thinking metadata on its top edge, completions outside the frame, and no extra blank row before the footer; user messages use soft rounded surfaces and retain Markdown rendering
+- a compact rounded prompt with model/provider/thinking metadata in the portrait dashboard, completions outside the frame, and no extra blank row before the footer; user messages use soft rounded surfaces and retain Markdown rendering
 - a native-compatible `✦ 思考` fold that stays on one row while the model thinks and after it settles, reporting `N 步 · 18s` (step count plus measured thinking time); expanding it reveals the step tree with semantic titles, role-colored markers, and bounded detail, with unchanged `Ctrl+T` show/hide behavior, plus a theme-colored animated working HUD
 - cached settled tool rows so the working HUD does not repeatedly re-render completed tool output
 Tool ownership is conservative. The extension presents registered tools but does not claim `find` or `ls`; those remain under Pi or another search owner. Guarded presentation bridges apply the common label column and result formatting at the exported `ToolExecutionComponent` layer. Diff markers and gutters remain aligned while shared code indentation is removed per visible hunk and relative indentation is retained.
 
+## Portrait dashboard
+
+The bundled [pi-agent-portrait fork](portrait/FORK.md) displays an animated portrait above the editor.
+The default `lamb-hood` character has 30 transparent frames covering all 17 animation states.
+The dashboard contains the existing model/provider/thinking label, context usage, token statistics, working directory, working indicator, Plan panel, and Agents panel.
+Wide terminals place the portrait and model statistics on the left, with the working indicator, Plan, and Agents on the right.
+With an eight-column portrait, this layout starts at 82 terminal columns. The right column uses at most nine rows.
+The working indicator retains its phase text, token count, elapsed time, and animated glyph.
+The original model and working rows are hidden while the dashboard is mounted.
+
+`Alt+T` expands the Plan panel. `/portrait` selects a character and saves the choice for the current project.
+Narrow terminals stack the sections. Below the configured `hideBelow` width, they hide the avatar and keep the text.
+Long panels show omission counts. The Plan panel keeps its current step visible.
+Unsupported image terminals use ASCII portraits.
+Set `enabled` to `false` in `~/.pi/agent/extensions/pi-emote/config.json`, then reload Pi to restore separate views.
+
+The fork ships inside this package. No additional package registration or image-service call is required.
+
 ## Teammate dashboard
 
-`teammate-panel.ts` shows a live, theme-colored `Agents` widget above the Plan panel and editor when `pi-maestro-teammate` emits task events. It lists up to five tasks, prioritizes active work, and shows status, elapsed time, tool calls, token counts and the latest progress/result. Narrow terminals omit the second line and truncate safely. Completed history is bounded to 50 entries; active tasks are retained.
+`teammate-panel.ts` supplies the live, theme-colored `Agents` section when `pi-maestro-teammate` emits task events. It lists up to five tasks, prioritizes active work, and shows status, elapsed time, tool calls, token counts and the latest progress/result. Narrow terminals omit the second line and truncate safely. Completed history is bounded to 50 entries; active tasks are retained.
 
 - `Ctrl+Alt+A` or `/agents-panel` toggles the one-line summary.
 - `/agents-panel open` selects an agent and opens its task, model, status and latest result/error; use arrow keys to scroll and Escape to close.

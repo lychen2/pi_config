@@ -4,6 +4,7 @@ import { registerContinuity } from "./continuity.ts";
 import { registerWireGuard } from "./wire-guard.ts";
 import { registerSolCacheCompatibility } from "./sol-cache-compat.ts";
 import { tryRegisterSolPiCompatibility } from "./sol-pi-compat.ts";
+import registerTeammate from "./teammate.ts";
 
 type ExtensionFactory = (pi: ExtensionAPI) => void | Promise<void>;
 
@@ -19,6 +20,7 @@ async function loadExtension(specifier: string): Promise<ExtensionFactory> {
 }
 
 export default async function contextBridge(pi: ExtensionAPI): Promise<void> {
+  await registerTeammate(pi);
   await tryRegisterSolPiCompatibility(pi, getAgentDir());
 
   let webAccessInitialized = false;

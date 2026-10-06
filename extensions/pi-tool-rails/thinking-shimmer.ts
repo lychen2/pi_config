@@ -1,6 +1,8 @@
 import type { ExtensionAPI, ExtensionContext, Theme } from "@earendil-works/pi-coding-agent";
 import { shortToolName } from "./tool-presentations.mjs";
 
+import { dashboard } from "./dashboard-state.ts";
+
 type SpinnerMode = "requesting" | "thinking" | "responding" | "tool-input" | "tool-use";
 type ThemeColor = "accent" | "dim" | "error" | "muted" | "success" | "thinkingHigh" | "thinkingLow" | "thinkingMax" | "thinkingMedium" | "thinkingMinimal" | "thinkingOff" | "thinkingXhigh" | "toolOutput" | "toolTitle" | "warning";
 type AssistantTokenMessage = {
@@ -421,7 +423,9 @@ function installShimmer(pi: ExtensionAPI): void {
       const hud = hudParts.length > 0 ? themeFg("dim", `( ${hudParts.join(" · ")} )`) : "";
       const message = themeFg("muted", modeLabel(mode, [...activeTools.values()], currentPhaseLine()));
       widgetText = hud ? `${message} ${hud}` : message;
-      // Native Loader owns the animation clock and terminal redraw cycle.
+      dashboard.setWorking(widgetText);
+      sessionContext.ui.setWorkingVisible?.(!dashboard.active);
+      // Keep the native Loader ready when the portrait is disabled.
       sessionContext.ui.setWorkingMessage(widgetText);
     } catch {
       // A teardown can invalidate the context while a UI interval is winding down.
@@ -435,12 +439,11 @@ function installShimmer(pi: ExtensionAPI): void {
       ? effortInfo(pi)?.color ?? "thinkingXhigh"
       : "accent";
     try {
-      sessionContext.ui.setWorkingIndicator({
-        frames: reducedMotionEnabled()
-          ? [themeFg(color, GLYPHS[0])]
-          : SPINNER_FRAMES.map((glyph) => themeFg(color, glyph)),
-        intervalMs: 125,
-      });
+      const frames = reducedMotionEnabled()
+        ? [themeFg(color, GLYPHS[0])]
+        : SPINNER_FRAMES.map((glyph) => themeFg(color, glyph));
+      dashboard.setWorking(widgetText, frames, 125);
+      sessionContext.ui.setWorkingIndicator({ frames, intervalMs: 125 });
     } catch {
       // A session replacement can invalidate its UI between event dispatches.
     }
@@ -510,6 +513,7 @@ function installShimmer(pi: ExtensionAPI): void {
   function resetTurn(resetOutput = false): void {
     stopShimmer();
     widgetText = "";
+    dashboard.setWorking("");
     try { ctx?.ui.setWorkingMessage(); } catch { /* session context retired */ }
     mode = "requesting";
     phaseOrder.splice(0, phaseOrder.length);
@@ -553,7 +557,9 @@ function installShimmer(pi: ExtensionAPI): void {
     turnActive = false;
     stopShimmer();
     widgetText = "";
+    dashboard.setWorking("");
     try {
+      ctx?.ui.setWorkingVisible?.(true);
       ctx?.ui.setWorkingMessage();
       ctx?.ui.setWorkingIndicator();
     } catch {
@@ -574,7 +580,7 @@ function installShimmer(pi: ExtensionAPI): void {
 
   pi.on("agent_start", async (_event, sessionContext) => {
     if (sessionContext.mode !== "tui" || !ctx) return;
-    ctx.ui.setWorkingVisible?.(true);
+    ctx.ui.setWorkingVisible?.(!dashboard.active);
     if (!agentStart) agentStart = Date.now();
     if (!turnActive) initTurn(true);
   });
@@ -689,6 +695,7 @@ function installShimmer(pi: ExtensionAPI): void {
     turnActive = false;
     stopShimmer();
     widgetText = "";
+    dashboard.setWorking("");
     try {
       sessionContextAtStart.ui.setWorkingMessage();
       sessionContextAtStart.ui.setWorkingIndicator();

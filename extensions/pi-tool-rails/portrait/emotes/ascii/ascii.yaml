@@ -1,0 +1,38 @@
+# ASCII fallback emotes for terminals without image support.
+# Each state has named frames matching the image-based counterparts.
+# Frames are plain text — rendered directly in the widget.
+
+hi:
+  default: "(^ ◡ ^)/"
+
+idle:
+  default: "(• ◡ •)"
+  blink:   "(- ◡ -)"
+
+think:
+  default: "(•_ • )?"
+  hard:    "(-᷅_ -᷄\") "
+
+talk:
+  close:       "(• _ •)"
+  open_small:  "(• . •)"
+  open_medium: "(• o •)"
+  open_wide:   "(• O •)"
+
+read:
+  - "( ╭ರᴥ•́)⠉"
+  - "( ╭ರᴥ•)⠒"
+  - "( ╭ರᴥ•)⠤"
+
+write:
+  - "( ｡ ｡).φ"
+  - "( ｡ ｡)φ."
+
+tool:
+  - "( • ω•)/"
+  - "( • ω•)\\"
+
+failure: "( ° Д°)#"
+
+
+compact: "(-᷅_ -᷄;)"

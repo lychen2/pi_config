@@ -1,6 +1,6 @@
 {
   "name": "pi-context-bridge",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Default-profile bridge for Web Access and manager models",
   "license": "MIT",
   "type": "module",
@@ -30,8 +30,7 @@
   "pi": {
     "extensions": [
       "./index.ts",
-      "./rtk.ts",
-      "./teammate.ts"
+      "./rtk.ts"
     ]
   },
   "scripts": {

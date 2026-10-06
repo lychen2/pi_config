@@ -1,0 +1,52 @@
+{
+  "name": "pi-agent-portrait",
+  "version": "0.4.0",
+  "type": "module",
+  "description": "Animated pixel-art portrait for the pi coding agent that reacts to thinking, tools, failures and idle time, with a script that draws a custom character for each agent",
+  "author": "testy-cool, based on pi-emote by CGx",
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test \"tests/*.test.ts\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/testy-cool/pi-agent-portrait.git"
+  },
+  "homepage": "https://github.com/testy-cool/pi-agent-portrait#readme",
+  "bin": {
+    "draw-portrait": "scripts/draw-portrait"
+  },
+  "keywords": [
+    "ai-agents",
+    "avatar",
+    "coding-agent",
+    "emote",
+    "kitty-graphics",
+    "pi-coding-agent",
+    "pi-extension",
+    "pi-package",
+    "pixel-art",
+    "terminal",
+    "tui"
+  ],
+  "files": [
+    "src",
+    "emotes",
+    "scripts",
+    "!emotes/test",
+    "!emotes/_unused",
+    "config.json",
+    "README.md",
+    "LICENSE"
+  ],
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ],
+    "image": "https://raw.githubusercontent.com/testy-cool/pi-agent-portrait/main/docs/demo.gif"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*"
+  }
+}

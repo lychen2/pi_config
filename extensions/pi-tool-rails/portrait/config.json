@@ -1,0 +1,39 @@
+{
+  "enabled": true,
+  "debug": false,
+  "size": 8,
+  "readingSpeed": 1000,
+  "hideBelow": 40,
+  "holdDuration": {
+    "hi": 2000,
+    "success": 1200,
+    "failure": 1200
+  },
+  "blinkInterval": [3000, 6000],
+  "talkTickMs": 120,
+  "cycleMs": 500,
+  "emotes": [
+    { "model": "*", "emote-set": "lamb-hood" }
+  ],
+  "terminals": [
+    { "match": "zellij", "render": "ascii" },
+    { "match": "tmux", "render": "auto" },
+    { "match": "screen", "render": "ascii" },
+    { "match": "wezterm", "render": "iterm2" },
+    { "match": "ghostty", "render": "kitty" },
+    { "match": "warpterminal", "render": "kitty" }
+  ],
+  "theme": {
+    "model-name": "thinking-level-color",
+    "progress-bar": {
+      "default": "text",
+      "cache-hit": "success",
+      "cache-miss": "error",
+      "almost-full": "warning"
+    },
+    "token-info": "dim",
+    "working-directory": "warning",
+    "border": "thinking-level-color",
+    "vertical-separator": "thinking-level-color"
+  }
+}

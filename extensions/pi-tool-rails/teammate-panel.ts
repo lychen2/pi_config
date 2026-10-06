@@ -3,6 +3,7 @@ import { Key, Text, matchesKey, truncateToWidth } from "@earendil-works/pi-tui";
 import type { VisualState, VisualTheme } from "./visual-style.ts";
 import { renderSoftLabel } from "./visual-style.ts";
 import { AGENTS_PANEL_TAG } from "./plan-widget.ts";
+import { dashboard } from "./dashboard-state.ts";
 
 export const TEAMMATE_PANEL_KEY = "tool-rails-agents";
 export const TEAMMATE_PANEL_TOGGLE = Key.ctrlAlt("a");
@@ -75,7 +76,7 @@ export class TeammatePanelStore {
   }
 }
 
-export function renderTeammatePanel(store: TeammatePanelStore, theme: Theme, width: number, expanded = true, now = Date.now()): string[] {
+export function renderTeammatePanel(store: TeammatePanelStore, theme: Theme, width: number, expanded = true, now = Date.now(), maxRows = Infinity): string[] {
   const rows = store.visible();
   if (!rows.length || width < 1) return [];
   const running = rows.filter(active).length;
@@ -85,19 +86,20 @@ export function renderTeammatePanel(store: TeammatePanelStore, theme: Theme, wid
   const badge = renderSoftLabel(theme as unknown as VisualTheme, "Agents", state);
   const lines = [badge + theme.fg("dim", `  ${running} active · ${done} done${failed ? ` · ${failed} failed` : ""}  Ctrl+Alt+A`)];
   if (expanded) {
-    for (const row of rows.slice(0, 5)) {
+    const limit = Math.min(5, Number.isFinite(maxRows) ? Math.max(0, maxRows - (rows.length + 1 > maxRows ? 2 : 1)) : 5);
+    for (const row of rows.slice(0, limit)) {
       const color = row.status === "failed" ? "error" : row.status === "completed" ? "success" : active(row) ? "warning" : "muted";
       const icon = row.status === "completed" ? "✓" : row.status === "failed" ? "✗" : row.status === "terminated" ? "–" : row.status === "pending" ? "○" : "●";
       const elapsed = active(row) && row.startedAt ? Math.max(0, now - row.startedAt) : row.durationMs ?? 0;
       const usage = `${row.toolCount === undefined ? "" : ` · ${row.toolCount} tools`}${row.tokens === undefined ? "" : ` · ${row.tokens.toLocaleString("en-US")} tok`}`;
       const currentRail = active(row) ? `${theme.fg(color, "▏")} ` : "  ";
       lines.push(`${currentRail}${theme.fg(color, icon)} ${theme.fg("text", row.name || row.agent)} ${theme.fg("dim", `${row.status} · ${duration(elapsed)}${usage}`)}`);
-      if (width >= 65) {
+      if (width >= 65 && !Number.isFinite(maxRows)) {
         const detail = row.error || row.lastMessage || row.task || row.resolvedModel;
         if (detail) lines.push(theme.fg("dim", `    ${detail}`));
       }
     }
-    if (rows.length > 5) lines.push(theme.fg("dim", `  +${rows.length - 5} more · /agents-panel open`));
+    if (rows.length > limit) lines.push(theme.fg("dim", `  +${rows.length - limit} more · /agents-panel open`));
   }
   return lines.map(line => truncateToWidth(line, width, "…"));
 }
@@ -112,8 +114,9 @@ export function installTeammatePanel(pi: ExtensionAPI): void {
   let mounted = false;
   const own = (agents: boolean) => pi.events.emit("cockpit:ui-ownership", { agents, sessionList: false, quiet: false });
   const draw = () => {
-    if (!ctx?.hasUI) return;
+    if (!ctx?.hasUI || ctx.mode !== "tui") return;
     if (!store.rows.size) {
+      dashboard.setPanel("agents");
       if (mounted) ctx.ui.setWidget(TEAMMATE_PANEL_KEY, undefined);
       mounted = false;
       requestRender = undefined;
@@ -124,7 +127,8 @@ export function installTeammatePanel(pi: ExtensionAPI): void {
     if (!mounted) {
       ctx.ui.setWidget(TEAMMATE_PANEL_KEY, (tui, theme) => {
         requestRender = () => tui.requestRender();
-        return { [AGENTS_PANEL_TAG]: true, render: (width: number) => renderTeammatePanel(store, theme, width, expanded), invalidate() {} };
+        dashboard.setPanel("agents", { render: (width: number, maxRows?: number) => renderTeammatePanel(store, theme, width, expanded, Date.now(), maxRows), invalidate() {} });
+        return { [AGENTS_PANEL_TAG]: true, render: (width: number) => dashboard.active ? [] : renderTeammatePanel(store, theme, width, expanded), invalidate() {} };
       }, { placement: "aboveEditor" });
       mounted = true;
     } else {
@@ -144,7 +148,7 @@ export function installTeammatePanel(pi: ExtensionAPI): void {
     if (mounted && ctx?.hasUI) ctx.ui.setWidget(TEAMMATE_PANEL_KEY, undefined);
     mounted = false; requestRender = undefined;
     ctx = context; store = new TeammatePanelStore(); expanded = true;
-    if (ctx.hasUI) own(true);
+    if (ctx.hasUI && ctx.mode === "tui") own(true);
     draw();
   });
   pi.registerShortcut(TEAMMATE_PANEL_TOGGLE, {
@@ -188,6 +192,7 @@ export function installTeammatePanel(pi: ExtensionAPI): void {
     },
   });
   pi.on("session_shutdown", () => {
+    dashboard.setPanel("agents");
     if (timer) clearInterval(timer);
     timer = undefined; requestRender = undefined;
     if (ctx?.hasUI) {

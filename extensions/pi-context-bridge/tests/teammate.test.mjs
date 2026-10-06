@@ -96,6 +96,21 @@ test("Pi validates the public schema and streaming previews tolerate incomplete 
   assert.equal(previewTeammateDispatch(valid).tasks[0].prompt, task.goal);
 });
 
+test("context bridge exposes the teammate tool through its package entrypoint", async () => {
+  const bridge = await jiti.import("../index.ts");
+  const tools = [];
+  const pi = {
+    registerTool: tool => tools.push(tool),
+    on: () => () => {},
+    events: { on: () => () => {}, emit: () => {} },
+    registerCommand: () => {},
+    registerShortcut: () => {},
+  };
+
+  await bridge.default(pi);
+  assert.ok(tools.some(tool => tool.name === "teammate"));
+});
+
 test("bridge registers a lightweight teammate proxy and loads upstream on first use", async (t) => {
   // This fixture exercises root registration even when run by a delegated reviewer.
   const childMode = process.env.PI_TEAMMATE_CHILD;
