@@ -69,7 +69,7 @@
 
 首次运行会由 `uvx` 下载 Python 3.13 和固定版本 `cadgen==0.7.21`。默认 MCP 服务 `cad` 处于禁用状态；需要 MCP 操作时在 Pi 中运行 `/mcp` 启用它，再运行 `/reload`。配置默认设置 `DO_NOT_TRACK=1`。Pi 没有上游插件的 CAD Viewer 面板；仍可生成和检查文件，并按技能指引启动本地 Viewer。
 
-技能源码和参考资料位于 [`../skills/cad/`](../skills/cad/)，通过 `scripts/deploy-skills.mjs` 管理。上游来源是 [`earthtojake/text-to-cad`](https://github.com/earthtojake/text-to-cad)，更新时将 `latest` 分支的 `skills/cad/` 文件整体同步至此，并在仓库记录来源提交。
+技能源码和参考资料位于 [`../skills/cad/`](../skills/cad/)，通过 `scripts/deploy-skills.mjs` 管理。上游来源是 [`earthtojake/text-to-cad`](https://github.com/earthtojake/text-to-cad)，当前基于 `latest` 分支提交 `a499253845c717e5144471ca75f9eb0f90e7964f`。更新时整体同步 `skills/cad/` 的说明与参考资料，保留本地的 Pi 查看器适配和 `SOURCES.md`，再记录新的来源提交。
 
 ## 组合建议
 

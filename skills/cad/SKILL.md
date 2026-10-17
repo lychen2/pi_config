@@ -177,9 +177,9 @@ geometric evidence. `cadgen store why <model>.py` explains unexpected rebuilds;
 build progress. More diagnostics are in the [model contract](references/step-generation.md).
 
 Include output files, checks actually run, and material assumptions or
-limitations in the final response. The user sees the model in the viewer (Show
-the model), so don't attach snapshots unless they ask for an image. Explain any
-snapshot skip or failure using the cases in the snapshot reference.
+limitations in the final response. Attach snapshots only when the user asks for
+an image. Explain any snapshot skip or failure using the cases in the snapshot
+reference.
 
 ### Show the model
 
@@ -190,7 +190,8 @@ validation don't replace this.
   absolute path, and follow its description for when to call it again. `cad_view` reads
   what the user selected; `cad_screenshot` shows you what they see. Neither is a review
   of your own work.
-- Otherwise run the CAD Viewer, from any folder:
+- Pi has no native `cad_show` tool. Start the local CAD Viewer only when the user needs
+  to see a model. From any folder, run:
 
   ```bash
   cadgen viewer --host 127.0.0.1 --json --detach
@@ -199,8 +200,9 @@ validation don't replace this.
   `--detach` returns once the viewer answers requests and leaves it running in the
   background: always pass it, since a foreground viewer never exits (and piping its
   output through `tail` can hide the URL for good). It starts this machine's one viewer,
-  or reuses it. Read `url` from its one JSON line (never guess the port), and for each
-  file return `url?file=<its URL-encoded absolute path>`. If it fails to launch, say so.
+  or reuses it. Read `url` from its one JSON line (never guess the port), and provide
+  `url?file=<its URL-encoded absolute path>` for each file. If it fails to launch,
+  say so.
 
 Generate changed artifacts first: the viewer never runs model scripts. Existing
 STEP files compile on open when needed. Topology selection and measurement
