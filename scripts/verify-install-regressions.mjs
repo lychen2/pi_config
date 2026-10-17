@@ -58,7 +58,7 @@ try {
   assert.deepEqual(externalPackages, [
     "npm:@pi-lab/notify", "npm:pi-model-system-prompt",
     "npm:@cortexkit/pi-magic-context", "npm:@narumitw/pi-plan-mode",
-    "npm:@juicesharp/rpiv-ask-user-question", "npm:pi-slopchop", "npm:pi-btw",
+    "npm:@juicesharp/rpiv-ask-user-question", "npm:pi-btw",
     "npm:@victor-software-house/pi-curated-themes",
   ]);
   assert.ok(!externalPackages.some(entry => /^npm:.*@\d/.test(entry)), "npm sources must not pin a version");

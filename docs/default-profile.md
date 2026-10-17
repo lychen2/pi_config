@@ -30,6 +30,8 @@ Native tool search and local skill search have different catalogs. Native schema
 
 The five default local runtime packages are `pi-context-bridge`, `pi-default-workbench`, `pi-slim-skills`, `pi-tool-rails`, and `pi-cache-drop-guard`. `pi-zh-localizer` is an installer patcher. Source-only compatibility packages are not extra runtime registrations.
 
+`pi-slopchop` is opt-in for interactive Git-diff review; it is absent from the default external list. Install it explicitly when needed. `pi-compaction-model` also remains opt-in; its declared Pi range excludes the host's observed 1.3.0 installation.
+
 Workbench search can use a cached local embedding model; lexical BM25 remains available when embeddings are absent or disabled. Starting Pi does not download model weights by default. Explicitly enabled downloads still honor offline mode. See `extensions/pi-default-workbench/README.md` for the explicit download option and local-model behavior.
 
 Use the installed Pi's startup benchmark in an interactive terminal:
@@ -71,6 +73,8 @@ The npm preset remains intact. Local GPT refinements cover proportional verifica
 `scripts/deploy-skills.mjs` owns the managed skill list. It preserves user-added skills and archives only explicitly retired managed names. Scientific calculations retain their relevant unit, approximation, numerical and evidence checks. Skill metadata should describe the task that benefits from the guidance; references are opened when needed for that task.
 
 The active Manim entries in `.pi/agent/skills` may point to `.agents/skills`. Resolve symlinks before treating matching names as duplicate installations. Package-provided skills remain owned by their package.
+
+Keep native skill discovery enabled in launch wrappers. Pi scans user, project, Agent Skills, and enabled package locations. `search_skill_bm25` searches discovered metadata and loads selected instructions on demand. `--no-skills` restricts discovery; it does not enable BM25 loading. The host wrapper no longer selects the retired curated directory. The empty body-injection allowlist remains unchanged.
 
 ## Updates and verification
 

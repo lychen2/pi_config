@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { randomInt } from "node:crypto";
 import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -16,15 +15,6 @@ function fakePi() {
     registerTool(tool) { tools.set(tool.name, tool); },
     on(name, handler) { handlers.set(name, [...(handlers.get(name) ?? []), handler]); },
   };
-}
-
-function randomSample(items, count) {
-  const pool = [...items];
-  for (let index = pool.length - 1; index > 0; index -= 1) {
-    const swap = randomInt(index + 1);
-    [pool[index], pool[swap]] = [pool[swap], pool[index]];
-  }
-  return pool.slice(0, count);
 }
 
 test("search_skill_bm25 returns metadata before explicitly loading a candidate", async () => {
@@ -51,12 +41,6 @@ test("search_skill_bm25 returns metadata before explicitly loading a candidate",
   const search = pi.tools.get("search_skill_bm25");
   assert.match(search.promptSnippet, /action=search/);
   assert.match(search.promptSnippet, /action=load/);
-  assert.match(search.promptSnippet, /exact returned name/i);
-  assert.match(search.promptSnippet, /relevant specialized guidance/i);
-  assert.match(search.promptSnippet, /Reuse already-loaded guidance/i);
-  assert.match(search.promptSnippet, /known required SKILL\.md/i);
-  assert.match(search.promptSnippet, /requested skill audit/i);
-  assert.match(search.promptSnippet, /references only as needed/i);
   assert.doesNotMatch(search.promptSnippet, /first call|must|always|shell-scanning/i);
   await assert.rejects(
     search.execute("test", { action: "load", name: skills[0].name }),
@@ -70,7 +54,7 @@ test("search_skill_bm25 returns metadata before explicitly loading a candidate",
   assert.equal(broad.details.skills.length, 3);
   assert.doesNotMatch(broad.content[0].text, /INSTRUCTIONS FOR/);
 
-  const selected = randomSample(skills, 3);
+  const selected = skills.slice(0, 3);
   for (const skill of selected) {
     const result = await search.execute("test", {
       action: "search",

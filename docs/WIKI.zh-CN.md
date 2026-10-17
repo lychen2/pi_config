@@ -105,15 +105,15 @@ Pi 是终端编码代理。它将当前目录、`AGENTS.md`、已启用技能和
 
 1. 提供范围，例如 `审阅当前分支相对 main 的改动`。
 2. 指明优先级：错误、安全、回归和测试缺口。
-3. 使用 `pi-slopchop` 的 `/slopchop` 或 `/diff` 获得终端内审阅视图。
+3. 需要终端内差异视图时，运行 `pi install npm:pi-slopchop` 并重新加载，再使用 `/slopchop` 或 `/diff`。
 4. 让模型按严重程度输出带文件路径和行号的发现。
 
 ### 科研与文献
 
 1. PDF、表格和公式抽取：`/skill:mineru-file-processing`；任务中说明是否需要页码和 OCR。
-2. 科学图表：先加载 `/skill:figure-style`，再加载 `/skill:scientific-visualization`，只用已有数据。
-3. 中文或英文润色：`/skill:humanizer-zh` 或 `/skill:humanizer`，保留术语和引用。
-4. 其他已同步但默认未发现的技能，先查[技能目录](skills.zh-CN.md)，再用 `/slim-skills inject <名称>` 显式注入。
+2. 科学图表：加载 `/skill:scientific-visualization`，只用已有数据。
+3. 中文润色使用 `/skill:humanizer-zh`；科研写作使用 `/skill:scientific-writing`，保留术语和引用。
+4. 其他技能可让模型通过 `search_skill_bm25` 搜索元数据，再按需读取所选正文；也可显式调用 `/skill:<名称>`。
 
 ### 联网资料
 

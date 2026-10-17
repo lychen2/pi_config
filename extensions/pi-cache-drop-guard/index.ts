@@ -86,10 +86,7 @@ export function readPositiveInt(raw: string | undefined, fallback: number, min =
 
 /** 允许 0（=一直等），非法值回落默认。 */
 export function readNonNegativeInt(raw: string | undefined, fallback: number): number {
-  if (raw === undefined) return fallback;
-  const parsed = Number.parseInt(raw.trim(), 10);
-  if (!Number.isFinite(parsed) || parsed < 0) return fallback;
-  return parsed;
+  return readPositiveInt(raw, fallback, 0);
 }
 
 export function resolveGuardSettings(
@@ -337,7 +334,7 @@ export function collectCacheHistory(
   options: CollectOptions,
 ): CacheHistory {
   const records: CacheTurnRecord[] = [];
-  const totals: CacheTotals = emptyTotals();
+  let totals: CacheTotals = emptyTotals();
   const reportedModels = new Set<string>();
   let prev: CacheBaseline | undefined;
 
@@ -360,12 +357,7 @@ export function collectCacheHistory(
     });
     if (usage.cacheRead > 0 || usage.cacheWrite > 0) reportedModels.add(modelKey);
 
-    if (assessment) {
-      totals.missedTokens += assessment.missedTokens;
-      totals.missedCost += assessment.missedCost;
-      totals.missCount += 1;
-      if (assessment.obvious) totals.notableCount += 1;
-    }
+    if (assessment) totals = accumulateTotals(totals, assessment);
 
     records.push(cacheTurnRecord(prev, usage, assessment));
     prev = baselineFrom(usage) ?? prev;

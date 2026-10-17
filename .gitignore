@@ -63,8 +63,11 @@ skills/venue-templates/assets/journals/*
 # Machine-local overrides
 .pi/settings.local.json
 
-# Plan-mode session drafts
+# Local plans, audit reports, handoff notes, and review diagrams
 /docs/plans/
+/docs/audits/
+/docs/HANDOFF-*.md
+/docs/*-AUDIT*.md
 
 # Legacy large-mode launcher (superseded by /large on)
 /bin/pi-large

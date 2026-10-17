@@ -8,7 +8,7 @@ npm:@cortexkit/pi-magic-context
 npm:@narumitw/pi-plan-mode
 npm:@juicesharp/rpiv-ask-user-question
 # Web Access is loaded by pi-context-bridge.
-npm:pi-slopchop
+# pi-slopchop stays opt-in for interactive Git-diff review.
 # Parallel side conversations; /btw:ask is the read-only entry.
 npm:pi-btw
 # pi-mcp-adapter is installed only when a user-configured server requires it.

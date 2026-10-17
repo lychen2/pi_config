@@ -52,11 +52,12 @@
 | `@cortexkit/pi-magic-context` | 持久记忆、历史搜索与上下文回收 | `ctx_search`、`ctx_memory`、`ctx_note`、`ctx_expand`、`ctx_reduce` |
 | `@narumitw/pi-plan-mode` | 只读的计划协作模式 | `/plan` |
 | `@juicesharp/rpiv-ask-user-question` | 有选项、可结构化回答的问题组件 | 模型在需要澄清时调用 `ask_user_question` |
-| `pi-slopchop` | 终端内代码审阅与注释 | `/slopchop` 或 `/diff` |
 | `pi-workspace-history` | 工作区级撤销与重做 | 在需要回退文件改动时调用其命令；先查看 `/hotkeys` 中实际注册键位 |
 | `pi-rtk-optimizer` | RTK 命令改写和通用工具输出压缩 | `/rtk verify`；需要安装 `rtk` binary |
 | `@victor-software-house/pi-curated-themes` | 额外终端主题资源 | `/settings` 中选择主题 |
 | `git:github.com/BevalZ/pi-provider` | 配置与检查自定义 provider | `/provider add`，再用 `/model` 选择模型 |
+
+`pi-slopchop` 现为可选工具，需要终端内 Git 差异审阅时运行 `pi install npm:pi-slopchop`。安装并重新加载后可使用 `/slopchop` 或 `/diff`。
 
 ## 组合建议
 
