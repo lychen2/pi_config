@@ -9,6 +9,8 @@ Collapsed cards show purpose, target, status and a short result, normally in two
 Background teammate dispatch is labeled `已派发`; its compact card shows task names and goals. SoL `obs_recall` shows the observation ID, offsets and available line count; recovered evidence appears on expansion. `update_plan` keeps the active-step view and pinned Plan widget. Action-fusion edits retain their proportional diff bars, and a failed `then_run` marks both the header and summary as failed. Measured savings and live sleep progress remain visible.
 
 
+Native image results keep their text card, with images displayed below it. Kitty and iTerm2 image rows retain native spacing across expansion and resizing. Background images are temporarily hidden while an overlay, including `/btw`, is visible. Closing the overlay restores them.
+
 Quiet TUI styling for Pi:
 
 - short top-edge tool labels with adjacent icons and a separate truthful status badge; below 48 columns, compact rails put status first. Material Symbols Rounded glyphs remain available via `PI_TOOL_RAILS_ICON_STYLE=material`

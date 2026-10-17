@@ -2,11 +2,12 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { initTheme, ToolExecutionComponent, BashExecutionComponent } from "@earendil-works/pi-coding-agent";
-import { Text, visibleWidth } from "@earendil-works/pi-tui";
+import { getCapabilities, setCapabilities, Text, TuiAltScreen, TuiMainScreen, visibleWidth } from "@earendil-works/pi-tui";
 import labeledToolShell from "../compact-shell.ts";
 import { TOOL_PRESENTATIONS } from "../tool-presentations.mjs";
 import { measuredSavingsLine } from "../codemode-tree.ts";
 
+const isImageLine = line => line.includes("\x1b_G") || line.includes("\x1b]1337;File=");
 const theme = { fg: (_color, text) => text, bg: (_color, text) => text, bold: text => text };
 const plain = text => text.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "");
 const toolResult = (text, extra = {}) => ({ content: [{ type: "text", text }], isError: false, ...extra });
@@ -32,6 +33,113 @@ function harness() {
     },
   };
 }
+
+test("native tool images retain their rows outside the framed text across expansion and resize", () => {
+  const previousCapabilities = getCapabilities();
+  const h = harness();
+  const data = readFileSync(new URL("../portrait/emotes/lamb-hood/idle/idle.png", import.meta.url)).toString("base64");
+  try {
+    for (const protocol of ["kitty", "iterm2"]) {
+      setCapabilities({ ...previousCapabilities, images: protocol });
+      for (const name of ["read", "codemode", "mcp__blender__get_viewport_screenshot"]) {
+        const result = toolResult("Image preview", {
+          content: [{ type: "text", text: "Image preview" }, ...Array.from({ length: 2 }, () => ({ type: "image", mimeType: "image/png", data }))],
+        });
+        const component = h.make(name, { path: "preview.png" }, result);
+        for (const expanded of [false, true]) {
+          component.setExpanded(expanded);
+          for (const width of [24, 80, 42]) {
+            const lines = component.render(width);
+            const innerWidth = width < 48 ? width - 2 : width - 4;
+            const nativeImages = component.imageComponents.flatMap((image, index) => [
+              ...component.imageSpacers[index].render(innerWidth), ...image.render(innerWidth),
+            ]);
+            const textEnd = lines.length - nativeImages.length;
+            assert.ok(textEnd > 1, `${name}/${protocol}: missing framed text`);
+            assert.match(plain(lines[0]), /✓ 完成/);
+            if (width >= 48) assert.match(plain(lines[textEnd - 1]), /^╰─+╯$/);
+            assert.ok(lines.slice(0, textEnd).every(line => !isImageLine(line) && visibleWidth(line) <= width));
+            assert.ok(nativeImages.length > 4, "fixture must exercise multi-row images");
+            assert.deepEqual(lines.slice(textEnd), nativeImages, `${name}/${protocol}: image rows changed`);
+            assert.equal(lines.filter(isImageLine).length, 2);
+            assert.deepEqual(component.render(width), lines, "repeated render retains image layout");
+          }
+        }
+        if (name === "read") {
+          let output = "";
+          const tui = new TuiMainScreen({ columns: 80, rows: 100, write: data => { output += data; }, hideCursor() {}, showCursor() {} });
+          tui.addChild(component);
+          tui.addChild(new Text("Following tool", 0, 0));
+          tui.renderNow();
+          const imagePrefix = protocol === "kitty" ? "\x1b_G" : "\x1b]1337;File=";
+          assert.ok(output.indexOf("╯") < output.indexOf(imagePrefix), "TUI closes the card before drawing images");
+          assert.ok(output.lastIndexOf(imagePrefix) < output.indexOf("Following tool"), "next component follows the image rows");
+        }
+        component.setShowImages(false);
+        assert.ok(!component.render(80).some(isImageLine));
+        component.setShowImages(true);
+        assert.equal(component.render(80).filter(isImageLine).length, 2);
+      }
+    }
+  } finally {
+    setCapabilities(previousCapabilities);
+    h.close();
+  }
+});
+
+test("btw-style overlays hide background images and restore them after dismissal", () => {
+  const previousCapabilities = getCapabilities();
+  const overlayPrototype = Object.getPrototypeOf(TuiMainScreen.prototype);
+  const originalCompositor = overlayPrototype.compositeOverlays;
+  const h = harness();
+  const data = readFileSync(new URL("../portrait/emotes/lamb-hood/idle/idle.png", import.meta.url)).toString("base64");
+  try {
+    for (const protocol of ["kitty", "iterm2"]) {
+      setCapabilities({ ...previousCapabilities, images: protocol });
+      for (const Screen of [TuiMainScreen, TuiAltScreen]) {
+        const component = h.make("read", { path: "preview.png" }, {
+          content: [{ type: "image", mimeType: "image/png", data }], isError: false,
+        });
+        let output = "";
+        const tui = new Screen({ columns: 80, rows: 50, write: value => { output += value; }, hideCursor() {}, showCursor() {}, start() {}, stop() {} });
+        tui.addChild(component);
+        tui.start();
+        // Fullscreen disables iTerm2 globally; restore the capability to exercise custom image widgets too.
+        setCapabilities({ ...previousCapabilities, images: protocol });
+        component.updateDisplay();
+        output = "";
+        tui.renderNow();
+        assert.ok(output.includes(data.slice(0, 100)), `${Screen.name}/${protocol}: background image initially drawn`);
+        const markers = Array.from({ length: 24 }, (_, i) => `BTW overlay row ${i}`);
+        const overlay = tui.showOverlay(new Text(markers.join("\n"), 0, 0), { width: 40, anchor: "top-left" });
+        output = "";
+        tui.renderNow();
+        assert.ok(!output.includes(data.slice(0, 100)), `${Screen.name}/${protocol}: background image overlaps overlay`);
+        for (const marker of markers) assert.ok(output.includes(marker), `missing ${marker}`);
+        if (protocol === "kitty" && Screen === TuiMainScreen) {
+          assert.match(output, /\x1b_Ga=d,d=I,i=\d+/, "native renderer removes existing Kitty image");
+        }
+        overlay.setHidden(true);
+        output = "";
+        tui.renderNow();
+        assert.ok(output.includes(protocol === "kitty" ? "\x1b_Ga=p" : data.slice(0, 100)) || output.includes(data.slice(0, 100)), `${Screen.name}/${protocol}: hidden overlay restores images`);
+        overlay.setHidden(false);
+        output = "";
+        tui.renderNow();
+        assert.ok(!output.includes(data.slice(0, 100)), "reopened overlay suppresses images again");
+        overlay.hide();
+        output = "";
+        tui.renderNow();
+        assert.ok(output.includes(protocol === "kitty" ? "\x1b_Ga=p" : data.slice(0, 100)) || output.includes(data.slice(0, 100)), `${Screen.name}/${protocol}: dismissed overlay restores images`);
+        tui.stop();
+      }
+    }
+  } finally {
+    setCapabilities(previousCapabilities);
+    h.close();
+  }
+  assert.equal(overlayPrototype.compositeOverlays, originalCompositor, "shutdown restores the native compositor");
+});
 
 test("multiline commands collapse to purpose and script summary; expanding preserves code", () => {
   const h = harness();

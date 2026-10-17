@@ -1,5 +1,5 @@
 {
-  "toolMode": "adaptive",
+  "toolMode": "full",
   "disabledExtensions": [],
   "disabledTools": [
     "todowrite"

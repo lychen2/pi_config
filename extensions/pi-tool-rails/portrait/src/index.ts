@@ -5,6 +5,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 
 import type { EmoteState, ResolvedRenderer } from "./types.ts";
 import { ALL_STATES } from "./emotes.ts";
+import { TOOL_STATES, toolNameToState } from "./tool-states.ts";
 import type { Renderer } from "./renderer.ts";
 import { log, setDebug } from "./log.ts";
 import { loadLayeredConfig } from "./config.ts";
@@ -31,17 +32,6 @@ function hasImageFrames(setDir: string): boolean {
     }
   }
   return false;
-}
-
-function toolNameToState(toolName: string): EmoteState {
-  switch (toolName) {
-    case "read": return "read";
-    case "write":
-    case "edit": return "write";
-    case "bash": return "bash";
-  }
-  if (/search|web|fetch|browse|scrape|crawl/i.test(toolName)) return "search";
-  return "tool";
 }
 
 function createRendererFromResolved(resolved: ResolvedRenderer, size: number): Renderer {
@@ -82,6 +72,8 @@ export default function (pi: ExtensionAPI, integration?: DashboardIntegration) {
   let currentEmoteSet = "default";
   let ctxRef: any = null;
   let widgetActive = false;
+  let questionBlocked = false;
+  let requestWidgetRender: (() => void) | undefined;
   let lastResolved: ResolvedRenderer = { protocol: "ascii", multiplexer: null, warning: null, warningLevel: "info" };
   let renderer: Renderer = new AsciiRenderer();
   let greetingTimer: ReturnType<typeof setTimeout> | undefined;
@@ -210,6 +202,7 @@ export default function (pi: ExtensionAPI, integration?: DashboardIntegration) {
     animator.disposeRenderer();
     if (widgetActive && ctxRef) ctxRef.ui.setWidget("emote", undefined);
     integration?.unmount();
+    requestWidgetRender = undefined;
     widgetActive = false;
     animator.setTui(null);
     ctxRef = null;
@@ -245,6 +238,7 @@ export default function (pi: ExtensionAPI, integration?: DashboardIntegration) {
     }
 
     ctxRef = ctx;
+    questionBlocked = false;
 
     // Resolve emote set for current model and thinking level
     const modelId = ctx.model?.id ?? "";
@@ -264,6 +258,8 @@ export default function (pi: ExtensionAPI, integration?: DashboardIntegration) {
       getCtxRef: () => ctxRef,
       getCurrentEmoteSet: () => currentEmoteSet,
       getRevision: () => revision,
+      isHidden: () => questionBlocked,
+      onRenderReady: (requestRender) => { requestWidgetRender = requestRender; },
       integration,
     }), { placement: "aboveEditor" });
 
@@ -275,6 +271,11 @@ export default function (pi: ExtensionAPI, integration?: DashboardIntegration) {
   });
 
   pi.on("session_shutdown", dispose);
+
+  pi.events.on("rpiv:ask-user:blocked", (payload) => {
+    questionBlocked = (payload as { active?: boolean } | null)?.active === true;
+    if (widgetActive) requestWidgetRender?.();
+  });
 
   pi.on("model_select", async (event) => {
     if (!widgetActive) return;
@@ -336,15 +337,15 @@ export default function (pi: ExtensionAPI, integration?: DashboardIntegration) {
   // A question can open while a tool runs (or for /portrait itself); when it
   // closes, go back to that activity instead of idle.
   let stateBeforeWait: EmoteState = "idle";
-  let waitShownAs: EmoteState | null = null; // "wait", or "idle" for sets without wait frames
-  const RESUMABLE: EmoteState[] = ["think", "talk", "read", "write", "tool", "search", "bash", "compact"];
+  let waitShownAs: EmoteState | null = null; // The question pose or its older-set fallback.
+  const RESUMABLE: EmoteState[] = ["think", "talk", "read", "write", "tool", "search", "bash", "compact", ...TOOL_STATES];
 
   pi.on("ui_prompt_start", async () => {
     if (!widgetActive) return;
     if (waitShownAs === null) {
       stateBeforeWait = RESUMABLE.includes(animator.currentState) ? animator.currentState : "idle";
     }
-    animator.transitionTo("wait");
+    animator.transitionTo("ask_user");
     waitShownAs = animator.currentState;
   });
 
@@ -376,7 +377,7 @@ export default function (pi: ExtensionAPI, integration?: DashboardIntegration) {
 
   pi.on("tool_execution_start", async (event) => {
     if (!widgetActive) return;
-    animator.transitionTo(toolNameToState(event.toolName));
+    animator.transitionTo(toolNameToState(event.toolName, event.args));
   });
 
   pi.on("tool_execution_end", async (event) => {

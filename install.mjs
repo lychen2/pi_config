@@ -24,6 +24,7 @@ import { configureTeammate } from "./scripts/configure-teammate.mjs";
 import { configureMcpProxy } from "./scripts/configure-mcp-proxy.mjs";
 import { configurePortable } from "./scripts/configure-portable.mjs";
 import { deploySkills } from "./scripts/deploy-skills.mjs";
+import { configureModelSystemPrompt } from "./scripts/configure-model-system-prompt.mjs";
 
 const repoDir = path.dirname(fileURLToPath(import.meta.url));
 const isWindows = process.platform === "win32";
@@ -57,7 +58,10 @@ const retiredDefaultPackageNames = new Set([
   "pi-large-mode",
   "pi-large-beautify",
 ]);
-const retiredExternalPackageSources = new Set(["npm:pi-workspace-history"]);
+const retiredExternalPackageSources = new Set([
+  "npm:pi-workspace-history",
+  "git:github.com/ayghri/i-have-adhd",
+]);
 const managedExternalGitSources = new Set(managedGitSources.map(spec => spec.source));
 
 // Local packages that ship in this repository but stay out of the default profile;
@@ -261,6 +265,7 @@ function configuredPackageSource(value) {
 function isRetiredDefaultPackage(value) {
   const source = configuredPackageSource(value)?.replaceAll("\\", "/").replace(/\/+$/, "");
   if (!source) return false;
+  if (retiredExternalPackageSources.has(source)) return true;
   return [...retiredDefaultPackageNames].some((name) =>
     source === `npm:${name}`
     || source.startsWith(`npm:${name}@`)
@@ -478,11 +483,14 @@ async function restoreFiles() {
     console.log("  Explicit soft-palette migration: node scripts/configure-matugen-tui.mjs --apply (backups support --rollback)");
   }
 
+  // Seed global guidance without replacing machine-owned instructions.
+  if (!(await pathExists(path.join(agentDir, "AGENTS.md")))) {
+    await copyPath(path.join(repoDir, "config", "AGENTS.md"), path.join(agentDir, "AGENTS.md"));
+  }
+
   const configFiles = [
-    "APPEND_SYSTEM.md",
     "slim-skills-whitelist.json",
     "pi-plan-mode.json",
-    "i-have-adhd.json",
   ];
   for (const file of configFiles) {
     await copyPath(path.join(repoDir, "config", file), path.join(agentDir, file));
@@ -766,6 +774,7 @@ async function main() {
     await configureManagedGit(agentDir);
   }
   await installExternalPackages(choices.external);
+  if (choices.external) configureModelSystemPrompt({ repoDir, homeDir, agentDir, dryRun: installerOptions.dryRun });
   await configureRtkCompat(agentDir, { dryRun: installerOptions.dryRun });
   configureTeammate(agentDir, { dryRun: installerOptions.dryRun });
   configureMcpProxy(agentDir, { dryRun: installerOptions.dryRun });
@@ -783,7 +792,7 @@ async function main() {
   }
 }
 
-export { run };
+export { run, mergePublicSettings };
 
 const isMainModule = process.argv[1] &&
   (() => { try { return realpathSync(process.argv[1]); } catch { return undefined; } })() ===

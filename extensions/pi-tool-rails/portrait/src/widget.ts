@@ -280,11 +280,14 @@ export interface WidgetDeps {
   getCurrentEmoteSet: () => string;
   getRevision: () => number;
   integration?: DashboardIntegration;
+  isHidden?: () => boolean;
+  onRenderReady?: (requestRender: (() => void) | undefined) => void;
 }
 
 export function createWidgetFactory(deps: WidgetDeps) {
   return (_tui: any, theme: any) => {
     deps.animator.setTui(_tui);
+    deps.onRenderReady?.(() => _tui.requestRender());
     deps.integration?.mount(() => _tui.requestRender());
     let cachedInfo: string[] = [];
     let cachedRevision = -1;
@@ -294,6 +297,7 @@ export function createWidgetFactory(deps: WidgetDeps) {
       render(width: number): string[] {
         const { animator, config } = deps;
 
+        if (deps.isHidden?.()) return [];
         if (width <= 0 || (width < config.hideBelow && !deps.integration)) return [];
 
         const frame = width >= config.hideBelow ? animator.getRenderedFrame() : null;
@@ -363,6 +367,7 @@ export function createWidgetFactory(deps: WidgetDeps) {
       },
       dispose() {
         deps.integration?.unmount();
+        deps.onRenderReady?.(undefined);
         deps.animator.setTui(null);
       },
     };

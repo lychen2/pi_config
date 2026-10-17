@@ -53,6 +53,7 @@ const DEFAULTS: Config = {
     { match: "tmux", render: "auto" },
     { match: "screen", render: "ascii" },
     { match: "wezterm", render: "iterm2" },
+    { match: "orca", render: "iterm2" },
     { match: "ghostty", render: "kitty" },
     { match: "warpterminal", render: "kitty" },
   ],

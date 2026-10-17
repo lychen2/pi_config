@@ -5,12 +5,15 @@ This directory is a standalone source package tracked by the pi_config Git repos
 ## Provenance
 
 - Upstream: https://github.com/NVlabs/SoL-Pi
-- Base: `e1a586af0ad8956f42ae5b26bba20e48fbf30e00`.
+- Base: `41fa7e0e230bedc5e639aed2e7b9cc5698726db1` (upstream `main`, 2026-10-14).
+- The update from `e1a586af0ad8956f42ae5b26bba20e48fbf30e00` adds README news, a refreshed hero image, and opt-in Skill and Visual examples. Core source, dependency declarations, and default loading are unchanged.
 - [PR #90](https://github.com/NVlabs/SoL-Pi/pull/90) is already included in that base. It accounts for unpaid cache-write debt and avoids repeated compaction from restated completed plans.
 - [PR #89](https://github.com/NVlabs/SoL-Pi/pull/89), head `f6d73af1487c306782593636f800168f39447c9f`, is applied locally: configurable Observation Pack full-send count, documentation, configuration preflight and regression tests.
 - [PR #93](https://github.com/NVlabs/SoL-Pi/pull/93), head `ea8a33cc6ba67660c44488e4fba2457c561d59a1`, is applied locally: array-valued system-prompt estimation and regression tests.
 
-PRs #89 and #93 were open at extraction. Applying their changes locally does not merge or publish anything upstream.
+PRs #89 and #93 were open at extraction. The updated base still excludes their recorded heads; both local patches remain applied. Applying their changes locally does not merge or publish anything upstream.
+
+The lockfile updates the existing development dependency `source-map-js` from 1.2.1 to 1.2.2 for [GHSA-68fv-2mgg-jv7q](https://github.com/advisories/GHSA-68fv-2mgg-jv7q).
 
 The copy preserves the previous checkout's local compaction test changes. Additional maintenance changes use Pi 1.0.0 development dependencies and peer ranges, update tool execution contexts, propagate Pi 1.0 Bash `isError` results as fused-command failures, and support both npm array and keyed-object pack reports.
 
@@ -39,6 +42,18 @@ The comparison inspected [pi-blackhole](https://github.com/k0valik/pi-blackhole/
 | Reuse within a synchronous decision | OCC reads Pi's context usage once per completed-step decision and shares its token count and window across that decision. Pi rebuilds its session projection on each usage read. A real AgentSession regression observes one read per decision, including consecutive compactions; it observed two before the change. No usage snapshot is retained across events. |
 
 Pi's message estimator primarily uses string lengths and serializes tool arguments; a content-fingerprinted LRU would add validation work to that cheap heuristic. The prompt cache avoids repeated UTF-8 byte scans of an unchanged system prompt. Decision-local usage reuse avoids one redundant native projection and branch scan at each evaluated boundary. Mutable prompt-segment arrays remain supported. Messages, native cut points, reported usage and compaction economics are unchanged. This is local computation reuse, with no claim of increased provider cache hits or measured wall-time improvement.
+
+## Upstream examples
+
+`examples/` contains upstream source examples. The bridge does not load them, and the default package excludes them. This update does not install Claude Code or Codex hooks, skills, Python dependencies, or a secondary Pi installation.
+
+Run the Skill example's offline tests from this directory:
+
+```sh
+python3 -B -m unittest discover -s examples/sol-pi-skill/tests
+```
+
+The upstream example READMEs report testing with Pi 0.85.1. The fork's core checks target Pi 1.0.0. Those checks do not establish Blender reconstruction or a live Claude Code/Codex hand-off.
 
 ## Maintenance
 

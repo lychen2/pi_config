@@ -41,6 +41,36 @@ function styleContextSegment(
 	return renderStyleForSource(theme, colorSource, contextColor, label);
 }
 
+// Layout reference: OldSuns/pi-open-tui, commit 766ccab7.
+// Keep the existing data sources and theme tokens; fit complete segments first.
+type FooterSegment = { text: string; priority: number; compactText?: string };
+
+function fitFooterRow(left: FooterSegment[], right: FooterSegment[], width: number): string {
+	const items = [...left, ...right].filter((item) => item.text).map((item) => ({ ...item }));
+	const leftCount = left.filter((item) => item.text).length;
+	const totalWidth = () => {
+		const active = items.filter((item) => item.text);
+		return active.reduce((sum, item) => sum + visibleWidth(item.text), 0) + Math.max(0, active.length - 1);
+	};
+	for (const item of items) {
+		if (totalWidth() <= width) break;
+		if (item.compactText && visibleWidth(item.compactText) < visibleWidth(item.text)) item.text = item.compactText;
+	}
+	// Low-priority fields give way before Git operations or context warnings.
+	while (totalWidth() > width) {
+		const active = items.filter((item) => item.text);
+		const lowest = active.reduce((a, b) => a.priority <= b.priority ? a : b);
+		if (active.length === 1) {
+			lowest.text = truncateToWidth(lowest.text, width, width > 1 ? "…" : "");
+			break;
+		}
+		lowest.text = "";
+	}
+	const fittedLeft = items.slice(0, leftCount).map((item) => item.text).filter(Boolean).join(" ");
+	const fittedRight = items.slice(leftCount).map((item) => item.text).filter(Boolean).join(" ");
+	return fittedLeft + " ".repeat(Math.max(0, width - visibleWidth(fittedLeft) - visibleWidth(fittedRight))) + fittedRight;
+}
+
 const separatorText: Record<SeparatorStyle, string> = {
 	pipe: " | ",
 	dot: " · ",
@@ -186,8 +216,8 @@ export function installFooter(
 			tui.requestRender();
 		});
 
-		// Share one busy-only 4fps clock for the pulse and the stationary pet.
-		// Idle sessions and reduced-motion sessions hold no animation timer.
+		// Explicit single-row formats retain the busy-only 4fps pet clock.
+		// The adaptive layout relies on state updates and needs no animation timer.
 		let active = false;
 		let petTick = 0;
 		const reducedMotion = () => process.env.PI_TOOL_RAILS_REDUCED_MOTION === "1";
@@ -199,7 +229,7 @@ export function installFooter(
 				petTick = 0;
 				tui.requestRender();
 			}
-			const shouldRun = enabled && !reducedMotion();
+			const shouldRun = enabled && Boolean(getConfig().footerFormat) && !reducedMotion();
 			if (!shouldRun) {
 				if (pulseTimer) {
 					clearInterval(pulseTimer);
@@ -235,7 +265,7 @@ export function installFooter(
 				const iconMode = config.icons.mode;
 				const phase = pulsePhase();
 				const separatorRaw = separatorText[config.separator];
-							const separator = renderStyleForSource(
+				const separator = renderStyleForSource(
 					theme,
 					colorSource,
 					config.colors.separator,
@@ -610,6 +640,45 @@ export function installFooter(
 					segment.colorMode === "original"
 						? segment.text
 						: renderStyleForSource(theme, colorSource, config.colors.extensionStatus, segment.text);
+				if (!config.footerFormat) {
+					const segment = (text: string, priority: number): FooterSegment => ({ text, priority });
+					const row = (left: FooterSegment[], right: FooterSegment[]) => {
+						const content = fitFooterRow(left, right, innerWidth);
+						return truncateToWidth(width > 2 ? ` ${content} ` : content, width, "");
+					};
+					const context = config.footerSegments.context ? renderVariable("context") : "";
+					const compactContext = styleContextSegment(theme, colorSource, contextColor,
+						buildContextDisplayLabel({ percent: contextPercent, contextWindow,
+							style: "text", asciiGauge: iconMode === "ascii", phase, tier }),
+						iconMode === "ascii", "text");
+					const lines = [row([
+						segment(osSegment, 0),
+						segment(usernameSegment, 0),
+						{ ...segment(config.footerSegments.cwd ? cwdLabel : "", 3),
+							compactText: renderStyleForSource(theme, colorSource, config.colors.cwd,
+								formatCwdLabel(ctx.cwd, config.icons.cwd, { mode: "basename", depth: 0 })) },
+						segment(branchLabel, gitStateBlock || state.conflicted > 0 ? 6 : 4),
+						segment(gitCommitLabel, 2),
+						segment(gitMetricsLabel, 2),
+						segment(packageVersionLabel, 0),
+						segment(runtimeLabel, 2),
+					], [segment(timeSegment, 0), { ...segment(context, tier === "normal" ? 3 : 5), compactText: compactContext }])];
+					lines.push(row([
+						segment(theme.fg(active ? "accent" : "muted", active ? "Working" : "Ready"), 4),
+						segment(theme.fg("accent", state.modelLabel), 3),
+						segment(sessionDurationSegment, 0),
+					], [
+						segment(config.footerSegments.tokens ? renderVariable("tokens") : "", 2),
+						segment(config.footerSegments.cost ? renderVariable("cost") : "", 1),
+					]));
+					const statuses = [...extensionStatuses.left, ...extensionStatuses.middle, ...extensionStatuses.right];
+					// Extension notices have their own row so crowded project data cannot hide them.
+					if (statuses.length) lines.push(row(
+						[...extensionStatuses.left, ...extensionStatuses.middle].map((status) => segment(renderExtensionStatus(status), 1)),
+						extensionStatuses.right.map((status) => segment(renderExtensionStatus(status), 1)),
+					));
+					return lines;
+				}
 				const extensionMiddleSegments = extensionStatuses.middle.map(renderExtensionStatus);
 				const middleSegments = contentMiddle
 					? [contentMiddle, ...extensionMiddleSegments]

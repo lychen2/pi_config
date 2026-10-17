@@ -29,7 +29,14 @@
 **/assets/
 !vendor/sol-pi/assets/
 !vendor/sol-pi/assets/sol-pi-hero.png
+!vendor/sol-pi/examples/solpi-visual/assets/
+vendor/sol-pi/examples/solpi-visual/assets/*
+!vendor/sol-pi/examples/solpi-visual/assets/results.png
+!vendor/sol-pi/examples/solpi-visual/assets/scene-comparison.jpg
 # Curated source templates with reviewed deliverable-content guidance.
+!skills/manimgx/assets/
+skills/manimgx/assets/*
+!skills/manimgx/assets/quickstart.py
 !skills/scientific-writing/assets/
 skills/scientific-writing/assets/*
 !skills/scientific-writing/assets/REPORT_FORMATTING_GUIDE.md

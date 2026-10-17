@@ -1,6 +1,6 @@
 export const TOOL_RAILS_PROTOTYPE_PATCH_REGISTRY = Symbol.for("pi.toolRails.prototype-patch-registry");
 
-type PrototypeMethodName = "render" | "invalidate" | "updateContent";
+type PrototypeMethodName = "render" | "invalidate" | "updateContent" | "compositeOverlays";
 type PrototypeMethod = (this: unknown, ...args: unknown[]) => unknown;
 export type PatchInvocation = {
   predecessor: PrototypeMethod;

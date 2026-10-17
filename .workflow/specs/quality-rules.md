@@ -12,4 +12,4 @@ keywords:
 
 # Quality Rules
 
-Read and apply [Global working rules](../../config/APPEND_SYSTEM.md). During authorized changes, execute the [finishing pass](../../.pi/prompts/deslop.md) in apply mode before handoff or a requested commit. Read-only reviews stay in audit mode.
+Follow the active model preset described in [Rules and skills](../../docs/default-profile.md#rules-and-skills). During authorized changes, execute the [finishing pass](../../.pi/prompts/deslop.md) in apply mode before handoff or a requested commit. Read-only reviews stay in audit mode.

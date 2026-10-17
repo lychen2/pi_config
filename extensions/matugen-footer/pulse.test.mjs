@@ -34,7 +34,7 @@ async function appendTsExtensions(dir) {
   }
 }
 
-test("footer stays on one row and pulses only while the agent is active", async (t) => {
+test("adaptive footer keeps useful information with portrait and custom-format animation", async (t) => {
   t.mock.timers.enable({ apis: ["setInterval"] });
 
   const root = await mkdtemp(join(tmpdir(), "matugen-pulse-test-"));
@@ -65,14 +65,25 @@ test("footer stays on one row and pulses only while the agent is active", async 
     let pulseController;
     let footer;
     let config = defaultConfig;
+    let contextPercent = 25;
+    const state = createInitialState(emptyGitStatus());
+    state.modelLabel = "test-model";
+    state.branch = "feature/显示宽度";
+    state.runtime = { name: "nodejs", symbol: "node", version: "22.19.0", style: "green" };
+    const colors = new Set();
+    let useAnsi = false;
+    const { dashboard } = await import("../pi-tool-rails/dashboard-state.ts");
+    const wasActive = dashboard.active;
+    t.after(() => { dashboard.active = wasActive; });
+    dashboard.active = false;
     const extensionStatuses = new Map();
     installFooter(
       {
         cwd: sourceDir,
-        getContextUsage: () => ({ percent: 25, contextWindow: 128000 }),
+        getContextUsage: () => ({ percent: contextPercent, contextWindow: 128000 }),
         ui: { setFooter: (component) => { footer = component; } },
       },
-      createInitialState(emptyGitStatus()),
+      state,
       () => config,
       {
         setRequestRender() {},
@@ -80,7 +91,10 @@ test("footer stays on one row and pulses only while the agent is active", async 
         setPulseController(fn) { pulseController = fn; },
       },
     );
-    const footerInstance = footer(tui, { fg: (_color, text) => text }, {
+    const footerInstance = footer(tui, { fg: (color, text) => {
+      colors.add(color);
+      return useAnsi ? `\x1b[36m${text}\x1b[39m` : text;
+    } }, {
       getExtensionStatuses: () => extensionStatuses,
       onBranchChange: () => () => {},
     });
@@ -152,14 +166,47 @@ test("footer stays on one row and pulses only while the agent is active", async 
     t.mock.timers.tick(250);
     assert.equal(renders - beforeAsciiTick, 1);
 
-    // The real footer must occupy one row at both narrow and wide widths.
+    // Exercise the mounted footer with ANSI colors, wide text, and narrow widths.
+    useAnsi = true;
     config = defaultConfig;
-    for (const width of [1, 2, 20, 80, 160]) {
-      const lines = footerInstance.render(width);
-      assert.equal(lines.length, 1, `footer at width ${width} must not add a bottom gutter`);
-      assert.ok(visibleWidth(lines[0]) <= width, `footer must fit width ${width}`);
-      if (width >= 20) assert.ok(lines[0].trim(), "footer content must remain visible");
+    pulseController(false);
+    pulseController(true);
+    const beforeAdaptiveTick = renders;
+    t.mock.timers.tick(1000);
+    assert.equal(renders, beforeAdaptiveTick, "adaptive layout has no decorative timer");
+    const plain = (text) => text.replace(/\x1b\[[0-9;]*m/g, "");
+    for (const portrait of [false, true]) {
+      dashboard.active = portrait;
+      for (const width of [1, 2, 20, 40, 80, 160]) {
+        const lines = footerInstance.render(width);
+        assert.equal(lines.length, 2);
+        for (const line of lines) assert.ok(visibleWidth(line) <= width, `footer must fit width ${width}`);
+      }
+      const text = footerInstance.render(160).map(plain).join("\n");
+      assert.match(text, /feature\/显示宽度/);
+      assert.match(text, /22\.19\.0/);
+      for (const value of ["Working", "test-model", "25%", "↑0", "$0.000", "matugen-footer", "up for"]) assert.ok(text.includes(value), value);
     }
+    // A fresh session outside a project must retain useful content with portrait active.
+    state.branch = undefined;
+    state.runtime = undefined;
+    pulseController(false);
+    const fresh = footerInstance.render(80).map(plain);
+    assert.match(fresh[0], /matugen-footer/);
+    assert.match(fresh[1], /Ready/);
+    for (const width of [20, 40, 80]) {
+      for (const line of footerInstance.render(width).map(plain)) assert.ok(line.trim());
+    }
+    dashboard.active = false;
+    extensionStatuses.set("test-status", "IMPORTANT");
+    const withStatus = footerInstance.render(40).map(plain);
+    assert.equal(withStatus.length, 3);
+    assert.match(withStatus[2], /IMPORTANT/);
+    extensionStatuses.clear();
+    contextPercent = 95;
+    colors.clear();
+    assert.match(plain(footerInstance.render(20)[0]), /95%/);
+    assert.ok(colors.has("error"), "context warning must use the active theme's semantic color");
 
     // dispose detaches the controller and clears the timer.
     footerInstance.dispose();

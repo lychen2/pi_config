@@ -189,6 +189,7 @@ test("registers one todo tool, both commands, shortcut, and session hooks", asyn
   assert.ok(!tools.some((tool) => tool.name === "todo"));
   assert.deepEqual([...commands.keys()], ["stash", "anycopy", "md", "preview", "preview-browser", "preview-pdf", "preview-clear-cache", "tools", "deferred-tools"]);
   assert.deepEqual([...shortcuts.keys()], ["ctrl+alt+s", "ctrl+alt+y", "ctrl+alt+t"]);
+  assert.ok(handlers.has("input"), "register first-task model advice through the default entry");
   assert.ok(handlers.has("session_start"));
   assert.ok(handlers.has("session_tree"));
   assert.ok(handlers.has("session_compact"));
@@ -216,6 +217,7 @@ test("registers one todo tool, both commands, shortcut, and session hooks", asyn
   assert.ok(handlers.has("session_tree"));
   assert.ok(handlers.has("session_compact"));
   assert.ok(handlers.has("session_shutdown"));
+  assert.ok(handlers.has("agent_before_settle"), "register unfinished-plan continuation through the default entry");
   const result = await tools.find((tool) => tool.name === "todo").execute("call-1", { action: "create", subject: "Test tool" }, undefined, undefined, ctx);
   assert.equal(result.details.nextId, 2);
   assert.equal(result.details.tasks[0].subject, "Test tool");

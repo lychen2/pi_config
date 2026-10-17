@@ -48,6 +48,7 @@
 
 | Package | 能力 | 常用入口 |
 | --- | --- | --- |
+| `pi-model-system-prompt` | 每轮按模型 ID 最长前缀追加 npm 预置；GPT 文件附加本地规则 | `~/.pi/agent/model-system-prompt/`；编辑后下一轮生效 |
 | `@cortexkit/pi-magic-context` | 持久记忆、历史搜索与上下文回收 | `ctx_search`、`ctx_memory`、`ctx_note`、`ctx_expand`、`ctx_reduce` |
 | `@narumitw/pi-plan-mode` | 只读的计划协作模式 | `/plan` |
 | `@juicesharp/rpiv-ask-user-question` | 有选项、可结构化回答的问题组件 | 模型在需要澄清时调用 `ask_user_question` |

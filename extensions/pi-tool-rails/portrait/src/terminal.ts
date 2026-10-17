@@ -26,6 +26,7 @@ export function detectTerminalName(): string {
   if (process.env.GHOSTTY_RESOURCES_DIR || termProgram === "ghostty" || term.includes("ghostty")) return "ghostty";
   if (process.env.WEZTERM_PANE || termProgram === "wezterm") return "wezterm";
   if (process.env.ITERM_SESSION_ID || termProgram === "iterm.app") return "iterm2";
+  if (termProgram === "orca") return "orca";
   if (termProgram === "vscode") return "vscode";
   if (termProgram === "alacritty") return "alacritty";
   if (termProgram === "warpterminal") return "warpterminal";

@@ -9,6 +9,7 @@ import { normalizeToolName, shortToolName, toolIcon } from "./tool-presentations
 import { backgroundToolStatus, collapsedToolCard, hasToolCardFailure } from "./tool-card-summary.ts";
 import { cleanCodemodeText, codemodeCallTarget, measuredSavingsLine, renderCodemodeTree, summarizeCodemodeOutput } from "./codemode-tree.ts";
 import { installPrototypePatch } from "./prototype-patch-registry.ts";
+import { installOverlayImageCompatibility } from "./overlay-images.ts";
 import { compactToolBody, TOOL_COLLAPSED_MAX_LINES, TOOL_EXPANDED_MAX_LINES } from "./tool-body-polish.ts";
 import { renderSoftFrame, softFrameTop, softFrameBottom, softFrameLine, softFrameInnerWidth, type VisualTheme, type VisualState } from "./visual-style.ts";
 
@@ -652,10 +653,14 @@ function installLabeledShell(theme: ToolTheme): () => void {
       : { lines: state.originalRender.call(this, innerWidth) };
     const lines = rendered.lines;
     if (execution.hideComponent || !execution.selfRenderContainer) return lines;
-    if (lines.some((line) => line.includes("\x1b_G") || line.includes("\x1b]1337;File="))) return lines;
-
     const capturedLines = rendered.contentLines ?? execution.selfRenderContainer.render(innerWidth);
-    const contentLines = capturedLines.length ? capturedLines : lines;
+    // Pi appends image spacers and pixel rows after the self-rendered text.
+    // Keep that tail intact: iTerm2 moves up over its blank rows to draw the image.
+    const imageLines = execution.imageComponents?.length
+      ? lines.slice(capturedLines.length + (capturedLines.length ? 1 : 0))
+      : [];
+    const contentLines = capturedLines.length || imageLines.length ? capturedLines : lines;
+    if (contentLines.some((line) => line.includes("\x1b_G") || line.includes("\x1b]1337;File="))) return lines;
     const name = normalizeToolName(execution.toolName ?? "tool");
     const customSolBody = semanticSolBody(execution, Boolean(execution.expanded), state.theme, innerWidth);
     const framedBody = filterSoLStaticSavingsLines(
@@ -686,7 +691,7 @@ function installLabeledShell(theme: ToolTheme): () => void {
               formatLine: content => styleStructuredLine(content, state.theme, selection),
             }));
     const bodyLines = stabilizeToolBoxBody(name, selectedBody);
-    const output = executionFrame(execution, bodyLines, width, state.theme);
+    const output = [...executionFrame(execution, bodyLines, width, state.theme), ...imageLines];
     if (cacheable && execution.result) {
       state.settledRenders.set(this, {
         width,
@@ -727,7 +732,11 @@ export default function labeledToolShell(pi: ExtensionAPI): void {
 
   pi.on("session_start", (_event, ctx) => {
     disposeSessionShell();
-    if (ctx.mode === "tui") cleanup = installLabeledShell(ctx.ui.theme);
+    if (ctx.mode === "tui") {
+      const cleanupShell = installLabeledShell(ctx.ui.theme);
+      const cleanupImages = installOverlayImageCompatibility();
+      cleanup = () => { cleanupImages(); cleanupShell(); };
+    }
   });
   pi.on("session_shutdown", disposeSessionShell);
 }

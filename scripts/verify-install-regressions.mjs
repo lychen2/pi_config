@@ -45,9 +45,8 @@ try {
   assert.doesNotMatch(f01.stdout, /raw\.githubusercontent\.com\/cortexkit/);
   assert.doesNotMatch(f01.stdout, /sync-large-beautify|pi-large-mode|pi-workspace-history/i);
   assert.match(f01.stdout, /verify active tool presentations/);
-  assert.match(f01.stdout, /i-have-adhd\.json/);
-  const adhdConfig = JSON.parse(await readFile(path.join(repoRoot, "config", "i-have-adhd.json"), "utf8"));
-  assert.deepEqual(adhdConfig, { alwaysOn: true, hideStatus: false });
+  assert.doesNotMatch(f01.stdout, /i-have-adhd/, "retired ADHD package and config must not be deployed");
+  await assert.rejects(readFile(path.join(repoRoot, "config", "i-have-adhd.json")), { code: "ENOENT" });
   const installMjsSource = await readFile(installMjs, "utf8");
   console.log("  package all external Pi dependencies from config/external-packages.txt with unversioned npm sources");
   assert.match(installMjsSource, /installRuntimeGitSources/);
@@ -57,11 +56,10 @@ try {
   const externalPackages = (await readFile(path.join(repoRoot, "config", "external-packages.txt"), "utf8"))
     .split(/\r?\n/).map((line) => line.trim()).filter((line) => line && !line.startsWith("#"));
   assert.deepEqual(externalPackages, [
-    "npm:@pi-lab/notify",
+    "npm:@pi-lab/notify", "npm:pi-model-system-prompt",
     "npm:@cortexkit/pi-magic-context", "npm:@narumitw/pi-plan-mode",
     "npm:@juicesharp/rpiv-ask-user-question", "npm:pi-slopchop", "npm:pi-btw",
     "npm:@victor-software-house/pi-curated-themes",
-    "git:github.com/ayghri/i-have-adhd",
   ]);
   assert.ok(!externalPackages.some(entry => /^npm:.*@\d/.test(entry)), "npm sources must not pin a version");
   const runtimeSources = (await readFile(path.join(repoRoot, "config", "runtime-git-sources.txt"), "utf8"))
@@ -69,6 +67,22 @@ try {
   assert.deepEqual(runtimeSources, ["git:github.com/BevalZ/pi-provider"]);
   assert.match(installMjsSource, /await configureManagedGit\(agentDir\)/);
   assert.doesNotMatch(f01.stdout, /pi-workspace-history/i, "retired workspace history package must not be offered by the installer");
+
+  // Incremental settings migration removes legacy ADHD registration and preserves other packages.
+  const migrationAgent = path.join(tempRoot, "migration-agent");
+  await mkdir(migrationAgent);
+  const retainedPackages = ["npm:pi-btw", { source: "npm:custom-tools", skills: [] }];
+  await writeFile(path.join(migrationAgent, "settings.json"), JSON.stringify({
+    packages: [...retainedPackages, "git:github.com/ayghri/i-have-adhd", { source: "git:github.com/ayghri/i-have-adhd", skills: [] }],
+    defaultModel: "keep-current-model",
+  }));
+  const migration = spawnSync(process.execPath, ["--input-type=module", "-e",
+    `import { mergePublicSettings } from ${JSON.stringify(pathToFileURL(installMjs).href)}; await mergePublicSettings(false);`,
+  ], { env: { ...process.env, PI_CODING_AGENT_DIR: migrationAgent }, encoding: "utf8", timeout: 30_000 });
+  assert.equal(migration.status, 0, `incremental settings migration failed:\n${migration.stderr}`);
+  const migrated = JSON.parse(await readFile(path.join(migrationAgent, "settings.json"), "utf8"));
+  assert.deepEqual(migrated.packages, retainedPackages);
+  assert.equal(migrated.defaultModel, "keep-current-model");
 
   // Public templates restore a fresh host without embedding secrets or starting optional services.
   const portableHome = path.join(tempRoot, "portable-home");

@@ -32,6 +32,8 @@ Pi's retry and compaction indicators remain under Pi's control.
 
 The bundled default is `lamb-hood`, processed from the user-supplied character sheet.
 Its [asset notes](emotes/lamb-hood/README.md) record the source and image processing.
+Twenty selected tool poses extend its original 17 states. `src/tool-states.ts` owns the routing and older-set fallbacks.
+The new poses are static, with normalized hood scale and canvas placement. The original animation masks remain unchanged.
 The previous portrait sets remain available through `/portrait`.
 
 Configuration precedence remains:

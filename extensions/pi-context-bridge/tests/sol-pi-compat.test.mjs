@@ -16,7 +16,7 @@ test("loads the local fork through Pi and keeps first-request observation bytes 
   const config = JSON.parse(await readFile(new URL("../../../config/sol-pi.json", import.meta.url), "utf8"));
   await mkdir(join(cwd, ".pi"));
   await writeFile(join(cwd, ".pi", "sol-pi.json"), JSON.stringify(config));
-  const body = `head evidence\n${`${"middle evidence bytes ".repeat(3)}\n`.repeat(200)}tail evidence\n`;
+  const body = `head evidence\n${`${"middle evidence bytes ".repeat(3)}\n`.repeat(400)}tail evidence\n`;
   await writeFile(join(cwd, "evidence.txt"), body);
   const compatPath = fileURLToPath(new URL("../sol-pi-compat.ts", import.meta.url));
   const fixturePath = join(cwd, "bridge-sol.ts");
@@ -42,7 +42,7 @@ export default async function (pi) {
       const result = context.messages.find((message) => message.role === "toolResult" && message.toolName === "read");
       const id = result?.content.find((block) => block.type === "text")?.text.match(/obs_[a-f0-9]{24}/)?.[0];
       assert.ok(id, "first read result must have an observation id");
-      return fauxAssistantMessage(fauxToolCall("obs_recall", { id, offset: 600 }), { stopReason: "toolUse" });
+      return fauxAssistantMessage(fauxToolCall("obs_recall", { id, offset: 16_384 }), { stopReason: "toolUse" });
     },
     (context) => { capture(context); return fauxAssistantMessage("bridge fork verified"); },
   ]);
@@ -76,7 +76,7 @@ export default async function (pi) {
   const results = sessionManager.getBranch().flatMap((entry) => entry.type === "message" && entry.message.role === "toolResult" ? [entry.message] : []);
   assert.deepEqual(results.map((result) => result.isError), [false, false, false]);
   assert.equal(results[0].content[0].text, body);
-  assert.ok(results[2].content[0].text.endsWith(body.slice(600)));
+  assert.ok(results[2].content[0].text.endsWith(body.slice(16_384)));
   assert.equal(session.getLastAssistantText(), "bridge fork verified");
   assert.deepEqual(errors, []);
 });

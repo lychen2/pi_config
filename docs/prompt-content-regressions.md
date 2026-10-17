@@ -2,11 +2,12 @@
 
 ## Ownership
 
-`config/APPEND_SYSTEM.md` owns the shared content-placement contract. Skill entrypoints
+`config/model-system-prompt/gpt-overrides.md` owns local GPT content-placement refinements.
+The npm model preset loader injects them only for a matching GPT preset. Skill entrypoints
 add domain-specific decisions; references and templates must agree with those decisions.
-The installer copies the system addendum to the agent directory and deploys curated
-skills through `scripts/deploy-skills.mjs`. Use `/reload` or a new Pi session after
-changing installed instructions. Already generated artifacts are not rewritten.
+The installer configures model presets and deploys curated skills through
+`scripts/deploy-skills.mjs`. Reload after package installation. Preset edits apply to the
+next run. Already generated artifacts are not rewritten.
 
 Subject matter includes material scientific limitations, parameter provenance, safety
 information, and required disclosures. It stays visible. Actionable editorial issues
@@ -29,7 +30,7 @@ requested reproduction assessment or source quotation.
 
 ## Behavioral probes
 
-Run each probe in a fresh session with the installed addendum and relevant skill.
+Run each probe in a fresh GPT session with a matching installed preset and relevant skill.
 Save the exact prompt, model, loaded instruction paths, generated artifact, and review
 result. Inspect all rendered or spoken surfaces. Grade against the criteria below,
 not agreement with another model. Passing probes reduce risk; they do not guarantee

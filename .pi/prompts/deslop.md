@@ -3,9 +3,9 @@ description: Audit or remove unnecessary defenses and redundant tests from the c
 argument-hint: "[audit|apply] [paths or scope]"
 ---
 
-Apply the global working rules and applicable project guidance. Request: ${@:-audit current task changes}.
+Apply the active host instructions, model preset, and project guidance. Request: ${@:-audit current task changes}.
 
-Default/audit is read-only. Only apply permits scoped edits. The global rules require an automatic apply pass within the already-authorized task; it never expands that authorization.
+Default/audit is read-only. Only apply permits scoped edits. During authorized changes, run an automatic apply pass within the task scope; it never expands that authorization.
 
 1. Inspect staged and unstaged diffs plus new files. Identify task-owned changes and required behavior; preserve prior user edits and unrelated code. If ownership is unclear, ask for scope before editing.
 2. Review tests first. Map changed cases to observable results and independent expectations. Identify duplicate or implementation-coupled cases and their unused fixtures. Preserve distinct success, rejection, security, persistence, and supported compatibility coverage. Redundant tests are not evidence that production behavior is obsolete.

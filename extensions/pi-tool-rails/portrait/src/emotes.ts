@@ -1,10 +1,12 @@
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import type { EmoteState, EmoteMapping, EmotesConfig, FrameSet } from "./types.ts";
+import { TOOL_STATES, TOOL_STATE_FALLBACK } from "./tool-states.ts";
 
 export const ALL_STATES: EmoteState[] = [
   "hi", "idle", "think", "talk", "read", "write", "tool", "success", "failure", "compact",
   "sleep", "wait", "interrupted", "search", "bash", "error", "heard",
+  ...TOOL_STATES,
 ];
 
 /** What to show when a set has no frames for a newer state. */
@@ -16,6 +18,7 @@ export const FALLBACK_STATE: Partial<Record<EmoteState, EmoteState>> = {
   bash: "tool",
   error: "failure",
   heard: "idle",
+  ...TOOL_STATE_FALLBACK,
 };
 
 // --- Glob Matching ---

@@ -14,6 +14,13 @@
 
 > [!NOTE]
 > This repository contains the open-source version of SoL-Pi, a standalone extension for [Pi](https://github.com/earendil-works/pi). It is not an official distribution of Pi.
+>
+> SoL-Pi is under active development to support pi-v1 and the latest model checkpoints.
+
+## 📰 News
+
+- **2026-10-14** — Released the [SoL-Pi Skill](examples/sol-pi-skill/README.md) example: use SoL-Pi as a skill from Claude Code (`/sol-pi`) or Codex (`$sol-pi`). The current task is handed to SoL-Pi with the host conversation as context, runs in the background, and its result is reported back to the session.
+- **2026-10-13** — Released the [SoL-Pi Visual](examples/solpi-visual/README.md) example for 3D scene reconstruction in Blender. On this task, it lowers the cost per scene by **37%** compared with Codex, with 13% fewer model calls. See the example for visual scores and scene comparisons.
 
 ## 💡 TL;DR
 

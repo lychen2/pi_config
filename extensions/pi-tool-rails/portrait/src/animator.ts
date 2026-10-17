@@ -1,6 +1,7 @@
 import type { TUI } from "@earendil-works/pi-tui";
 import type { EmoteState, Config, EmotesConfig } from "./types.ts";
 import { FALLBACK_STATE } from "./emotes.ts";
+import { TOOL_STATES } from "./tool-states.ts";
 import type { Renderer, RenderedFrame } from "./renderer.ts";
 import { log } from "./log.ts";
 
@@ -176,6 +177,7 @@ export class Animator {
       case "success": this.enterHold(state, this.config.holdDuration.success, this.holdNextState); this.holdNextState = "idle"; break;
       case "failure": this.enterHold(state, this.config.holdDuration.failure, this.holdNextState); this.holdNextState = "idle"; break;
       case "compact": this.enterCompact(); break;
+      default: if (TOOL_STATES.some(pose => pose === state)) this.enterCycle(state); break;
     }
   }
 

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, writeFile, readFile, access, rm, cp, readdir } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, readFile, access, rm, cp, readdir, symlink } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -15,12 +15,24 @@ test('fresh install, migration, second install and dry run preserve user skills'
     await put(path.join(agentDir, 'skills', 'litho-paper-radar', 'SKILL.md'), 'protected facts');
     await put(path.join(agentDir, 'skills', 'air.academic-plotting', 'SKILL.md'), 'legacy facts');
     await put(path.join(shared, 'sympy', 'SKILL.md'), 'old');
+    for (const name of ['manim-composer', 'manimce-best-practices', 'manimgl-best-practices']) {
+      await put(path.join(shared, name, 'SKILL.md'), `legacy ${name}`);
+      const linkTarget = process.platform === 'win32' ? path.join(shared, name) : path.relative(path.join(agentDir, 'skills'), path.join(shared, name));
+      await symlink(linkTarget, path.join(agentDir, 'skills', name), 'junction');
+    }
     const options = { repoDir, agentDir, otherRoots: [shared], log: () => {} };
     await deploySkills({ ...options, dryRun: true });
     await access(path.join(shared, 'sympy', 'SKILL.md'));
     const result = await deploySkills(options);
     assert.equal(await readFile(path.join(result.archive, '0', 'air.academic-plotting', 'SKILL.md'), 'utf8'), 'legacy facts');
     await assert.rejects(access(path.join(shared, 'sympy')));
+    for (const name of ['manim-composer', 'manimce-best-practices', 'manimgl-best-practices']) {
+      for (const index of ['0', '1']) {
+        assert.equal(await readFile(path.join(result.archive, index, name, 'SKILL.md'), 'utf8'), `legacy ${name}`);
+      }
+      await assert.rejects(access(path.join(agentDir, 'skills', name)));
+      await assert.rejects(access(path.join(shared, name)));
+    }
     await deploySkills(options);
     for (const name of installedSkills) assert.equal(await readFile(path.join(agentDir, 'skills', name, 'SKILL.md'), 'utf8'), name);
     assert.equal(await readFile(path.join(agentDir, 'skills', 'litho-paper-radar', 'SKILL.md'), 'utf8'), 'protected facts');
@@ -46,6 +58,12 @@ test('all release skill files survive deployment and preserve user-owned files',
     const custom = path.join(agentDir, 'skills', 'user-owned', 'SKILL.md');
     await mkdir(path.dirname(custom), { recursive: true });
     await writeFile(custom, 'Keep my skill unchanged.');
+    const existing = path.join(agentDir, 'skills', 'sympy', 'SKILL.md');
+    await mkdir(path.dirname(existing), { recursive: true });
+    await writeFile(existing, 'Keep this managed copy during a scoped install.');
+    const scoped = await deploySkills({ repoDir, agentDir, only: ['manimgx', 'manim-composer', 'manimce-best-practices', 'manimgl-best-practices'], log: () => {} });
+    assert.deepEqual(scoped.installed, ['manimgx']);
+    assert.equal(await readFile(existing, 'utf8'), 'Keep this managed copy during a scoped install.');
     const result = await deploySkills({ repoDir, agentDir, log: () => {} });
     assert.deepEqual(result.installed, installedSkills);
     for (const name of installedSkills) {

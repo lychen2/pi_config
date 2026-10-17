@@ -217,8 +217,8 @@ export const configPath = join(getAgentDir(), "matugen-footer.json");
 
 export const defaultConfig: PolishedTuiConfig = {
 	projectRefreshIntervalMs: 60_000,
-	footerFormat:
-		"$os  $cwd(  $git_branch)( $git_status)(  $runtime)$fill($context)(  $tokens)(  $cost)",
+	// Empty selects the adaptive two-row layout. Explicit formats remain single-row.
+	footerFormat: "",
 	separator: "dot",
 	contextStyle: "text+gauge",
 	contextThresholds: { warning: 70, error: 90 },
@@ -281,9 +281,9 @@ export const defaultConfig: PolishedTuiConfig = {
 		context: true,
 		tokens: true,
 		cost: true,
-		sessionDuration: false,
+		sessionDuration: true,
 		username: false,
-		time: false,
+		time: true,
 		os: true,
 		packageVersion: false,
 		gitCommit: false,

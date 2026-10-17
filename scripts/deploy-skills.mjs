@@ -1,4 +1,4 @@
-import { access, cp, mkdir, readdir, rename } from 'node:fs/promises';
+import { access, cp, lstat, mkdir, rename, unlink } from 'node:fs/promises';
 import path from 'node:path';
 
 export const installedSkills = [
@@ -7,7 +7,7 @@ export const installedSkills = [
   'sympy', 'paper-lookup', 'citation-management', 'scientific-writing',
   'venue-templates', 'scientific-slides', 'agents-progressive-disclosure',
   'find-skills', 'humanizer-zh', 'mineru-file-processing', 'workflow-skill-creator',
-  'pi-learn', 'optics-research', 'fuck-my-shit-mountain',
+  'pi-learn', 'optics-research', 'fuck-my-shit-mountain', 'manimgx',
 ];
 // Only known legacy distribution directories are retired; user skills are preserved.
 export const retiredSkills = [
@@ -15,13 +15,20 @@ export const retiredSkills = [
   'academic-paper', 'academic-paper-reviewer', 'deep-research',
   'literature-search-openalex', 'nature-skills', 'pubmed-database', 'docx', 'pdfs',
   'claude-science/figure-style', 'mineru', 'humanizer',
+  'manim-composer', 'manimce-best-practices', 'manimgl-best-practices',
 ];
 const exists = async p => { try { await access(p); return true; } catch { return false; } };
 
-export async function deploySkills({ repoDir, agentDir, otherRoots = [], dryRun = false, log = console.log }) {
+export async function deploySkills({ repoDir, agentDir, otherRoots = [], only, dryRun = false, log = console.log }) {
+  const managed = [...retiredSkills, ...installedSkills];
+  for (const name of only ?? []) {
+    if (!managed.includes(name)) throw new Error(`Unknown managed skill: ${name}`);
+  }
+  const selected = only ? installedSkills.filter(name => only.includes(name)) : installedSkills;
+  const archived = only ? managed.filter(name => only.includes(name)) : managed;
   const source = path.join(repoDir, 'skills');
   // Fail before changing anything if a release is incomplete.
-  for (const name of installedSkills) {
+  for (const name of selected) {
     if (!await exists(path.join(source, name, 'SKILL.md'))) throw new Error(`Missing release skill: ${name}`);
   }
   const target = path.join(agentDir, 'skills');
@@ -29,18 +36,25 @@ export async function deploySkills({ repoDir, agentDir, otherRoots = [], dryRun 
   const archive = path.join(agentDir, 'skill-archives', new Date().toISOString().replaceAll(':', '-') + '-' + process.pid);
   const moved = [];
   for (const [index, root] of roots.entries()) {
-    for (const name of [...retiredSkills, ...installedSkills]) {
+    for (const name of archived) {
       const from = path.join(root, name);
       if (!await exists(from)) continue;
       const to = path.join(archive, String(index), name);
       log(`  archive skill ${from} -> ${to}`);
-      if (!dryRun) { await mkdir(path.dirname(to), { recursive: true }); await rename(from, to); }
+      if (!dryRun) {
+        await mkdir(path.dirname(to), { recursive: true });
+        if ((await lstat(from)).isSymbolicLink()) {
+          // Relative links break after relocation; retain a standalone archive.
+          await cp(from, to, { recursive: true, dereference: true });
+          await unlink(from);
+        } else await rename(from, to);
+      }
       moved.push({ from, to });
     }
   }
-  for (const name of installedSkills) {
+  for (const name of selected) {
     log(`  deploy skill ${name}`);
     if (!dryRun) { await mkdir(target, { recursive: true }); await cp(path.join(source, name), path.join(target, name), { recursive: true }); }
   }
-  return { installed: installedSkills, moved, archive };
+  return { installed: selected, moved, archive };
 }

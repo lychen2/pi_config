@@ -1,6 +1,8 @@
 # Pi package sources installed from npm and GitHub.
 # Unversioned sources resolve the current latest release/branch.
 npm:@pi-lab/notify
+# Model-specific npm presets; GPT overrides are deployed by configure-model-system-prompt.mjs.
+npm:pi-model-system-prompt
 # Magic Context retains knowledge/history with compaction disabled.
 npm:@cortexkit/pi-magic-context
 npm:@narumitw/pi-plan-mode
@@ -13,4 +15,3 @@ npm:pi-btw
 # RTK is loaded through pi-context-bridge for evidence safety.
 npm:@victor-software-house/pi-curated-themes
 # pi-provider is a managed runtime checkout, registered locally to preserve patches.
-git:github.com/ayghri/i-have-adhd

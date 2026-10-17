@@ -1,10 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createEventBus, createExtensionRuntime } from "@earendil-works/pi-coding-agent";
-import { visibleWidth, CURSOR_MARKER, Key } from "@earendil-works/pi-tui";
+import { visibleWidth, CURSOR_MARKER, Key, Text, TuiMainScreen } from "@earendil-works/pi-tui";
+import { installOverlayImageCompatibility } from "../overlay-images.ts";
 
 const { loadExtensions } = await import(new URL("./core/extensions/loader.js", import.meta.resolve("@earendil-works/pi-coding-agent")));
 const root = new URL("../", import.meta.url);
@@ -17,11 +18,26 @@ const steps = [
   { id: "integrate", goal: "整合仪表盘", status: "in_progress" },
 ];
 
-async function harness(t, { enabled = true, mode = "tui" } = {}) {
+async function harness(t, { enabled = true, mode = "tui", emoteSet = "ascii", image = false, terminalProgram = "wezterm" } = {}) {
+  if (image) {
+    const keys = ["TERM_PROGRAM", "TERM", "TMUX", "ZELLIJ", "ZELLIJ_SESSION_NAME", "KITTY_WINDOW_ID", "GHOSTTY_RESOURCES_DIR", "WEZTERM_PANE", "ITERM_SESSION_ID"];
+    const saved = keys.map(key => [key, process.env[key]]);
+    for (const key of keys) delete process.env[key];
+    process.env.TERM_PROGRAM = terminalProgram;
+    t.after(() => {
+      for (const [key, value] of saved) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+    });
+  }
   const cwd = mkdtempSync(join(tmpdir(), "portrait-test-"));
   const configDir = join(cwd, ".pi/extensions/pi-emote");
   mkdirSync(configDir, { recursive: true });
-  writeFileSync(join(configDir, "config.json"), JSON.stringify({ enabled, emotes: [{ model: "*", "emote-set": "ascii" }] }));
+  writeFileSync(join(configDir, "config.json"), JSON.stringify({
+    enabled, emotes: [{ model: "*", "emote-set": emoteSet }],
+    ...(image && terminalProgram === "wezterm" ? { terminals: [{ match: "wezterm", render: "iterm2" }] } : {}),
+  }));
   const events = createEventBus();
   const runtime = createExtensionRuntime();
   runtime.getAllTools = () => [];
@@ -122,6 +138,97 @@ test("actual Pi loader joins model, working status, plan and teammates in one po
   await app.emit("session_start");
   assert.equal(app.widgets.has("tool-rails-agents"), false, "session replacement clears old teammates");
   assert.match(app.widgets.get("emote").render(80).join("\n"), /Plan/);
+});
+
+test("ask-user-question hides the portrait until the questionnaire closes", async t => {
+  const app = await harness(t);
+  const portrait = app.widgets.get("emote");
+  assert.match(portrait.render(120).join("\n"), /gpt-6-astra/);
+
+  app.events.emit("rpiv:ask-user:blocked", { active: true });
+  assert.deepEqual(portrait.render(120), [], "the portrait and model details clear the questionnaire area");
+
+  app.events.emit("rpiv:ask-user:blocked", { active: false });
+  assert.match(portrait.render(120).join("\n"), /gpt-6-astra/, "the portrait returns after the questionnaire closes");
+});
+
+test("selected tool poses render through actual extension events and resume after a question", async t => {
+  const app = await harness(t, { emoteSet: "lamb-hood", image: true });
+  const portrait = app.widgets.get("emote");
+  const expectFrame = file => {
+    const base64 = readFileSync(new URL(`portrait/emotes/lamb-hood/${file}`, root)).toString("base64");
+    assert.ok(portrait.render(120).join("\n").includes(base64), `renders ${file}`);
+  };
+  const cases = [
+    ["functions.ls", {}, "browse_files"], ["edit", {}, "edit_patch"],
+    ["write", {}, "create_file"], ["undo_last_replace", {}, "undo_change"],
+    ["powershell", {}, "run_command"], ["bash_bg", { action: "status" }, "monitor_task"],
+    ["bash_write", {}, "terminal_input"], ["bash_bg", { action: "kill" }, "stop_process"],
+    ["codemode", {}, "orchestrate"], ["teammate", {}, "delegate_task"],
+    ["teammate_send", {}, "message_teammate"], ["teammate_list", {}, "monitor_team"],
+    ["ask_user_question", {}, "ask_user"], ["web_search", {}, "search_web"],
+    ["fetch_content", {}, "fetch_content"], ["source_check", {}, "verify_source"],
+    ["tool_search", {}, "discover_tool"], ["ctx_memory", { action: "get" }, "recall_context"],
+    ["ctx_memory", { action: "write" }, "store_memory"], ["preview_export", {}, "render_preview"],
+  ];
+  for (const [toolName, args, state] of cases) {
+    await app.emit("tool_execution_start", { toolCallId: state, toolName, args });
+    expectFrame(`${state}/${state}.png`);
+  }
+  await app.emit("tool_execution_start", { toolCallId: "background", toolName: "bash_bg", args: { action: "wait" } });
+  await app.emit("ui_prompt_start");
+  expectFrame("ask_user/ask_user.png");
+  await app.emit("ui_prompt_end");
+  expectFrame("monitor_task/monitor_task.png");
+  await app.emit("tool_execution_end", { isError: true });
+  assert.ok(["failure1", "failure2"].some(name => portrait.render(120).join("\n").includes(
+    readFileSync(new URL(`portrait/emotes/lamb-hood/failure/${name}.png`, root)).toString("base64"),
+  )), "tool errors retain the original failure poses");
+  for (const toolName of ["update_plan", "readSeek_rename", "unknown_tool"]) {
+    await app.emit("tool_execution_start", { toolCallId: toolName, toolName, args: {} });
+    assert.ok(["tool1", "tool2"].some(name => portrait.render(120).join("\n").includes(
+      readFileSync(new URL(`portrait/emotes/lamb-hood/tool/${name}.png`, root)).toString("base64"),
+    )), `${toolName} keeps the original generic pose`);
+  }
+  await app.emit("agent_end", { messages: [] });
+  expectFrame("idle/idle.png");
+});
+
+test("Orca renders the portrait through iTerm2 without a project protocol override", async t => {
+  const app = await harness(t, { emoteSet: "lamb-hood", image: true, terminalProgram: "Orca" });
+  const portrait = app.widgets.get("emote");
+  await app.emit("agent_end", { messages: [] });
+  const lines = portrait.render(120);
+  const base64 = readFileSync(new URL("portrait/emotes/lamb-hood/idle/idle.png", root)).toString("base64");
+  assert.ok(lines.some(line => line.includes("\x1b]1337;File=") && line.includes(base64)));
+  assert.ok(lines.every(line => !line.includes("\x1b_G")), "avoids Kitty tiles erased by Orca text writes");
+  let output = "";
+  const tui = new TuiMainScreen({ columns: 120, rows: 30, write: data => { output += data; }, hideCursor() {}, showCursor() {} });
+  tui.addChild(portrait);
+  tui.renderNow();
+  assert.ok(output.includes(base64), "Pi redraw preserves the image payload");
+  t.after(installOverlayImageCompatibility());
+  const overlay = tui.showOverlay(new Text("BTW overlay", 0, 0), { width: 40, anchor: "top-left" });
+  output = "";
+  tui.renderNow();
+  assert.ok(!output.includes(base64), "portrait does not draw over the btw overlay");
+  assert.ok(output.includes("BTW overlay"));
+  overlay.hide();
+  output = "";
+  tui.renderNow();
+  assert.ok(output.includes(base64), "portrait returns when the overlay closes");
+});
+
+test("older portrait sets fall back through the actual tool event handler", async t => {
+  const app = await harness(t, { emoteSet: "default", image: true });
+  const portrait = app.widgets.get("emote");
+  for (const [toolName, args, state] of [
+    ["edit", {}, "write"], ["web_search", {}, "tool"], ["ctx_memory", { action: "get" }, "read"],
+  ]) {
+    await app.emit("tool_execution_start", { toolCallId: toolName, toolName, args });
+    const base64 = readFileSync(new URL(`portrait/emotes/default/${state}/${state}1.png`, root)).toString("base64");
+    assert.ok(portrait.render(120).join("\n").includes(base64), `${toolName} falls back to ${state}`);
+  }
 });
 
 test("disabled portrait leaves the original model, plan and working status visible", async t => {

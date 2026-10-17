@@ -14,4 +14,4 @@ keywords:
 
 # Coding Conventions
 
-Read and apply [Global working rules](../../config/APPEND_SYSTEM.md), especially **Work and evidence** and **Trust boundaries**. Match the nearest existing code; do not introduce a competing style.
+Follow the active model preset described in [Rules and skills](../../docs/default-profile.md#rules-and-skills). Match the nearest existing code; do not introduce a competing style.

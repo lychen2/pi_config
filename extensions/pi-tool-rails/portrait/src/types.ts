@@ -1,4 +1,8 @@
-export type EmoteState =
+import type { ToolEmoteState } from "./tool-states.ts";
+
+export type EmoteState = BaseEmoteState | ToolEmoteState;
+
+export type BaseEmoteState =
   | "hi" | "idle" | "think" | "talk" | "read" | "write" | "tool" | "success" | "failure" | "compact"
   | "sleep" | "wait" | "interrupted" | "search" | "bash" | "error" | "heard";
 

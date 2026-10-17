@@ -56,7 +56,17 @@ The migration accepts either the bridge-owned registration or one standalone SoL
 
 ## Rules and skills
 
-`config/APPEND_SYSTEM.md` is the source for the global working rules copied into the agent directory. Coding, trust-boundary, test, and finishing-pass rules apply across projects; this repository has no root `AGENTS.md`. Repository-specific test guidance remains in [test conventions](../.workflow/specs/test-conventions.md). Keep only broadly applicable instructions global; task-specific procedures belong in the relevant skill.
+`npm:pi-model-system-prompt` supplies model-specific presets in `~/.pi/agent/model-system-prompt/`. Each run appends the longest case-insensitive model-ID prefix match to Pi’s native prompt. Models without a matching file receive no preset. Switching models changes the next run’s preset. The package uses the OS home directory, independently of `PI_CODING_AGENT_DIR`.
+
+`config/model-system-prompt/gpt-overrides.md` owns the local GPT refinements. `node scripts/configure-model-system-prompt.mjs` seeds missing npm presets and appends one managed override block to nonempty `gpt-*.md` files. It preserves other model files and explicitly disabled empty GPT files. It reads npm presets from the active agent directory. It archives that directory’s retired `APPEND_SYSTEM.md` and changed GPT files under its `backups/` directory. Installation with `--with-external` runs this configuration step, including when npm blocks postinstall. The repository no longer deploys a shared addendum file; the bridge supplies the shared taste guidance described below. Reload Pi after package installation; subsequent preset edits take effect on the next run. A fresh session avoids carrying earlier custom instructions in conversation history.
+
+The bridge adds [GPT with Taste](../extensions/pi-context-bridge/taste/PROVENANCE.md) Main guidance for every model and provider. It composes with model presets through Pi hooks. UserSteer follows unanswered user input; AgentSteer follows `teammate-complete` deliveries. These reminders stay request-local. Use `/taste status`, `/taste off`, or `/taste steer off` to inspect or change the current session branch. Restart or reload Pi to load the integration.
+
+Pi also supports user-level `~/.pi/agent/APPEND_SYSTEM.md` for shared static instructions. This profile uses the bridge hooks for taste guidance and its event reminders.
+
+`config/model-system-prompt/gemini.md` supplies a local Gemini fallback because npm 0.2.1 has no Gemini preset. The configurator seeds it only when missing and preserves subsequent user edits. More specific model-prefix files take precedence. Gemini guidance calls tools for requested file operations and keeps saved artifacts out of lengthy replies.
+
+The npm preset remains intact. Local GPT refinements cover proportional verification, YAGNI, and evidence-based explanations. Unmatched GPT model IDs do not receive these overrides. This repository has no root `AGENTS.md`. Repository-specific test guidance remains in [test conventions](../.workflow/specs/test-conventions.md); task-specific procedures belong in the relevant skill.
 
 `scripts/deploy-skills.mjs` owns the managed skill list. It preserves user-added skills and archives only explicitly retired managed names. Scientific calculations retain their relevant unit, approximation, numerical and evidence checks. Skill metadata should describe the task that benefits from the guidance; references are opened when needed for that task.
 

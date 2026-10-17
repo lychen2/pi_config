@@ -16,6 +16,8 @@
     "index.ts",
     "manager-models.ts",
     "continuity.ts",
+    "taste.ts",
+    "taste/",
     "rtk.ts",
     "rtk-compat.ts",
     "wire-guard.ts",

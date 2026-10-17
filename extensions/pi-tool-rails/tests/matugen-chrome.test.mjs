@@ -20,7 +20,7 @@ test("defaults to theme-driven soft footer chrome without losing factual segment
   assert.match(config, /contextWarning: "warning"/);
   assert.match(config, /contextError: "error"/);
   assert.match(config, /footerSegments: \{[\s\S]*?gitBranch: true,[\s\S]*?gitStatus: true,[\s\S]*?context: true,[\s\S]*?tokens: true/);
-  assert.match(config, /\$os  \$cwd\(  \$git_branch\)\( \$git_status\)\(  \$runtime\)\$fill\(\$context\)\(  \$tokens\)\(  \$cost\)/);
+  assert.match(config, /footerFormat: ""/, "default footer uses the adaptive layout");
 });
 
 test("parses branch divergence and conflicts from porcelain status", () => {

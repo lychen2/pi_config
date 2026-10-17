@@ -7,10 +7,19 @@ Default-profile bridge for the locked upstream implementations:
 - bounded `checkpoint` entries and a hidden, capped `context` continuity snapshot
 - SoL-Pi, loaded by the bridge so the former `update_plan` `summary`/`plan` payload is normalized before schema validation
 - `wire-guard.ts`: last-mile 清理出站 provider payload 里的空内容块
+- `taste.ts`: shared GPT with Taste guidance and input/completion reminders for every model
 
 The package loads the maintained `vendor/sol-pi` fork through its `file:../../vendor/sol-pi` dependency and `sol-pi-compat.ts`. Pi owns peer-module resolution. Do not install SoL-Pi as a separate package alongside this bridge; see `../../vendor/sol-pi/FORK.md` for upstream provenance and maintenance. Legacy `update_plan` calls are converted from `summary`/`plan` to `steps`/`progress` before schema validation. The package also loads `pi-rtk-optimizer@0.9.0` through the first-party `rtk.ts` compatibility entry. Checkpoints are stored in the Pi session branch and only the latest bounded snapshot is added before a model call; they do not replace Pi or Magic Context compaction and do not append to the global system prompt.
 
 Use `checkpoint` for a meaningful verified decision, failed approach, or phase handoff. Do not use it for every tool call.
+
+## Shared taste guidance
+
+The bridge loads the locally maintained [GPT with Taste adapter](taste/PROVENANCE.md). Main applies to every model and provider alongside existing model presets. The adapter composes at run start and adds request-local system sections. OpenAI-compatible APIs also receive a final-payload guard.
+
+UserSteer follows unanswered user input. AgentSteer follows the existing `teammate-complete` custom message. Tool continuations and other custom message types do not receive completion reminders. These reminders do not change stored user messages or worker results.
+
+Use `/taste status`, `/taste off`, `/taste on`, `/taste steer off`, `/taste steer on`, or `/taste reset`. Controls persist in the current session branch. Restart or reload Pi after changing runtime code; Markdown edits apply on the next extension reload.
 
 ## Teammate agents
 

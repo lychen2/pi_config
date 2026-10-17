@@ -1,0 +1,8 @@
+{
+  "main": "main.md",
+  "sub": "sub.md",
+  "independent": "independent.md",
+  "userSteer": "user-steer.md",
+  "subSteer": "sub-steer.md",
+  "agentSteer": "agent-steer.md"
+}
