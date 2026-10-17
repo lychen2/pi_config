@@ -59,6 +59,18 @@
 
 `pi-slopchop` 现为可选工具，需要终端内 Git 差异审阅时运行 `pi install npm:pi-slopchop`。安装并重新加载后可使用 `/slopchop` 或 `/diff`。
 
+## text-to-cad CAD 技能
+
+安装器会把上游 MIT 技能 `cad` 部署到 Pi 的全局技能目录，适用于参数化建模、STEP/STL/3MF/GLB 导出和几何检查。调用示例：
+
+```text
+/skill:cad 设计一个可调节支架，并导出 STEP 和 STL
+```
+
+首次运行会由 `uvx` 下载 Python 3.13 和固定版本 `cadgen==0.7.21`。默认 MCP 服务 `cad` 处于禁用状态；需要 MCP 操作时在 Pi 中运行 `/mcp` 启用它，再运行 `/reload`。配置默认设置 `DO_NOT_TRACK=1`。Pi 没有上游插件的 CAD Viewer 面板；仍可生成和检查文件，并按技能指引启动本地 Viewer。
+
+技能源码和参考资料位于 [`../skills/cad/`](../skills/cad/)，通过 `scripts/deploy-skills.mjs` 管理。上游来源是 [`earthtojake/text-to-cad`](https://github.com/earthtojake/text-to-cad)，更新时将 `latest` 分支的 `skills/cad/` 文件整体同步至此，并在仓库记录来源提交。
+
 ## 组合建议
 
 - **常规编码**：Pi 原生 `bash`、`pi-context-bridge` 提供的 Web/manager 能力、Magic Context 的 `ctx_*` 工具、`pi-default-workbench`、`pi-tool-rails`、`pi-slim-skills`、`pi-rtk-optimizer` 与结构化提问 package 构成默认基础。

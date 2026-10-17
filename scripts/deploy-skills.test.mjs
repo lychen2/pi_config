@@ -107,6 +107,35 @@ test('optics-research metadata and references survive installation and redeploym
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 
+test('cad ships all upstream references, license and Pi source notes', async () => {
+  assert.ok(installedSkills.includes('cad'));
+  const root = await mkdtemp(path.join(os.tmpdir(), 'cad-skill-test-'));
+  try {
+    const repoDir = fileURLToPath(new URL('../', import.meta.url));
+    const agentDir = path.join(root, 'agent');
+    const source = path.join(repoDir, 'skills/cad');
+    await mkdir(path.join(agentDir, 'skills'), { recursive: true });
+    await cp(source, path.join(agentDir, 'skills/cad'), { recursive: true });
+    const result = await deploySkills({ repoDir, agentDir, only: ['cad'], log: () => {} });
+    const target = path.join(agentDir, 'skills/cad');
+    const filesUnder = async dir => {
+      const entries = await readdir(dir, { withFileTypes: true });
+      const files = [];
+      for (const entry of entries) {
+        if (entry.isDirectory()) for (const child of await filesUnder(path.join(dir, entry.name))) files.push(path.join(entry.name, child));
+        else files.push(entry.name);
+      }
+      return files.sort();
+    };
+    const files = await filesUnder(source);
+    assert.deepEqual(await filesUnder(target), files);
+    assert.deepEqual(await filesUnder(path.join(result.archive, '0', 'cad')), files);
+    const skill = await readFile(path.join(target, 'SKILL.md'), 'utf8');
+    for (const match of skill.matchAll(/\]\((references\/[^)]+\.md)\)/g)) await access(path.join(target, match[1]));
+    assert.match(await readFile(path.join(target, 'SOURCES.md'), 'utf8'), /a499253845c717e5144471ca75f9eb0f90e7964f/);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
 test('pi-learn ships its references and license and survives redeployment', async () => {
   assert.ok(installedSkills.includes('pi-learn'));
   const root = await mkdtemp(path.join(os.tmpdir(), 'pi-learn-test-'));

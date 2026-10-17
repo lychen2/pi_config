@@ -69,6 +69,27 @@
         "jupyter-mcp-server"
       ],
       "enabled": false
+    },
+    "cad": {
+      "command": "uvx",
+      "args": [
+        "--no-config",
+        "--managed-python",
+        "--python",
+        "3.13",
+        "--from",
+        "cadgen==0.7.21",
+        "cadgen",
+        "mcp"
+      ],
+      "timeout": 300,
+      "exposure": "deferred",
+      "description": "Generate, export and inspect local CAD models with cadgen. First use downloads the pinned CAD runtime.",
+      "env": {
+        "CADGEN_INSTALL_CHANNEL": "pi",
+        "DO_NOT_TRACK": "1"
+      },
+      "enabled": false
     }
   }
 }
