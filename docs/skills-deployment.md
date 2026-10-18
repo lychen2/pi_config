@@ -8,6 +8,8 @@ Default lazy loading uses `config/slim-skills-whitelist.json`: empty whitelist a
 
 `manimgx` replaces `manim-composer`, `manimce-best-practices`, and `manimgl-best-practices` in both global roots. It retains scene planning and adds the ManimGX inspect/render workflow. Existing CE or GL projects retain their engine unless migration is requested. The skill uses Python 3.13 or 3.14; its runtime is installed on demand, outside the Pi installer. After deployment, run `/reload` and use `/skill:manimgx` to load it. The previous skill directories remain in the archive.
 
+UI work uses the five managed entries: `design-ui`, `frontend-design`, `ui-ux-pro-max`, `emil-design-eng`, and `review-animations`. Start with `/skill:design-ui <task>` after `/reload`. The entry reads the project design system before implementation and loads supporting guidance as needed. Animation audits require explicit invocation. See [UI design workflow](ui-design-skills.md) for commands, local search, browser acceptance, sources, and recovery.
+
 Routing boundaries:
 - Compare linewidth distributions: statistical-analysis.
 - Propagate exposure-dose uncertainty: uncertainty-and-units.

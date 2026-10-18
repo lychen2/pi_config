@@ -8,6 +8,7 @@ export const installedSkills = [
   'venue-templates', 'scientific-slides', 'agents-progressive-disclosure',
   'find-skills', 'humanizer-zh', 'mineru-file-processing', 'workflow-skill-creator', 'cad',
   'pi-learn', 'optics-research', 'fuck-my-shit-mountain', 'manimgx',
+  'design-ui', 'frontend-design', 'ui-ux-pro-max', 'emil-design-eng', 'review-animations',
 ];
 // Only known legacy distribution directories are retired; user skills are preserved.
 export const retiredSkills = [

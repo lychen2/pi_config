@@ -1,35 +1,26 @@
 # Skill 目录与使用示例
 
-本页给出当前有效 skill 的完整目录和可直接复制的请求示例。Skill 是按需加载的工作流说明，不是常驻工具；先输入 `/skill:<名称>`，再给出目标、输入文件和验收条件。
+本页提供技能使用示例。仓库管理的安装清单以 `scripts/deploy-skills.mjs` 的 `installedSkills` 为准。Skill 是按需加载的工作流说明；使用 `/skill:<名称> <任务>` 时，给出目标、输入文件和验收条件。
+
+UI 任务统一从 `/skill:design-ui <任务>` 进入。入口先读取项目设计系统，再按需加载 `frontend-design`、`ui-ux-pro-max` 和 `emil-design-eng`。动效专项审查使用 `/skill:review-animations <目标>`。安装、搜索和验收方式见 [UI design workflow](ui-design-skills.md)。
 
 ## 统计口径
 
-当前有效目录以仓库中的 **34 个唯一 skill** 为基线；Pi 还会合并 `~/.pi/agent/skills` 与 `~/.agents/skills` 中的本机技能，因此活动环境的数量会随机器和当前工作目录变化。外部 package 还可能提供本机额外 skill，例如 `grill-with-docs`。
+Pi 会发现 `~/.pi/agent/skills`、`~/.agents/skills`、项目目录和已配置 package 中的技能。活动目录以当前会话的实际发现结果为准；下方示例也包含历史或按需安装的技能。
 
-默认发现索引保留 `config/slim-skills-whitelist.json` 中声明的入口；当前 allowlist 为：
+`config/slim-skills-whitelist.json` 的 `whitelist` 和 `inject` 当前均为空。默认通过 `search_skill_bm25` 搜索候选，再显式加载正文。空白名单保留按需检索能力。
 
-```text
-humanizer
-humanizer-zh
-mineru
-mineru-file-processing
-literature-search-openalex
-academic-paper
-academic-paper-reviewer
-deep-research
-scientific-visualization
-docx
-pdfs
-```
+Pi 会递归发现嵌套目录中的 `SKILL.md`；安装器复制完整技能目录。安装后执行 `/reload`，再使用 `/skill:<名称> <任务>`。技能所需的 Python、浏览器、远程计算、网络服务和凭据按任务配置。
 
-Pi 会递归发现嵌套目录中的 `SKILL.md`；安装器同步完整 skill 树。外部 package 提供的 skills 以本机实际安装结果为准。
-
-其他 skill 仍会被同步，但如果 `/skill:` 补全中没有出现，可显式运行 `/slim-skills inject <名称>`，或直接提供对应 `SKILL.md` 路径。技能所需的 Python、浏览器、远程计算、网络服务和凭据必须先在本机配置。
-
-## 编码、设计与技能维护（14）
+## 编码、设计与技能维护
 
 | Skill | 用途 | 使用示例 |
 | --- | --- | --- |
+| [`design-ui`](../skills/design-ui/SKILL.md) | UI 统一入口，先读取项目设计系统 | `/skill:design-ui`；改进设置页，沿用现有 token 和组件，并检查桌面及手机布局。 |
+| [`frontend-design`](../skills/frontend-design/SKILL.md) | 新界面或改版的视觉方向 | `/skill:frontend-design`；根据博物馆藏品和受众设计首页，先确定内容层级与排版。 |
+| [`ui-ux-pro-max`](../skills/ui-ux-pro-max/SKILL.md) | 检索本地设计建议或生成设计系统草稿 | `/skill:ui-ux-pro-max`；检索表单键盘焦点建议，按项目规范筛选。 |
+| [`emil-design-eng`](../skills/emil-design-eng/SKILL.md) | 组件反馈、动效与手势细节 | `/skill:emil-design-eng`；改进抽屉关闭反馈，检查连续操作与减少动态效果模式。 |
+| [`review-animations`](../skills/review-animations/SKILL.md) | 显式动效审查，默认只读 | `/skill:review-animations`；审查现有弹窗的时序、焦点和中断行为，列出问题及依据。 |
 | [`agents-progressive-disclosure`](../skills/agents-progressive-disclosure/SKILL.md) | 拆分过大的 `AGENTS.md`、`CLAUDE.md` 或规则文件 | `/skill:agents-progressive-disclosure`；把 900 行项目规则拆成入口、路由和按需参考文档，保持规则语义不变。 |
 | [`fuck-my-shit-mountain`](../skills/fuck-my-shit-mountain/SKILL.md) | 对代码库进行跨质量维度的证据化审计 | `/skill:fuck-my-shit-mountain`；先选择审计维度、语言、输出格式和范围，再生成结构化报告。 |
 | `grill-with-docs`（本机安装） | 在需求边界不清时进行访谈，并随过程维护决策文档 | `/skill:grill-with-docs`；先确认目标、约束、验收标准和不可接受的方案，再确定实现边界。 |
