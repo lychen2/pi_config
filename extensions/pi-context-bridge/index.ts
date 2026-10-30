@@ -2,7 +2,6 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import managerModels from "./manager-models.ts";
 import { registerContinuity } from "./continuity.ts";
 import { registerWireGuard } from "./wire-guard.ts";
-import { registerAxonHubAffinity } from "./axonhub-affinity.ts";
 import { registerResearchDecision } from "./research-decision.ts";
 import { registerSolCacheCompatibility } from "./sol-cache-compat.ts";
 import registerTeammate from "./teammate.ts";
@@ -23,7 +22,6 @@ async function loadExtension(specifier: string): Promise<ExtensionFactory> {
 
 export default async function contextBridge(pi: ExtensionAPI): Promise<void> {
   registerTaste(pi);
-  registerAxonHubAffinity(pi);
   registerResearchDecision(pi);
   await registerTeammate(pi);
 
