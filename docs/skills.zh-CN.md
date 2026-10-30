@@ -2,7 +2,9 @@
 
 本页提供技能使用示例。仓库管理的安装清单以 `scripts/deploy-skills.mjs` 的 `installedSkills` 为准。Skill 是按需加载的工作流说明；使用 `/skill:<名称> <任务>` 时，给出目标、输入文件和验收条件。
 
-UI 任务统一从 `/skill:design-ui <任务>` 进入。入口先读取项目设计系统，再按需加载 `frontend-design`、`ui-ux-pro-max` 和 `emil-design-eng`。动效专项审查使用 `/skill:review-animations <目标>`。安装、搜索和验收方式见 [UI design workflow](ui-design-skills.md)。
+UI 任务统一从 `/skill:design-ui <任务>` 进入。入口先读取项目设计系统，再按需加载 `frontend-design`、`ui-ux-pro-max` 和 `emil-design-eng`。动效、产品发布片和解说视频使用 `/skill:huashu-motion <任务>`；界面动效审查继续使用 `emil-design-eng`。安装、搜索和验收方式见 [UI design workflow](ui-design-skills.md)。
+
+科研决策涉及选择下一项实验、解释意外结果或检验项目记录中的既有判断时，搜索并按需加载 [`research-decision`](../skills/research-decision/SKILL.md)。需要保存关键证据来源、替代解释和切换条件时，调用 `research_decision`。
 
 ## 统计口径
 
@@ -10,7 +12,7 @@ Pi 会发现 `~/.pi/agent/skills`、`~/.agents/skills`、项目目录和已配�
 
 `config/slim-skills-whitelist.json` 的 `whitelist` 和 `inject` 当前均为空。默认通过 `search_skill_bm25` 搜索候选，再显式加载正文。空白名单保留按需检索能力。
 
-Pi 会递归发现嵌套目录中的 `SKILL.md`；安装器复制完整技能目录。安装后执行 `/reload`，再使用 `/skill:<名称> <任务>`。技能所需的 Python、浏览器、远程计算、网络服务和凭据按任务配置。
+Pi 会递归发现嵌套目录中的 `SKILL.md`；安装器复制完整技能目录。安装后执行 `/reload`，输入 `/skill:` 即可查看技能及简短中文用途，再使用 `/skill:<名称> <任务>`。菜单用途来自各技能 `SKILL.md` 的 `description`。技能所需的 Python、浏览器、远程计算、网络服务和凭据按任务配置。
 
 ## 编码、设计与技能维护
 
@@ -20,7 +22,7 @@ Pi 会递归发现嵌套目录中的 `SKILL.md`；安装器复制完整技能目
 | [`frontend-design`](../skills/frontend-design/SKILL.md) | 新界面或改版的视觉方向 | `/skill:frontend-design`；根据博物馆藏品和受众设计首页，先确定内容层级与排版。 |
 | [`ui-ux-pro-max`](../skills/ui-ux-pro-max/SKILL.md) | 检索本地设计建议或生成设计系统草稿 | `/skill:ui-ux-pro-max`；检索表单键盘焦点建议，按项目规范筛选。 |
 | [`emil-design-eng`](../skills/emil-design-eng/SKILL.md) | 组件反馈、动效与手势细节 | `/skill:emil-design-eng`；改进抽屉关闭反馈，检查连续操作与减少动态效果模式。 |
-| [`review-animations`](../skills/review-animations/SKILL.md) | 显式动效审查，默认只读 | `/skill:review-animations`；审查现有弹窗的时序、焦点和中断行为，列出问题及依据。 |
+| [`huashu-motion`](../skills/huashu-motion/SKILL.md) | 可编辑动效、产品发布片与解说视频 | `/skill:huashu-motion`；用现有产品截图制作 30 秒发布片，在本地预览、批注修改并导出。 |
 | [`agents-progressive-disclosure`](../skills/agents-progressive-disclosure/SKILL.md) | 拆分过大的 `AGENTS.md`、`CLAUDE.md` 或规则文件 | `/skill:agents-progressive-disclosure`；把 900 行项目规则拆成入口、路由和按需参考文档，保持规则语义不变。 |
 | [`fuck-my-shit-mountain`](../skills/fuck-my-shit-mountain/SKILL.md) | 对代码库进行跨质量维度的证据化审计 | `/skill:fuck-my-shit-mountain`；先选择审计维度、语言、输出格式和范围，再生成结构化报告。 |
 | `grill-with-docs`（本机安装） | 在需求边界不清时进行访谈，并随过程维护决策文档 | `/skill:grill-with-docs`；先确认目标、约束、验收标准和不可接受的方案，再确定实现边界。 |

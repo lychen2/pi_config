@@ -1,7 +1,7 @@
 ---
 allowed-tools: Read Write Edit Bash Glob Grep
 compatibility: Python 3.10-3.14 with build123d 0.11.1 and matplotlib for snapshots. Geometry commands require build123d; the standards lookup and the interface check run on the standard library alone. No network access needed.
-description: Design parametric lab hardware in CAD. Use when generating or validating build123d-based fixtures and optical mounts.
+description: 使用 build123d 设计和验证实验夹具、光学支架。
 license: MIT
 metadata:
     build123d-version: 0.11.1

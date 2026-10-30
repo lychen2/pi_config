@@ -1,6 +1,6 @@
 ---
 compatibility: Requires Python 3.11+ only for optional dependency-free local CLIs; core guidance is platform-neutral. Bundled tools are offline and require no API keys.
-description: Draft and revise scientific manuscripts. Use when improving paper structure, clarity, or technical argumentation.
+description: 撰写和修改科研论文，改进结构、论证与表达。
 license: MIT
 metadata:
     github-path: skills/scientific-writing

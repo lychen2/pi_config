@@ -1,6 +1,6 @@
 ---
 name: optics-research
-description: Guide optics and photonics research when planning experiments, calculating diffraction or imaging, simulating photonic systems, reproducing a paper, or reviewing optics claims. Covers traceable evidence, physical conventions, derivations, and scientific checks.
+description: 开展光学与光子学研究，规划实验、推导仿真和核验结论。
 ---
 
 # Optics research

@@ -5,13 +5,14 @@ Default-profile bridge for the locked upstream implementations:
 - `pi-web-access@0.22.0`
 - `pi-manager-models` 的 provider 模型目录刷新
 - bounded `checkpoint` entries and a hidden, capped `context` continuity snapshot
-- SoL-Pi, loaded by the bridge so the former `update_plan` `summary`/`plan` payload is normalized before schema validation
 - `wire-guard.ts`: last-mile 清理出站 provider payload 里的空内容块
 - `taste.ts`: shared GPT with Taste guidance and input/completion reminders for every model
 
-The package loads the maintained `vendor/sol-pi` fork through its `file:../../vendor/sol-pi` dependency and `sol-pi-compat.ts`. Pi owns peer-module resolution. Do not install SoL-Pi as a separate package alongside this bridge; see `../../vendor/sol-pi/FORK.md` for upstream provenance and maintenance. Legacy `update_plan` calls are converted from `summary`/`plan` to `steps`/`progress` before schema validation. The package also loads `pi-rtk-optimizer@0.9.0` through the first-party `rtk.ts` compatibility entry. Checkpoints are stored in the Pi session branch and only the latest bounded snapshot is added before a model call; they do not replace Pi or Magic Context compaction and do not append to the global system prompt.
+Workbench owns `edit` and `write` follow-up commands. Magic Context owns session compaction. Pi owns peer-module resolution. This package loads `pi-rtk-optimizer@0.9.0` through the first-party `rtk.ts` compatibility entry. Checkpoints are stored in the Pi session branch and only the latest bounded snapshot is added before a model call; they do not replace Pi or Magic Context compaction and do not append to the global system prompt.
 
 Use `checkpoint` for a meaningful verified decision, failed approach, or phase handoff. Do not use it for every tool call.
+
+Load the `research-decision` skill when planning experiments or interpreting research results. It describes when to discover and call the deferred `research_decision` tool. The tool records evidence sources, interpretations, alternatives, measurement checks, predictions, switch conditions, and reversibility in the current session branch. Text fields accept up to 420 characters; invalid or oversized fields are rejected. Each request restores complete records from the latest four checkpoints, newest first, within 6,000 characters. This preserves their conditions after compaction and excludes abandoned branches. The tool stores agent-supplied judgments; research workflow instructions remain in the skill.
 
 ## Shared taste guidance
 

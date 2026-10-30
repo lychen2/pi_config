@@ -2,10 +2,10 @@
 
 Default-profile functional workbench with one registration entry:
 
-- `deferred-tools/`: adaptive, fast, and full project tool modes; adaptive uses hybrid BM25/local embedding discovery with up to three matches by default. Semantic ranking uses cached local weights when available; downloading them is opt-in with `PI_WORKBENCH_DOWNLOAD_EMBEDDINGS=1` and is disabled under Pi offline mode. Without weights, search falls back to lexical BM25. Full enables direct and model-only tools while respecting explicit disables. Deferred and codemode tools stay available through native `tool_search` or codemode scripts; a tool explicitly declared by discovery remains active across refreshes. Hidden tools remain inactive. Full omits the local discovery loaders and retains native `tool_search`. SoL's `update_plan` replaces duplicate active Todo tools, and `obs_recall` remains available in every mode.
+- `deferred-tools/`: adaptive, fast, and full project tool modes; adaptive uses hybrid BM25/local embedding discovery with up to three matches by default. Semantic ranking uses cached local weights when available; downloading them is opt-in with `PI_WORKBENCH_DOWNLOAD_EMBEDDINGS=1` and is disabled under Pi offline mode. Without weights, search falls back to lexical BM25. Full enables direct and model-only tools while respecting explicit disables. Deferred and codemode tools stay available through native `tool_search` or codemode scripts; a tool explicitly declared by discovery remains active across refreshes. Hidden tools remain inactive. Full omits the local discovery loaders and retains native `tool_search`. All modes enable `codemode` and Magic Context's `ctx_search`, `ctx_memory`, `ctx_note`, `ctx_expand`, and `ctx_reduce` by default. Explicit disables remain authoritative.
 - `skill-search.ts`: metadata-first search over installed, model-invocable skills, followed by explicit loading with source and reference paths
 - `todo/`: persistent Todo state, commands, terminal panel, and unfinished-plan continuation reminders
-- `model-advisor.ts`: first-task model advice using Pi's built-in `typesafe/jev-latest` classifier
+- `action-fusion/`: optional `then_run` commands for the native `edit` and `write` tools
 - `maestro/`: FFF search, background shell, and Git conflict tools
 - `preview/`: validated Markdown Preview PNG exports
 - `session-tools/`: memory-only draft stash and local Markdown export
@@ -13,19 +13,27 @@ Default-profile functional workbench with one registration entry:
 
 `index.ts` registers these surfaces in one package while preserving their existing tool names, commands, and configuration files. For network research, use host-provided `web_search` and `fetch_content` when available; MCP tools are available only when configured and exposed by the host. Default profile context/network integration remains in `pi-context-bridge`.
 
-## Plan reminders and model advice
+## Edit or write, then check
 
-When an assistant finishes a response with unfinished work, the plan reminder requests another response through `agent_before_settle`. It reads SoL's persisted `update_plan` state, direct plan snapshots, and legacy Todo results. A completed plan takes precedence over old Todo items. Each user request allows up to three automatic continuations. Failed or aborted runs and pending user messages skip reminders. `PI_TODO_GUARD_DISABLE=1` disables reminders; `PI_TODO_GUARD_TOOL` changes the legacy Todo tool name.
+Add `then_run` to an `edit` or `write` call to run a command after the mutation succeeds:
 
-For a new interactive session, Jev classifies the first user task when the active model is one of these models:
+```json
+{
+  "path": "src/app.ts",
+  "edits": [{ "oldText": "oldValue", "newText": "newValue" }],
+  "then_run": { "command": "npm test", "timeout": 60 }
+}
+```
 
-- `gpt-6-luna`: simple, routine tasks
-- `gpt-6.1-sol`: difficult tasks with a bounded scope and clear completion criteria
-- `gpt-6-astra`: open-ended, creative, or exceptionally difficult tasks
+Without `then_run`, the tools keep their native behavior. A failed mutation skips the command. A failed command reports an error and preserves the mutation. Output retains the existing `[then_run:succeeded]`, `[then_run:failed]`, and `[then_run:skipped]` markers. Same-file mutations stay queued until the command ends. A detected external content change skips the command.
 
-If the recommendation differs, Pi asks before switching. Approval changes the current session model under the same provider; global defaults stay unchanged. Declining keeps the active model. Advice runs once per session and skips existing sessions, extension-generated input, headless mode, and `PI_OFFLINE=1`.
+Workbench registers these tools directly and inherits their native argument preparation and renderers. It owns `then_run` independently of other extensions.
 
-Classification sends up to 16,000 characters of the first task and its image count to TypeSafe using Pi's configured credentials. Image contents are excluded. The classifier request has a 15-second timeout. Missing models, credentials, or a failed classifier request produce a warning and preserve the active model.
+The three implementation modules derive from the maintained SoL-Pi Action Fusion source. They retain NVIDIA copyright notices and the MIT [license](action-fusion/LICENSE). SoL-Pi status banners and savings wrappers are omitted; the existing tool presentation remains in `pi-tool-rails`.
+
+## Plan reminders
+
+When an assistant finishes a response with unfinished work, the plan reminder requests another response through `agent_before_settle`. It reads current Todo results, direct plan snapshots, and persisted `update_plan` state from older SoL-Pi sessions. A completed plan takes precedence over old Todo items. A successful `todo` clear retires earlier plan reminders. Save unfinished work in a handoff before clearing; later plan updates can start reminders again. Each user request allows up to three automatic continuations. Failed or aborted runs and pending user messages skip reminders. `PI_TODO_GUARD_DISABLE=1` disables reminders; `PI_TODO_GUARD_TOOL` changes the legacy Todo tool name.
 
 ## Drafts and session export
 

@@ -1,6 +1,6 @@
 ---
 name: review-animations
-description: Audit an existing interface's animation purpose, timing, interruption, accessibility, and rendering. Invoke explicitly with a component, page, or recording.
+description: 显式审查现有界面动效的用途、时序、中断和无障碍表现。
 disable-model-invocation: true
 license: MIT; see LICENSE
 ---

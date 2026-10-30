@@ -1,0 +1,22 @@
+{
+  "title": "Interface in space (CSS 3D)",
+  "summary": "A real screenshot cut into layers that fly apart in depth, pieces rebuilt in code where they change, one continuous 3D camera that swings, pushes into a comment and settles on the flat interface, then pans to the title. Text stays sharp and pickable.",
+  "best_for": [
+    "a software product or an app launch",
+    "showing how an interface is built (layers, panels)",
+    "a first second that already moves",
+    "a UI tour without slides"
+  ],
+  "aspect": "16:9",
+  "copy": {
+    "templates/blank/vendor/gsap.min.js": "vendor/gsap.min.js",
+    "templates/blank/vendor/GSAP-LICENSE.txt": "vendor/GSAP-LICENSE.txt",
+    "templates/blank/vendor/GSAP-LICENSE.html": "vendor/GSAP-LICENSE.html",
+    "templates/object-3d/assets/studio.jpg": "assets/studio.jpg",
+    "fonts/Inter-var.woff": "assets/fonts/Inter-var.woff",
+    "fonts/NotoSansSC-500.woff": "assets/fonts/NotoSansSC-500.woff",
+    "fonts/NotoSansSC-700.woff": "assets/fonts/NotoSansSC-700.woff",
+    "fonts/OFL.txt": "assets/fonts/OFL.txt",
+    "fonts/LICENSES.md": "assets/fonts/LICENSES.md"
+  }
+}

@@ -1,6 +1,6 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import bashGuard from "./bash-guard.ts";
-import modelAdvisor from "./model-advisor.ts";
+import registerActionFusion from "./action-fusion/index.ts";
 import registerSessionTools from "./session-tools/index.ts";
 import registerCodeOutline from "./code-outline/index.ts";
 import toolSelector from "./deferred-tools/deferred-tools.ts";
@@ -38,13 +38,13 @@ export function createTodoInitializer<TodoModule, GuardModule>(
 }
 
 export default function register(pi: ExtensionAPI): void {
+  registerActionFusion(pi);
   registerSessionTools(pi);
   registerCodeOutline(pi);
   registerLazyTools(pi);
   registerLazyPreviewCommands(pi);
   installToolFailureMarker(pi);
   bashGuard(pi);
-  modelAdvisor(pi);
   toolSelector(pi);
   registerSkillSearch(pi);
 

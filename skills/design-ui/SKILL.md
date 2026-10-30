@@ -1,6 +1,6 @@
 ---
 name: design-ui
-description: Build or improve user interfaces. Read the project's design system first, then select visual, component, motion, and browser checks for the task.
+description: 构建或改进 UI，先读取项目设计系统，再选择设计与验收方法。
 ---
 
 # Design UI
@@ -28,8 +28,8 @@ Use skill discovery to find a candidate, then load its instructions explicitly.
 | New visual direction or substantial redesign | frontend-design | Establish hierarchy, typography, composition, imagery, and content specific to the brief. |
 | Searchable design options or a new design-system draft | ui-ux-pro-max | Query local data; evaluate suggestions against the actual project. |
 | Component feedback, transitions, gestures, or polish | emil-design-eng | Choose purposeful motion and implementation details. |
-| User-requested animation audit | review-animations | Run explicitly with /skill:review-animations and a target. |
-| Rendered UI and interaction acceptance | Existing browser tools or computer-use | Inspect the page and exercise its key path. |
+| Motion graphics, launch films, or explainer videos | huashu-motion | Build editable HTML/GSAP films with local preview, feedback, sound, and export. |
+| Rendered UI and interaction acceptance | Existing browser tools | Inspect the page and exercise its key path. |
 
 Pass the concrete task and project constraints to each loaded skill.
 Load frontend-design before committing to a new visual direction.
@@ -50,7 +50,7 @@ Respect reduced motion and touch input. Keep essential actions usable during tra
 ## Inspect the result
 
 Run the project's required checks for the affected behavior.
-Use available browser tooling; discover computer-use if a visible browser workflow is needed.
+Use available browser tooling for visible browser workflows.
 Inspect actual screenshots at desktop and a narrow viewport, including approximately 390px when relevant.
 Exercise the primary action, keyboard focus, and changed states. Check overflow, wrapping, and image cropping.
 For motion, check interruption, repeated activation, and reduced-motion behavior.

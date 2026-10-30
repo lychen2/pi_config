@@ -1,6 +1,6 @@
 ---
 name: mineru
-description: Use MinerU to parse PDFs, images, and Office documents into Markdown or extract text, tables, formulas, and OCR when document conversion or structured extraction is requested.
+description: 使用 MinerU 将 PDF、图片和 Office 文档转换为结构化内容。
 homepage: https://mineru.net
 metadata:
   author: Nebutra

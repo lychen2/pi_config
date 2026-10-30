@@ -6,6 +6,10 @@ Pi transport adapts projection.ts, payload.ts and extension.ts from [SpadeLushen
 
 Changes: dependency-free JavaScript, compiler-owned resources, independent role, factory scope options, compact branch controls and duplicate-registration guard. Request-local section, unanswered-input projection, completion-only custom message routing and OpenAI final-payload recovery retain the reference mechanisms. No behavior Markdown or TOML helper was copied from that transport reference.
 
+## Local writing guidance
+
+`main.md` and its companion role/steer Markdown files include locally maintained execution and writing guidance for every model: completing authorized work without self-limiting disclaimers, affirmative narration without hypothetical strawman objections, exact subjects/actions/conditions instead of vague hedges, content-led sentence structure, selective comparison, and positive prompt instructions. These edits belong to the shared adapter; model-specific upstream presets remain intact. Preserve this customization when rebuilding the adapter.
+
 ## Local integration
 
 `../taste.ts` registers Main for every provider and model ID. It routes `teammate-complete` messages to AgentSteer. UserSteer follows unanswered user input; tool continuations and other custom messages receive no completion reminder. Sub and Independent resources remain available for explicit role-specific integrations.

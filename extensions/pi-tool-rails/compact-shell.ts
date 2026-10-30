@@ -47,7 +47,7 @@ type ExecutionState = {
   hideComponent?: boolean;
   imageComponents?: unknown[];
   isPartial?: boolean;
-  result?: { isError?: boolean; content?: unknown; details?: unknown };
+  result?: { isError?: boolean; content?: unknown; details?: unknown; structuredContent?: unknown };
   selfRenderContainer?: Component;
   toolName?: string;
   args?: { steps?: unknown; [key: string]: unknown };

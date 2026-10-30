@@ -109,6 +109,7 @@ test("context bridge exposes the teammate tool through its package entrypoint", 
 
   await bridge.default(pi);
   assert.ok(tools.some(tool => tool.name === "teammate"));
+  assert.equal(tools.find(tool => tool.name === "research_decision")?.exposure, "deferred");
 });
 
 test("bridge registers a lightweight teammate proxy and loads upstream on first use", async (t) => {

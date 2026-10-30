@@ -187,7 +187,7 @@ export async function validateManaged(candidate, spec, workspace) {
 
 export async function updateManagedGit({ agentDir, ids = managedGitSources.map(spec => spec.id), validate = validateManaged, log = console.log }) {
   const selected = managedGitSources.filter(spec => ids.includes(spec.id));
-  if (!selected.length || ids.some(id => !selected.some(spec => spec.id === id))) throw new Error("Select pi-provider; SoL-Pi is maintained locally in vendor/sol-pi");
+  if (!selected.length || ids.some(id => !selected.some(spec => spec.id === id))) throw new Error("Select pi-provider; no other Git sources are managed");
   const root = join(agentDir, "managed-updates");
   await mkdir(root, { recursive: true, mode: 0o700 });
   const lock = join(root, ".lock");
@@ -215,7 +215,7 @@ export async function updateManagedGit({ agentDir, ids = managedGitSources.map(s
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   const args = process.argv.slice(2);
   if (args.includes("--help")) {
-    console.log("Usage: node scripts/update-managed-git.mjs [pi-provider]\nDefault: pi-provider. SoL-Pi is maintained locally in vendor/sol-pi. Stages upstream + local patches, validates, then activates with complete original backups.\nA failed merge/check does not activate either checkout. Reload Pi after success.");
+    console.log("Usage: node scripts/update-managed-git.mjs [pi-provider]\nDefault: pi-provider. Stages upstream + local patches, validates, then activates with complete original backups.\nA failed merge/check does not activate either checkout. Reload Pi after success.");
   } else {
     try {
       await updateManagedGit({ agentDir: resolve(process.env.PI_CODING_AGENT_DIR ?? join(homedir(), ".pi", "agent")), ...(args.length ? { ids: args } : {}) });

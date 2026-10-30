@@ -1,5 +1,5 @@
 ---
-description: Analyze experimental data and compare groups. Use when estimating effects, testing differences, or fitting statistical models.
+description: 分析实验数据，比较组间差异、估计效应和拟合模型。
 license: MIT license
 metadata:
     github-path: skills/statistical-analysis

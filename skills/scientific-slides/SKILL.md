@@ -1,6 +1,6 @@
 ---
 allowed-tools: Read Write Edit Bash
-description: Build scientific presentations and speaker notes. Use when turning research results into a talk or conference deck.
+description: 将科研结果制作成演示幻灯片与讲稿。
 license: MIT license
 metadata:
     github-path: skills/scientific-slides

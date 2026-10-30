@@ -4,7 +4,7 @@ import test from "node:test";
 import { initTheme, ToolExecutionComponent, BashExecutionComponent } from "@earendil-works/pi-coding-agent";
 import { getCapabilities, setCapabilities, Text, TuiAltScreen, TuiMainScreen, visibleWidth } from "@earendil-works/pi-tui";
 import labeledToolShell from "../compact-shell.ts";
-import { TOOL_PRESENTATIONS } from "../tool-presentations.mjs";
+import { TOOL_PRESENTATIONS, shortToolName, toolEmoji, materialToolIcon } from "../tool-presentations.mjs";
 import { measuredSavingsLine } from "../codemode-tree.ts";
 
 const isImageLine = line => line.includes("\x1b_G") || line.includes("\x1b]1337;File=");
@@ -41,7 +41,7 @@ test("native tool images retain their rows outside the framed text across expans
   try {
     for (const protocol of ["kitty", "iterm2"]) {
       setCapabilities({ ...previousCapabilities, images: protocol });
-      for (const name of ["read", "codemode", "mcp__blender__get_viewport_screenshot"]) {
+      for (const name of ["read", "codemode", "mcp__blender__get_viewport_screenshot", "computer_use_linux_screenshot"]) {
         const result = toolResult("Image preview", {
           content: [{ type: "text", text: "Image preview" }, ...Array.from({ length: 2 }, () => ({ type: "image", mimeType: "image/png", data }))],
         });

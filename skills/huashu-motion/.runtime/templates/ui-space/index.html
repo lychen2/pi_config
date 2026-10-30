@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="zh-CN" data-composition-variables='[
+  {"id":"screen","type":"string","label":"界面截图（真实界面，1600×1000 的 2 倍图）","default":"assets/studio.jpg"},
+  {"id":"comment","type":"string","label":"留言","default":"标题再大一点"},
+  {"id":"reply","type":"string","label":"Agent 回复","default":"已改：标题 96 → 132 px"},
+  {"id":"title","type":"string","label":"标题","default":"huashu-motion"},
+  {"id":"subtitle","type":"string","label":"副标题","default":"对着画面指一下，就能改"},
+  {"id":"paper","type":"color","label":"底色","default":"#f6f5f2"},
+  {"id":"ink","type":"color","label":"文字色","default":"#1d1b18"},
+  {"id":"accent","type":"color","label":"强调色","default":"#d9480f"},
+  {"id":"green","type":"color","label":"完成色","default":"#2f855a"},
+  {"id":"endHold","type":"number","label":"结尾停留（秒）","default":1.4,"min":0,"max":10,"step":0.1,"group":"节奏"}
+]'>
+<head>
+<meta charset="utf-8">
+<title>huashu-motion · ui-space</title>
+<script src="vendor/gsap.min.js"></script>
+<script src="vendor/om.js"></script>
+<style id="om-fonts">
+@font-face { font-family: "Inter"; src: url("assets/fonts/Inter-var.woff") format("woff"); font-weight: 100 900; }
+@font-face { font-family: "Noto Sans SC"; src: url("assets/fonts/NotoSansSC-700.woff") format("woff"); font-weight: 700; }
+@font-face { font-family: "Noto Sans SC"; src: url("assets/fonts/NotoSansSC-500.woff") format("woff"); font-weight: 500; }
+</style>
+<style>
+  html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: var(--paper); }
+  #film { position: relative; width: 1920px; height: 1080px; overflow: hidden; color: var(--ink); font-family: "Inter", "Noto Sans SC", sans-serif;
+    background: radial-gradient(1400px 900px at 50% 40%, #fffdf9, var(--paper) 70%); }
+  /* the world: every layer is placed in it with translate3d / rotate; the camera (OM.space) moves the world */
+  #world, #world * { transform-style: preserve-3d; }
+  #app { position: absolute; left: 160px; top: 40px; width: 1600px; height: 1000px; }
+  /* the real interface, cut into layers by background-position: one capture, no extra files */
+  .shot { position: absolute; background-image: var(--shot); background-size: 1600px 1000px; }
+  .base { left: 0; top: 0; width: 1600px; height: 1000px; border-radius: 14px; box-shadow: 0 60px 120px -40px #1d1b1855, 0 0 0 1px #00000014; }
+  .hole { position: absolute; }
+  .layer { position: absolute; border-radius: 8px; box-shadow: 0 40px 80px -30px #1d1b1866, 0 0 0 1px #0000001a; }
+  #stage { left: 48px; top: 48px; width: 1232px; height: 819px; background-position: -48px -48px; }
+  #inspector { left: 1281px; top: 48px; width: 319px; height: 819px; background-position: -1281px -48px; }
+  #timeline { left: 0; top: 868px; width: 1600px; height: 132px; background-position: 0 -868px; border-radius: 0 0 14px 14px; }
+  /* rebuilt in code: the studio's comment, sharp at any distance, editable, pickable */
+  .pin { position: absolute; width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 6px #ffffff, 0 10px 24px #0005; }
+  .card { position: absolute; width: 420px; padding: 22px 26px 24px; border-radius: 16px; background: #fff; box-shadow: 0 40px 70px -24px #1d1b1870, 0 0 0 1px #0000000f; font-family: "Noto Sans SC", sans-serif; }
+  .card .who { font: 600 17px/1 "Inter", sans-serif; color: #6f695f; letter-spacing: .5px; display: flex; gap: 10px; align-items: center; }
+  .card .who i { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
+  .card .say { margin-top: 14px; font-weight: 700; font-size: 38px; line-height: 1.2; }
+  .card .done { margin-top: 18px; display: inline-flex; gap: 10px; align-items: center; padding: 9px 16px; border-radius: 99px; background: #e3f3e9; color: #276749; font-weight: 500; font-size: 22px; }
+  .card .done b { font: 700 22px "Inter"; }
+  .ring { position: absolute; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%; border: 5px solid var(--accent); }
+  .cursor { position: absolute; width: 74px; height: 74px; margin: -8px 0 0 -14px; filter: drop-shadow(0 14px 14px #0004); }
+  .type { position: absolute; left: 1960px; top: 360px; width: 900px; }
+  .type .bar { width: 130px; height: 12px; background: var(--accent); margin-bottom: 48px; transform-origin: 0 50%; }
+  .type h1 { margin: 0; white-space: nowrap; font-size: 140px; line-height: 1; letter-spacing: -6px; font-weight: 760; }
+  .type p { margin: 40px 0 0; font-family: "Noto Sans SC", sans-serif; font-weight: 700; font-size: 66px; line-height: 1.25; }
+  #endframe { position: absolute; left: 120px; top: 40px; width: 3060px; height: 1000px; pointer-events: none; }
+</style>
+</head>
+<body>
+<!--
+  Interface in space: a real screenshot cut into layers that lift apart in depth, pieces rebuilt in code where
+  they have to change or stay sharp, one continuous 3D camera (OM.space) that ends on the flat layout.
+  Swap the capture and the colours for the product's own; rebuild what moves, never draw placeholder UI.
+-->
+<div id="film" data-composition-id="film" data-width="1920" data-height="1080">
+  <div id="world">
+    <div id="app" data-om-id="app">
+      <div class="shot base" data-om-id="base"></div>
+      <!-- where the layers were: the panels' own empty colours, so a lifted layer leaves its slot behind -->
+      <div class="hole" style="left:48px;top:48px;width:1232px;height:819px;background:#26241f"></div>
+      <div class="hole" style="left:1281px;top:48px;width:319px;height:819px;background:#fff"></div>
+      <div class="hole" style="left:0;top:868px;width:1600px;height:132px;background:#fff;border-radius:0 0 14px 14px"></div>
+      <div class="shot layer" id="timeline" data-om-id="timeline"></div>
+      <div class="shot layer" id="inspector" data-om-id="inspector"></div>
+      <div class="shot layer" id="stage" data-om-id="stage">
+        <div class="ring" id="ring"></div>
+        <div class="pin" id="pin" data-om-id="pin"></div>
+        <div class="card" id="card" data-om-id="card">
+          <div class="who"><i></i>你 · 刚刚</div>
+          <div class="say" data-var-text="comment">标题再大一点</div>
+          <div class="done" id="done" data-om-id="done"><b>✓</b><span data-var-text="reply">已改：标题 96 → 132 px</span></div>
+        </div>
+        <svg class="cursor" id="cursor" viewBox="0 0 24 24" data-om-id="cursor"><path fill="#1d1b18" stroke="#fff" stroke-width="1.2" stroke-linejoin="round" d="M5 3l14 8-6 1.5L10 19z"/></svg>
+      </div>
+    </div>
+    <div class="type" data-om-id="type">
+      <div class="bar"></div>
+      <h1 data-om-id="title" data-var-text="title">huashu-motion</h1>
+      <p data-om-id="subtitle" data-var-text="subtitle">对着画面指一下，就能改</p>
+    </div>
+    <div id="endframe"></div>
+  </div>
+</div>
+
+<script>
+  const V = OM.vars();
+  document.getElementById('film').style.setProperty('--shot', `url("${V.screen}")`);
+  const D = 9.6 + V.endHold;
+  const tl = gsap.timeline({ paused: true, defaults: { ease: 'power3.out' } });
+
+  // the point you click: the film's title, in stage-layer pixels
+  const P = { x: 518, y: 703 };
+  gsap.set('#pin, #ring', { left: P.x, top: P.y });
+  gsap.set('#card', { left: P.x + 60, top: P.y - 330 });
+  gsap.set('#cursor', { left: P.x, top: P.y });
+
+  // ---------- the layers in depth ----------
+  // exploded: each layer stands off the base; they arrive from far in the first second, collapse at 6.2 s
+  const Z = { stage: 230, inspector: 420, timeline: 140 };
+  tl.addLabel('scene:explode', 0);
+  tl.fromTo('#stage', { z: 760 }, { z: Z.stage, duration: 1.3, ease: 'expo.out' }, 0)
+    .fromTo('#inspector', { z: 1000, x: 160 }, { z: Z.inspector, x: 0, duration: 1.5, ease: 'expo.out' }, 0.06)
+    .fromTo('#timeline', { z: 560, y: 120 }, { z: Z.timeline, y: 0, duration: 1.4, ease: 'expo.out' }, 0.12);
+
+  // ---------- one camera ----------
+  const cam = OM.space('#world', { fov: 38 });
+  cam.set({ target: [700, 600, 300], distance: 1250, yaw: -40, pitch: 28, roll: -5 });
+  cam.to(tl, 0, { target: [960, 540, 160], distance: 2050, yaw: -20, pitch: 14, roll: 0, duration: 1.8, ease: 'expo.out' });
+  cam.to(tl, 1.8, { yaw: 14, pitch: 9, distance: 1950, duration: 1.5, ease: 'sine.inOut' });
+
+  // ---------- point, comment, done ----------
+  tl.addLabel('scene:point', 2.6);
+  tl.fromTo('#cursor', { x: 520, y: -260, z: 260, opacity: 0 }, { x: 0, y: 0, z: 24, opacity: 1, duration: 1.0, ease: 'expo.inOut' }, 2.4)
+    .to('#cursor', { scale: 0.86, duration: 0.1, ease: 'power2.in' }, 3.4)
+    .to('#cursor', { scale: 1, duration: 0.25 }, 3.5)
+    .fromTo('#ring', { scale: 0.2, opacity: 1 }, { scale: 1.8, opacity: 0, duration: 0.8, ease: 'expo.out' }, 3.42)
+    .fromTo('#pin', { scale: 0 }, { scale: 1, duration: 0.6, ease: OM.spring(0.4) }, 3.45)
+    .fromTo('#card', { scale: 0.4, z: 0, opacity: 0, transformOrigin: '0% 100%' }, { scale: 1, z: 170, opacity: 1, duration: 0.8, ease: OM.spring(0.3) }, 3.55)
+    .to('#cursor', { x: -150, y: 120, z: 60, duration: 0.9, ease: 'power3.inOut' }, 3.9)
+    .fromTo('#done', { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.5 }, 5.15);
+  // the camera follows: into the comment, the focus of the film
+  cam.to(tl, 3.45, { target: '#card', distance: 900, yaw: 6, pitch: 4, duration: 1.2, ease: 'expo.inOut' });
+  cam.to(tl, 4.65, { distance: 820, yaw: -4, duration: 1.4, ease: 'sine.inOut' });
+
+  // ---------- collapse to the flat interface, then the title ----------
+  tl.addLabel('scene:flat', 6.1);
+  tl.to('#stage', { z: 0, duration: 1.1, ease: 'expo.inOut' }, 6.1)
+    .to('#inspector', { z: 0, duration: 1.1, ease: 'expo.inOut' }, 6.16)
+    .to('#timeline', { z: 0, duration: 1.1, ease: 'expo.inOut' }, 6.22)
+    .to('#card', { z: 0, duration: 1.1, ease: 'expo.inOut' }, 6.1)
+    .to('#cursor', { z: 0, duration: 1.1, ease: 'expo.inOut' }, 6.1);
+  cam.to(tl, 6.1, { flat: true, duration: 1.2, ease: 'expo.inOut' });
+  tl.addLabel('scene:end', 7.5);
+  cam.to(tl, 7.5, { fit: '#endframe', pad: 0, duration: 1.3, ease: 'expo.inOut' });
+  tl.fromTo('.type .bar', { scaleX: 0 }, { scaleX: 1, duration: 0.8, ease: 'expo.inOut' }, 8.0)
+    .fromTo('.type h1', { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.9, ease: 'expo.out' }, 8.1)
+    .fromTo('.type p', { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.8, ease: 'expo.out' }, 8.35)
+    .to({}, { duration: 0 }, D);
+
+  window.__timelines['film'] = tl;
+</script>
+</body>
+</html>

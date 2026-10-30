@@ -46,15 +46,14 @@ export const TOOL_CAPABILITY_GROUPS = {
     "bash_bg",
   ],
   web: ["source_check", "fetch_content", "get_search_content"],
-  memory: ["ctx_search", "ctx_memory", "ctx_note", "ctx_expand"],
+  memory: ["ctx_search", "ctx_memory", "ctx_note", "ctx_expand", "ctx_reduce"],
   ops: ["conflict"],
   preview: ["preview_export"],
   workflow: ["execute_command"],
 } as const;
 
 export const FAST_TOOL_NAMES: readonly string[] = TOOL_CAPABILITY_GROUPS.core;
-const ALWAYS_ON_TOOL_NAMES = new Set<string>(["codemode"]);
-const ADAPTIVE_DEFAULT_TOOL_NAMES = new Set<string>(TOOL_CAPABILITY_GROUPS.memory);
+const ALWAYS_ON_TOOL_NAMES = new Set<string>(["codemode", ...TOOL_CAPABILITY_GROUPS.memory]);
 
 export function capabilityToolsForMatches(
   matchedNames: readonly string[],
@@ -81,7 +80,7 @@ export function isCoreToolName(name: string): boolean {
 }
 
 export function fastSelectionConfig(groups: readonly ToolGroupRef[]): ToolSelectionConfig {
-  const keep = new Set(FAST_TOOL_NAMES);
+  const keep = new Set([...FAST_TOOL_NAMES, ...ALWAYS_ON_TOOL_NAMES]);
   const disabledTools = [...new Set(
     groups.flatMap((group) => group.tools.map((tool) => tool.name))
       .filter((name) => !keep.has(name)),
@@ -276,13 +275,11 @@ export function activeToolsForMode(
   for (const { group, name } of extensionTools) {
     if (config.disabledTools.includes(name)) continue;
     if (config.disabledExtensions.includes(group.id) && !core.has(name)) continue;
-    const enabled = config.toolMode === "full"
-      || (config.toolMode === "fast" && (core.has(name) || name === "update_plan" || name === "obs_recall"))
+    const enabled = ALWAYS_ON_TOOL_NAMES.has(name)
+      || config.toolMode === "full"
+      || (config.toolMode === "fast" && core.has(name))
       || (config.toolMode === "adaptive" && (
         core.has(name)
-        || ADAPTIVE_DEFAULT_TOOL_NAMES.has(name)
-        || name === "update_plan"
-        || name === "obs_recall"
         || name === SEARCH_TOOL_NAME
         || activatedTools.has(name)
       ));
@@ -296,9 +293,9 @@ export function activeToolsForMode(
       || exposure === "model-only"
       || preserved.has(name));
   });
-  const solPlanActive = exposed.includes("update_plan") && !config.disabledTools.includes("update_plan");
+  const planActive = exposed.includes("update_plan") && !config.disabledTools.includes("update_plan");
   return exposed.filter((name) => !config.disabledTools.includes(name)
     && (config.toolMode === "adaptive" || name !== SEARCH_TOOL_NAME)
     && (config.toolMode !== "full" || !FULL_MODE_DISCOVERY_TOOL_NAMES.has(name))
-    && (!solPlanActive || (name !== "todo" && name !== "todowrite")));
+    && (!planActive || (name !== "todo" && name !== "todowrite")));
 }

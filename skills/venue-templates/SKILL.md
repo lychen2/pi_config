@@ -1,6 +1,6 @@
 ---
 compatibility: Requires Python 3.11+ for helper scripts; LaTeX and Poppler command-line tools are optional for compilation and PDF inspection.
-description: Format manuscripts for a target venue. Use when applying a journal or conference template and its submission rules.
+description: 按期刊或会议模板排版论文，核对投稿要求。
 license: MIT license
 metadata:
     github-path: skills/venue-templates

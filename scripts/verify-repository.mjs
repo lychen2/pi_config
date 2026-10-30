@@ -13,7 +13,7 @@ const skipPack = process.argv.includes("--skip-pack");
 const piRange = ">=1.0.0 <2.0.0";
 const legacyPiRange = ">=0.85.0 <0.86.0";
 const defaultOnly = process.argv.includes("--default-profile");
-const defaultPackages = new Set(["sol-pi", "pi-context-bridge", "pi-default-workbench", "pi-slim-skills", "pi-tool-rails", "pi-cache-drop-guard", "pi-zh-localizer"]);
+const defaultPackages = new Set(["pi-context-bridge", "pi-default-workbench", "pi-slim-skills", "pi-tool-rails", "pi-cache-drop-guard", "pi-zh-localizer"]);
 const nodeRange = ">=22.19.0";
 const piVersion = process.argv.find((argument) => argument.startsWith("--pi-version="))?.slice("--pi-version=".length);
 
@@ -88,12 +88,6 @@ for (const entry of names) {
   checkManifest(entry.name, manifest);
   packages.push({ name: entry.name, dir: packageDir, manifest });
 }
-
-// The bridge owns loading; the fork is verified as its own maintained source package.
-const solDir = path.join(repoRoot, "vendor", "sol-pi");
-const solManifest = JSON.parse(await readFile(path.join(solDir, "package.json"), "utf8"));
-checkManifest("sol-pi", solManifest);
-packages.unshift({ name: "sol-pi", dir: solDir, manifest: solManifest });
 
 let stagingRoot;
 let stagedRepo;

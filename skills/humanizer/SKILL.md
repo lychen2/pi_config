@@ -1,13 +1,7 @@
 ---
 name: humanizer
 version: 2.8.2
-description: |
-  Remove signs of AI-generated writing from text. Use when editing or reviewing
-  text to make it sound more natural and human-written. Based on Wikipedia's
-  comprehensive "Signs of AI writing" guide. Detects and fixes patterns including:
-  inflated symbolism, promotional language, superficial -ing analyses, vague
-  attributions, em dash overuse, rule of three, AI vocabulary words, passive
-  voice, negative parallelisms, and filler phrases.
+description: 润色英文，去除 AI 写作痕迹，保留事实与作者语气。
 license: MIT
 compatibility: any-agent
 allowed-tools:

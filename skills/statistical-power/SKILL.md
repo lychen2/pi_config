@@ -1,7 +1,7 @@
 ---
 allowed-tools: Read Write Edit Bash
 compatibility: Requires Python >=3.10. Examples target statsmodels >=0.14.6, scipy >=1.11, pingouin >=0.6, numpy >=1.26, and matplotlib. Optional extras are statsmodels mixed models and lifelines for simulation-based power.
-description: Estimate statistical power and sample size. Use when planning replication or checking whether a study can detect an effect.
+description: 计算统计功效与样本量，评估研究能否检出目标效应。
 license: MIT license
 metadata:
     github-path: skills/statistical-power

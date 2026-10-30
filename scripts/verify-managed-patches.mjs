@@ -6,7 +6,7 @@ import { pathToFileURL } from "node:url";
 
 const [id, directory] = process.argv.slice(2);
 assert.ok(directory, "A candidate checkout is required");
-assert.ok(["sol-pi", "pi-provider"].includes(id), "Unknown managed checkout");
+assert.equal(id, "pi-provider", "Unknown managed checkout");
 // Use the installed bridge's Pi loader, rather than a checkout's stale peer installation.
 const loaderPath = resolve(import.meta.dirname, "../extensions/pi-context-bridge/node_modules/@earendil-works/pi-coding-agent/dist/core/extensions/loader.js");
 const isolated = await mkdtemp(join(tmpdir(), "managed-pi-load-"));
@@ -20,14 +20,11 @@ try {
   assert.equal(homedir(), isolated);
   globalThis.fetch = async () => { throw new Error("Unexpected network access during load verification"); };
   const { loadExtensions } = await import(pathToFileURL(loaderPath).href);
-  const entrypoint = id === "sol-pi" ? "src/sol-pi/index.ts" : "extensions/provider/index.ts";
+  const entrypoint = "extensions/provider/index.ts";
   const result = await loadExtensions([join(resolve(directory), entrypoint)], isolated);
   assert.deepEqual(result.errors, [], "Pi extension load errors");
   assert.equal(result.extensions.length, 1);
-  if (id === "sol-pi") {
-    assert.ok(result.extensions[0].handlers.has("session_start"));
-    // Its deferred-continuation regression runs in the complete upstream suite.
-  } else {
+  {
     const provider = result.extensions[0].commands.get("provider");
     assert.ok(provider);
     const models = [{ id: "first" }, { id: "sparse-test" }, { id: "named", name: "Named", contextWindow: 42, maxTokens: 8 }];

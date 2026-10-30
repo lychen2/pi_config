@@ -33,6 +33,9 @@
 vendor/sol-pi/examples/solpi-visual/assets/*
 !vendor/sol-pi/examples/solpi-visual/assets/results.png
 !vendor/sol-pi/examples/solpi-visual/assets/scene-comparison.jpg
+# Upstream motion templates and examples require their bundled assets.
+!skills/huashu-motion/.runtime/**/assets/
+!skills/huashu-motion/references/about-author.md
 # Curated source templates with reviewed deliverable-content guidance.
 !skills/manimgx/assets/
 skills/manimgx/assets/*

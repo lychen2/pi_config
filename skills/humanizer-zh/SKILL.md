@@ -1,6 +1,6 @@
 ---
 name: humanizer-zh
-description: 编辑中文文本，去掉套话、机械重复、夸张修辞和纠错过程残留，同时保留事实、作者语气与必要限定。适用于润色讲稿、技术说明、报告和一般文章。
+description: 润色中文，去除套话和机械表达，保留事实与作者语气。
 allowed-tools:
   - Read
   - Write

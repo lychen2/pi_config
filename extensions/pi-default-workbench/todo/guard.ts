@@ -39,7 +39,12 @@ function getOpenWork(ctx: ExtensionContext, toolName: string): Task[] {
     if (entry.type !== "message") continue;
     const message = entry.message;
     if (message.role !== "toolResult" || message.isError) continue;
-    if (message.toolName === toolName) todos = openTasks(record(message.details).tasks, false) ?? todos;
+    if (message.toolName === toolName) {
+      const details = record(message.details);
+      todos = openTasks(details.tasks, false) ?? todos;
+      // Explicit clearing retires reminders inherited from earlier SoL plans.
+      if (details.action === "clear" && Array.isArray(details.tasks) && details.tasks.length === 0) plan = undefined;
+    }
     if (message.toolName !== "update_plan") continue;
     const detailsPlan = openTasks(record(message.details).plan, true);
     if (detailsPlan) {
@@ -55,7 +60,7 @@ function getOpenWork(ctx: ExtensionContext, toolName: string): Task[] {
       } catch { /* A malformed tool snapshot does not replace the last valid plan. */ }
     }
   }
-  // SoL's plan replaces Todo, including when all plan steps are completed.
+  // A plan replaces Todo until an explicit clear; later plan updates can resume it.
   return plan ?? todos;
 }
 

@@ -4,6 +4,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import todoGuard from "../../todo/guard.ts";
+import { applyMutation, EMPTY_STATE, resultEnvelope } from "../../todo/src/state.ts";
 
 const root = await mkdtemp(join(tmpdir(), "pi-plan-reminder-"));
 process.env.PI_CODING_AGENT_DIR = root;
@@ -45,6 +46,28 @@ test("restores nested-call plan state and direct tool snapshots; completed plan 
     assert.equal(guard.run(), undefined);
   }
   assert.equal(fixture([todo]).run().continue, true, "legacy Todo still receives reminders");
+});
+
+test("explicit Todo clear retires old plan reminders while reads and failed clears preserve them", () => {
+  const clear = { type: "message", message: { role: "toolResult", toolName: "todo",
+    ...resultEnvelope("clear", {}, applyMutation(EMPTY_STATE, "clear", {})) } };
+  const list = { type: "message", message: { role: "toolResult", toolName: "todo",
+    ...resultEnvelope("list", {}, applyMutation(EMPTY_STATE, "list", {})) } };
+  for (const entry of [state(open), result(open)]) {
+    const branch = [entry, list];
+    const guard = fixture(branch);
+    assert.equal(guard.run().continue, true, "reading an empty Todo must not dismiss the old plan");
+    branch.push({ ...clear, message: { ...clear.message, isError: true } });
+    assert.equal(guard.run().continue, true, "a failed clear must not dismiss the old plan");
+    branch.push(clear);
+    assert.equal(guard.run(), undefined, "explicit clearing ends reminders without marking work completed");
+    branch.push({ type: "message", message: { role: "toolResult", toolName: "todo",
+      ...resultEnvelope("create", { subject: "Resume saved work" },
+        applyMutation(EMPTY_STATE, "create", { subject: "Resume saved work" })) } });
+    assert.match(guard.run().entries.at(-1).content, /#1 \[pending\]: Resume saved work/);
+    branch.push(state(open));
+    assert.match(guard.run().entries.at(-1).content, /#verify \[in_progress\]/);
+  }
 });
 
 test("preserves boundary drafts and skips aborted, failed, pending, or already continuing runs", () => {

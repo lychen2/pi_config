@@ -1,7 +1,7 @@
 ---
 allowed-tools: Read Write Edit Bash
 compatibility: Requires Python 3.12+. The numeric CLIs need pint, uncertainties, NumPy, and SciPy; the static auditor is standard-library only. All bundled tooling runs locally with no network access.
-description: Propagate measurement uncertainty with units. Use when combining measured quantities or reporting uncertainty budgets.
+description: 计算带单位的测量不确定度，整理误差传播与预算。
 license: MIT
 metadata:
     github-path: skills/uncertainty-and-units

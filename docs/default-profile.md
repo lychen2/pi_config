@@ -21,6 +21,7 @@ Web Search restores `ssrf.allowRanges=["198.18.0.0/15"]` for this profile's TUN 
 | Skill instructions | Pi resource loader and workbench `search_skill_bm25` | Search metadata first when useful; load the selected body on demand |
 | Project tool modes and disabled-tool policy | `pi-default-workbench` | `fast`, `adaptive`, and `full`; full mode hides the redundant local tool-search entry |
 | Heavy implementation modules | Workbench lazy wrappers | Implementation imports occur on first use, separately from schema visibility |
+| Edit/write follow-up commands | Workbench `action-fusion` | Optional `then_run` runs after a successful mutation |
 | Compressed skill directory | `pi-slim-skills` | Empty default injection allowlist; no automatic full-body injection |
 | Tool and thinking presentation | `pi-tool-rails` | Preserves raw evidence, actual errors, timing and mutation ratio bars |
 
@@ -42,19 +43,21 @@ PI_TIMING=1 PI_STARTUP_BENCHMARK=1 pi --no-session
 
 The benchmark requires a TTY. Its reported timing is more useful than shell process duration, which can include shutdown work. Compare repeated measurements under the same profile and cache state.
 
-## SoL and persistent knowledge
+## Context and persistent knowledge
 
-The default bridge registers the maintained source package at `vendor/sol-pi` through a local npm file dependency. The original `~/.pi/agent/git/github.com/NVlabs/SoL-Pi` checkout remains untouched and is no longer loaded or automatically updated. Do not register either source as a second standalone Pi package in this profile. Provenance, selected PRs, cache limits and the maintenance procedure are in [FORK.md](../vendor/sol-pi/FORK.md). A failed optional SoL initialization must leave independent bridge features available and report the failure.
+`pi-default-workbench` supplies optional `then_run` commands for `edit` and `write`. It preserves native arguments and rendering, forwards timeout and cancellation, and serializes same-file operations through command completion. Failed mutations skip the command. Command failures retain the completed mutation and report the error.
 
-`config/sol-pi.json` controls artifact reduction, turn folding, online compaction and tool selection. This profile sets `observationPackFullSends: 0`: large results use the same placeholder from the first request, and `obs_recall` retrieves archived content. Native compaction still rewrites history; actual provider cache hits also depend on tools, system prompts, model and provider cache lifetime. It is copied to the agent directory; project `.pi/sol-pi.json` overrides require explicit reconciliation. RTK uses the bridge compatibility entry and only rewrites supported Git overview commands, preserving tool-result evidence for SoL.
+Magic Context owns session compaction, history recovery and persistent knowledge. Every tool preset enables `ctx_search`, `ctx_memory`, `ctx_note`, `ctx_expand`, and `ctx_reduce` by default. Explicit extension and tool disables remain authoritative. Workbench owns Todo; its guards and the plan panel retain legacy session recovery. The Matugen footer remains independent.
 
-Magic Context retains its knowledge and history role. Turning its compaction off affects every host sharing that user configuration, so the migration requires explicit approval:
+SoL-Pi is retired from the bridge, dependency lockfile and installer. Its observation packing, `obs_recall`, and automatic evidence-preserving log reducer are removed. Native output truncation and Magic Context retain their own behavior. RTK continues to rewrite only supported Git overview commands.
+
+Both Magic Context's and Pi's `compaction.enabled` stay true. Magic Context intercepts the compaction boundary. Its user configuration is shared across hosts, so the configurator requires explicit approval:
 
 ```sh
-node scripts/configure-default-sol.mjs --approve-shared-memory
+node scripts/configure-default-context.mjs --approve-shared-memory
 ```
 
-The migration accepts either the bridge-owned registration or one standalone SoL source, rejects duplicates, and saves backups. It does not erase memory databases or change reducer/provider credentials. Add `--tun` only for the documented synthetic DNS range used by a TUN proxy; other private ranges remain blocked.
+The configurator saves backups and enables Magic Context compaction. It preserves Pi's retained-tail settings, package registrations, memory databases and provider routes. Magic Context's `todowrite` stays off, so workbench supplies the task list. Add `--tun` only for the documented synthetic DNS range used by a TUN proxy; other private ranges remain blocked.
 
 ## Rules and skills
 
@@ -72,6 +75,8 @@ The npm preset remains intact. Local GPT refinements cover proportional verifica
 
 `scripts/deploy-skills.mjs` owns the managed skill list. It preserves user-added skills and archives only explicitly retired managed names. The MIT-licensed `cad` skill is maintained from text-to-cad's `latest` branch at `skills/cad/`; update its instructions and references together, then record the source commit. The skill's viewer instructions target hosts with a CAD viewer; Pi can use its model generation, export and inspection commands, but has no native viewer panel. Scientific calculations retain their relevant unit, approximation, numerical and evidence checks. Skill metadata should describe the task that benefits from the guidance; references are opened when needed for that task.
 
+Load [`research-decision`](../skills/research-decision/SKILL.md) for experiment choices, unexpected results, or interpretations inherited from project notes. Use `/skill:research-decision <task>` or search and load it with `search_skill_bm25`. The skill explains how to discover `research_decision` and preserve consequential decisions in the session branch.
+
 The active Manim entries in `.pi/agent/skills` may point to `.agents/skills`. Resolve symlinks before treating matching names as duplicate installations. Package-provided skills remain owned by their package.
 
 Keep native skill discovery enabled in launch wrappers. Pi scans user, project, Agent Skills, and enabled package locations. `search_skill_bm25` searches discovered metadata and loads selected instructions on demand. `--no-skills` restricts discovery; it does not enable BM25 loading. The host wrapper no longer selects the retired curated directory. The empty body-injection allowlist remains unchanged.
@@ -82,7 +87,7 @@ Installation is incremental by default. `--clean-plugins` is an explicit cleanup
 
 ### Safely update patched Git plugins
 
-pi-provider is the managed runtime source in `config/runtime-git-sources.txt`. SoL-Pi is maintained in this repository under `vendor/sol-pi`. `config/managed-patches/pi-provider.patch` restores the local provider metadata fixes on a fresh clone; an already applied patch is preserved, and a conflict stops installation without replacing local edits. This patch does not pin the upstream revision. The installer preserves dirty checkouts. pi-provider is registered as a local absolute path, so native `pi update --extensions` cannot reset its Git checkout. SoL-Pi remains bridge-loaded.
+pi-provider is the managed runtime source in `config/runtime-git-sources.txt`. `config/managed-patches/pi-provider.patch` restores the local provider metadata fixes on a fresh clone; an already applied patch is preserved, and a conflict stops installation without replacing local edits. This patch does not pin the upstream revision. The installer preserves dirty checkouts. pi-provider is registered as a local absolute path, so native `pi update --extensions` cannot reset its Git checkout.
 
 From this repository, explicitly update pi-provider:
 
@@ -90,7 +95,7 @@ From this repository, explicitly update pi-provider:
 node scripts/update-managed-git.mjs
 ```
 
-The optional `pi-provider` argument selects the same plugin. The command rejects `sol-pi`; review and merge upstream changes into the local fork using its maintenance guide. `PI_CODING_AGENT_DIR` selects another agent directory. The command requires Git, npm/npx, installed bridge development dependencies, and network access. It does not run automatically during installation.
+The optional `pi-provider` argument selects the same plugin. The command accepts only `pi-provider`. `PI_CODING_AGENT_DIR` selects another agent directory. The command requires Git, npm/npx, installed bridge development dependencies, and network access. It does not run automatically during installation.
 
 Each run archives the local binary patch, stages an independent checkout of the configured upstream branch, applies tracked changes using a three-way merge, and preserves untracked/ignored ordinary files except `node_modules`. Extra-file symlinks or collisions with upstream files stop the update. pi-provider compares strict TypeScript diagnostics with an independent pristine checkout of the exact upstream revision, blocking any new diagnostic while reporting unchanged upstream errors. It also runs the upstream API-error tests and exercises the public status command with sparse-model fixtures, an isolated HOME, and simulated network responses. pi-provider receives a Pi 1.0 load/registration smoke test; no real credentials or provider endpoints are used.
 

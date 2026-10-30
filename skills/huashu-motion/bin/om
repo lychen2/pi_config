@@ -1,0 +1,4 @@
+#!/bin/sh
+# Runs the locally bundled huashu-motion CLI.
+DIR="$(cd "$(dirname "$0")" && pwd -P)"
+exec node "$DIR/../.runtime/cli/om.js" "$@"

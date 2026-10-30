@@ -19,17 +19,23 @@ New interfaces get a compact direction based on their audience, content, and pri
 | frontend-design | Choose a visual direction for a new interface or substantial redesign. |
 | ui-ux-pro-max | Search local design guidance or draft a new design system. |
 | emil-design-eng | Polish component feedback, transitions, tooltips, popovers, or gestures. |
-| review-animations | Explicitly audit an existing interaction or animation. |
+| huashu-motion | Create editable motion graphics, launch films, or explainer videos. |
 
 The entry loads guidance as needed. Skill bodies stay outside the default prompt.
-The animation audit preserves disable-model-invocation and requires an explicit command:
-
+Use the motion entry to create a film:
 
 ```text
-/skill:review-animations Review the drawer in src/components/Drawer.vue.
+/skill:huashu-motion Create a 30-second launch film using this product’s screenshots and brand assets.
 ```
 
-A review remains read-only unless the request also authorizes repairs.
+The motion skill bundles its CLI and assets locally. Run `<skill-dir>/bin/om doctor` to inspect rendering prerequisites.
+Use `emil-design-eng` for interface animation audits and component polish.
+
+Huashu Motion remains the general motion-film entry, with MIT licensing and a bundled local studio.
+[OneTake](https://github.com/feitangyuan/onetake/tree/013a61ac8d98883c73733f59c06e49e9ba444f14) overlaps in short product films, HTML compositions, sound, and frame-by-frame export.
+Its distinct focus is continuous-shot choreography, measured moves, multilingual timing, and continuity diagnostics.
+Its PolyForm Noncommercial license limits permitted use to noncommercial purposes; it is excluded from the managed default skills.
+Keep `explainer-videos` for narrated teaching and `manimgx` for mathematical animation.
 
 ## Use local design search
 
@@ -52,7 +58,7 @@ Review and edit a generated draft before adopting its recommendations.
 
 ## Inspect the rendered interface
 
-Reuse available browser tools or discover computer-use for a visible browser session.
+Reuse available browser tools for a visible browser session.
 Inspect desktop and narrow layouts, then exercise the primary action and changed states.
 Check keyboard focus, touch behavior, reduced motion, and animation interruption when affected.
 A build establishes compilation; screenshots and exercised interactions establish the inspected UI behavior.
@@ -72,6 +78,8 @@ Archive logs show each original and backup path.
 
 Each imported skill includes SOURCES.md and its upstream license.
 Frontend Design retains upstream instructions with a marked project-context addition.
-Emil entries use concise local adaptations with project-specific values and rendering checks.
+The Emil entry uses a concise local adaptation with project-specific values and rendering checks.
+Huashu Motion retains upstream instructions and references, with local CLI packaging documented in its SOURCES.md.
 The Downloads-linked design-ui is replaced by the maintained local entry.
-The deployment adds no browser server, component registry, animation library, or paid service.
+Huashu Motion includes a local studio and animation runtime.
+Launching the studio, installing optional tools, and exporting films follow the active task’s requirements and authority.

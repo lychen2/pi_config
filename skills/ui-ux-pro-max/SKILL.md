@@ -1,6 +1,6 @@
 ---
 name: ui-ux-pro-max
-description: Search local UI and UX guidance for styles, palettes, typography, charts, accessibility, and framework patterns. Use for design research or a new design-system draft.
+description: 检索本地 UI/UX 设计建议，生成并评估设计系统草稿。
 license: MIT; see LICENSE
 compatibility: Python 3; standard library only
 ---

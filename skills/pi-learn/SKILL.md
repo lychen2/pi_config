@@ -1,6 +1,6 @@
 ---
 name: pi-learn
-description: Tutor a learner through lessons, practice, and review when they ask to learn a topic, study material, or resume tutoring.
+description: 围绕学习目标安排课程、练习和复习，继续已有学习进度。
 license: MIT; see LICENSE and SOURCES.md
 compatibility: Pi with file tools. Web, document parsing, and visualization are optional.
 ---

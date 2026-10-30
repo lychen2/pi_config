@@ -4,11 +4,12 @@ import path from 'node:path';
 export const installedSkills = [
   'uncertainty-and-units', 'lab-hardware-cad', 'experimental-design',
   'statistical-analysis', 'statistical-power', 'scientific-visualization',
+  'research-decision',
   'sympy', 'paper-lookup', 'citation-management', 'scientific-writing',
   'venue-templates', 'scientific-slides', 'agents-progressive-disclosure',
   'find-skills', 'humanizer-zh', 'mineru-file-processing', 'workflow-skill-creator', 'cad',
   'pi-learn', 'optics-research', 'fuck-my-shit-mountain', 'manimgx',
-  'design-ui', 'frontend-design', 'ui-ux-pro-max', 'emil-design-eng', 'review-animations',
+  'design-ui', 'frontend-design', 'ui-ux-pro-max', 'emil-design-eng', 'huashu-motion',
 ];
 // Only known legacy distribution directories are retired; user skills are preserved.
 export const retiredSkills = [
@@ -17,6 +18,7 @@ export const retiredSkills = [
   'literature-search-openalex', 'nature-skills', 'pubmed-database', 'docx', 'pdfs',
   'claude-science/figure-style', 'mineru', 'humanizer',
   'manim-composer', 'manimce-best-practices', 'manimgl-best-practices',
+  'review-animations',
 ];
 const exists = async p => { try { await access(p); return true; } catch { return false; } };
 

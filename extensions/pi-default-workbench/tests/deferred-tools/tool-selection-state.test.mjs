@@ -189,25 +189,31 @@ test("adaptive starts with core and loader, then preserves activated tools", () 
   assert.deepEqual(expanded, ["bash", "read", "fffind", "web_search", SEARCH_TOOL_NAME]);
 });
 
-test("adaptive includes memory tools while fast excludes them", () => {
-  const memoryTools = ["ctx_search", "ctx_memory", "ctx_note", "ctx_expand"];
-  const groups = [
-    { id: "npm:@cortexkit/pi-magic-context", tools: memoryTools.map((name) => ({ name })) },
-  ];
-
-  const adaptive = activeToolsForMode(["bash"], groups, empty);
-  assert.deepEqual(adaptive, ["bash", ...memoryTools]);
-
-  const fast = activeToolsForMode(["bash"], groups, { ...empty, toolMode: "fast" });
-  assert.deepEqual(fast, ["bash"]);
+test("all presets enable every registered Magic Context tool and preserve explicit disables", () => {
+  const memoryTools = ["ctx_search", "ctx_memory", "ctx_note", "ctx_expand", "ctx_reduce"];
+  const id = "npm:@cortexkit/pi-magic-context";
+  const groups = [{ id, tools: memoryTools.map((name) => ({ name })) }];
+  for (const toolMode of ["adaptive", "fast", "full"]) {
+    const config = { ...empty, toolMode };
+    assert.deepEqual(activeToolsForMode(["bash"], groups, config), ["bash", ...memoryTools]);
+    assert.deepEqual(activeToolsForMode(["bash"], groups, { ...config, disabledTools: ["ctx_reduce"] }),
+      ["bash", ...memoryTools.filter((name) => name !== "ctx_reduce")]);
+    assert.deepEqual(activeToolsForMode(["bash"], groups, { ...config, disabledExtensions: [id] }), ["bash"]);
+  }
+  const fast = fastSelectionConfig(groups);
+  assert.deepEqual(fast.disabledTools, []);
+  assert.deepEqual(activeToolsForMode(["bash"], groups, fast), ["bash", ...memoryTools]);
+  // Ephemeral children omit session-scoped tools; the selector does not invent them.
+  const childGroups = [{ id, tools: [{ name: "ctx_search" }, { name: "ctx_memory" }] }];
+  assert.deepEqual(activeToolsForMode(["bash"], childGroups, { ...empty, toolMode: "fast" }), ["bash", "ctx_search", "ctx_memory"]);
 });
 
 test("adaptive preserves memory and defers delegation, MCP and browser schemas", () => {
-  const defaults = ["ctx_search", "ctx_memory", "ctx_note", "ctx_expand"];
-  const deferred = ["ctx_reduce", "browser", "zen_browser_click", "teammate", "teammate-send", "teammate-list", "teammate-wait", "mcp", "teammate-monitor"];
+  const defaults = ["ctx_search", "ctx_memory", "ctx_note", "ctx_expand", "ctx_reduce"];
+  const deferred = ["browser", "zen_browser_click", "teammate", "teammate-send", "teammate-list", "teammate-wait", "mcp", "teammate-monitor"];
   const groups = [{ id: "integrations", tools: [...defaults, ...deferred].map(name => ({ name })) }];
   assert.deepEqual(activeToolsForMode(["read"], groups, empty), ["read", ...defaults]);
-  assert.deepEqual(activeToolsForMode(["read"], groups, { ...empty, toolMode: "fast" }), ["read"]);
+  assert.deepEqual(activeToolsForMode(["read"], groups, { ...empty, toolMode: "fast" }), ["read", ...defaults]);
   assert.deepEqual(activeToolsForMode(["read"], groups, { ...empty, disabledTools: ["mcp"] }), ["read", ...defaults.filter(name => name !== "mcp")]);
   assert.deepEqual(activeToolsForMode(["read"], groups, { ...empty, disabledExtensions: ["integrations"] }), ["read"]);
   for (const name of ["browser", "teammate", "mcp"]) {
@@ -277,14 +283,13 @@ test("full removes local discovery from registered and preserved tools; adaptive
   assert.ok(adaptive.includes(SEARCH_TOOL_NAME));
 });
 
-test("SoL plan and observation recall stay active without duplicate task tools", () => {
-  const groups = [{ id: "sol", tools: [{ name: "update_plan" }, { name: "obs_recall" }] }];
-  for (const toolMode of ["adaptive", "fast", "full"]) {
-    const active = activeToolsForMode(["read", "todo", "todowrite"], groups, { ...empty, toolMode });
-    assert.deepEqual(active, ["read", "update_plan", "obs_recall"]);
+test("external planning tools follow discovery and suppress duplicate Todo only while active", () => {
+  const groups = [{ id: "external-plan", tools: [{ name: "update_plan" }] }];
+  for (const toolMode of ["adaptive", "fast"]) {
+    assert.deepEqual(activeToolsForMode(["read", "todo"], groups, { ...empty, toolMode }), ["read", "todo"]);
   }
-  const disabled = activeToolsForMode(["read", "todo"], groups, { ...empty, disabledTools: ["update_plan"] });
-  assert.deepEqual(disabled, ["read", "todo", "obs_recall"]);
+  assert.deepEqual(activeToolsForMode(["read", "todo"], groups, { ...empty, toolMode: "full" }), ["read", "update_plan"]);
+  assert.deepEqual(activeToolsForMode(["read", "todo"], groups, empty, new Set(["update_plan"])), ["read", "update_plan"]);
 });
 
 test("full respects exposure and preserves discovered tools while disabled rules remain authoritative", () => {

@@ -1,7 +1,7 @@
 ---
 allowed-tools: Read Write Edit Bash Glob Grep
 compatibility: Requires Python 3.11+ and uv for pinned examples. Bundled CLIs are network-free and load Matplotlib, Pillow, or pypdf only when needed. Plotly static export with Kaleido v1 requires a compatible Chrome/Chromium installation.
-description: Create publication-ready scientific figures. Use when plotting analyzed results or preparing journal graphics.
+description: 将分析结果绘制成适合论文发表的科研图表。
 license: MIT
 metadata:
     github-path: skills/scientific-visualization

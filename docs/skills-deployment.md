@@ -8,13 +8,15 @@ Default lazy loading uses `config/slim-skills-whitelist.json`: empty whitelist a
 
 `manimgx` replaces `manim-composer`, `manimce-best-practices`, and `manimgl-best-practices` in both global roots. It retains scene planning and adds the ManimGX inspect/render workflow. Existing CE or GL projects retain their engine unless migration is requested. The skill uses Python 3.13 or 3.14; its runtime is installed on demand, outside the Pi installer. After deployment, run `/reload` and use `/skill:manimgx` to load it. The previous skill directories remain in the archive.
 
-UI work uses the five managed entries: `design-ui`, `frontend-design`, `ui-ux-pro-max`, `emil-design-eng`, and `review-animations`. Start with `/skill:design-ui <task>` after `/reload`. The entry reads the project design system before implementation and loads supporting guidance as needed. Animation audits require explicit invocation. See [UI design workflow](ui-design-skills.md) for commands, local search, browser acceptance, sources, and recovery.
+UI work uses the five managed entries: `design-ui`, `frontend-design`, `ui-ux-pro-max`, `emil-design-eng`, and `huashu-motion`. Start with `/skill:design-ui <task>` after `/reload`. The entry reads the project design system before implementation and loads supporting guidance as needed. `huashu-motion` replaces the deployed `review-animations` entry and includes its local CLI and assets. Previous copies remain archived. Interface animation audits use `emil-design-eng`. See [UI design workflow](ui-design-skills.md) for commands, local search, browser acceptance, sources, and recovery.
 
 Routing boundaries:
 - Compare linewidth distributions: statistical-analysis.
 - Propagate exposure-dose uncertainty: uncertainty-and-units.
 - Apply SPIE submission formatting: venue-templates.
 - Plot already analyzed results: scientific-visualization.
+
+For substantive skill rewrites, use the [Pi skill-diet evaluation workflow](../tests/skill-diet/README.md). Capture the original folder before editing. Compare complete-session behavior and tokens against the original and absent-skill conditions. Keep case-specific requirements reachable through explicit reference routes; entry size alone does not establish an improvement.
 
 Verification: `node --test scripts/deploy-skills.test.mjs` exercises migration, repeated installation, dry run, archival and preservation of a custom domain skill. `npm test --prefix extensions/pi-slim-skills` checks discovery-only and fallback behavior.
 

@@ -1,6 +1,6 @@
 ---
 name: find-skills
-description: Find and install agent skills when the user explicitly asks for reusable capabilities, workflows, or skill recommendations. Specialized tasks do not require skill discovery.
+description: 按用户要求查找、推荐和安装可复用技能。
 ---
 
 # Find Skills

@@ -239,20 +239,19 @@ test("explicit disables outrank adaptive discovery including SDK tools", async (
   assert.equal(result.details.tools.some((entry) => entry.name === "web_search"), false);
 });
 
-test("resource discovery settles late SoL tools and prevents duplicate task discovery", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "pi-sol-tools-"));
+test("late Magic Context tools stay enabled across all preset commands and reset", async () => {
+  const cwd = await mkdtemp(join(tmpdir(), "pi-context-tools-"));
   const pi = fakePi(initialTools());
   register(pi);
   await start(pi, cwd);
-  pi.registerTool(tool("update_plan", "Track execution plan", "sol"));
-  pi.registerTool(tool("obs_recall", "Recall observations", "sol"));
+  const names = ["ctx_search", "ctx_memory", "ctx_note", "ctx_expand", "ctx_reduce"];
+  for (const name of names) pi.registerTool(tool(name, "Magic Context", "npm:@cortexkit/pi-magic-context"));
   for (const handler of pi.handlers.get("resources_discover")) await handler({}, context(cwd));
-  assert.ok(pi.getActiveTools().includes("update_plan"));
-  assert.ok(pi.getActiveTools().includes("obs_recall"));
-  assert.ok(!pi.getActiveTools().includes("todo"));
-  const search = pi.tools.find(t => t.name === "search_tool_bm25");
-  const result = await search.execute("search", { query: "todo project tasks", limit: 50 });
-  assert.ok(!result.details.tools.some(t => t.name === "todo" || t.name === "todowrite"));
+  for (const preset of ["fast", "adaptive", "full", "reset"]) {
+    await pi.commands.get("tools").handler(preset, context(cwd));
+    for (const name of names) assert.ok(pi.getActiveTools().includes(name), `${preset} must expose ${name}`);
+    assert.ok(pi.getActiveTools().includes("todo"));
+  }
 });
 
 test("tools commands provide mode argument completions", () => {

@@ -1,7 +1,7 @@
 {
-  "model": "manager/gpt-6-luna",
+  "model": "manager/deepseek-v4.1-flash",
   "profile": {
-    "id": "gpt-6-luna",
-    "name": "GPT-6 Luna"
+    "id": "deepseek-v4.1-flash",
+    "name": "DeepSeek V4.1 Flash"
   }
 }

@@ -1,0 +1,23 @@
+{
+  "title": "3D object in a studio (Three.js)",
+  "summary": "The product's real things as objects in a lit studio — its screenshot on a floating device, its logo or icon SVG extruded — with one continuous camera: a low swinging reveal, a push into a detail with the focus following, a crane round the whole object, a hero frame with type.",
+  "best_for": [
+    "a premium launch or a hero shot",
+    "a logo, an icon or a device as a real object",
+    "strong camera moves through a space",
+    "a first second that already moves"
+  ],
+  "aspect": "16:9",
+  "copy": {
+    "templates/blank/vendor/gsap.min.js": "vendor/gsap.min.js",
+    "templates/blank/vendor/GSAP-LICENSE.txt": "vendor/GSAP-LICENSE.txt",
+    "templates/blank/vendor/GSAP-LICENSE.html": "vendor/GSAP-LICENSE.html",
+    "runtime/three/three.min.js": "vendor/three.min.js",
+    "runtime/three/LICENSE": "vendor/THREE-LICENSE.txt",
+    "runtime/three/om-three.js": "vendor/om-three.js",
+    "fonts/Inter-var.woff": "assets/fonts/Inter-var.woff",
+    "fonts/NotoSansSC-700.woff": "assets/fonts/NotoSansSC-700.woff",
+    "fonts/OFL.txt": "assets/fonts/OFL.txt",
+    "fonts/LICENSES.md": "assets/fonts/LICENSES.md"
+  }
+}

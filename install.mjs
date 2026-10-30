@@ -61,6 +61,7 @@ const retiredDefaultPackageNames = new Set([
 const retiredExternalPackageSources = new Set([
   "npm:pi-workspace-history",
   "git:github.com/ayghri/i-have-adhd",
+  "git:github.com/NVlabs/SoL-Pi",
 ]);
 const managedExternalGitSources = new Set(managedGitSources.map(spec => spec.source));
 
@@ -265,7 +266,8 @@ function configuredPackageSource(value) {
 function isRetiredDefaultPackage(value) {
   const source = configuredPackageSource(value)?.replaceAll("\\", "/").replace(/\/+$/, "");
   if (!source) return false;
-  if (retiredExternalPackageSources.has(source)) return true;
+  if ([...retiredExternalPackageSources].some(retired => source === retired || source.startsWith(`${retired}@`))) return true;
+  if (source.endsWith("/git/github.com/NVlabs/SoL-Pi") || source.endsWith("/vendor/sol-pi")) return true;
   return [...retiredDefaultPackageNames].some((name) =>
     source === `npm:${name}`
     || source.startsWith(`npm:${name}@`)
@@ -496,7 +498,7 @@ async function restoreFiles() {
     await copyPath(path.join(repoDir, "config", file), path.join(agentDir, file));
   }
 
-  console.log("  SoL-Pi source is prepared and registered through pi-context-bridge.");
+  console.log("  Workbench supplies edit/write follow-up commands; Magic Context manages session context.");
 
   for (const file of ["matugen-chrome.ts", "matugen-footer-core.mjs"]) {
     await copyPath(
@@ -635,11 +637,6 @@ async function installLocalPackages() {
 
 async function installRuntimeGitSources() {
   const manifestPath = path.join(repoDir, "config", "runtime-git-sources.txt");
-  const solConfigPath = path.join(agentDir, "sol-pi.json");
-  if (!(await pathExists(solConfigPath))) {
-    await copyPath(path.join(repoDir, "config", "sol-pi.json"), solConfigPath);
-    if (!installerOptions.dryRun) await chmod(solConfigPath, 0o600);
-  }
   const sources = (await readFile(manifestPath, "utf8"))
     .split(/\r?\n/).map(line => line.trim()).filter(line => line && !line.startsWith("#"));
   for (const source of sources) {

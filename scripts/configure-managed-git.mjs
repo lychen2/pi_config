@@ -25,8 +25,7 @@ export function managedPackages(packages, agentDir) {
       result.push(typeof entry === "string" ? local : { ...entry, source: local });
       registered = true;
     } else if (remote) {
-      // SoL-Pi is loaded through the bridge, not registered as a second package.
-      throw new Error("Standalone SoL-Pi registration found; run configure-default-sol.mjs first");
+      throw new Error("Standalone SoL-Pi registration is retired; remove it before updating managed sources.");
     } else result.push(entry);
   }
   if (!registered) result.push(local);

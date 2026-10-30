@@ -1,6 +1,6 @@
 ---
 name: agents-progressive-disclosure
-description: Refactor oversized agent instruction files into concise shared rules and task-specific references when instruction cleanup is requested.
+description: 整理冗长的智能体规则，拆分共享说明与按需参考。
 ---
 
 # Agents Progressive Disclosure

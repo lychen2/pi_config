@@ -1,7 +1,7 @@
 ---
 allowed-tools: Read Write Edit Bash
 compatibility: Requires Python >=3.10. Scripts use numpy, pandas, and pyDOE3 (DOE matrices). Install with uv as shown below.
-description: Plan experiments and choose designs. Use when selecting factors, controls, randomization, or run allocation.
+description: 规划实验因素、对照、随机化和实验次数。
 license: MIT license
 metadata:
     github-path: skills/experimental-design

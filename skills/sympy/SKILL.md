@@ -1,7 +1,7 @@
 ---
 allowed-tools: Read Write Edit Bash
 compatibility: Requires Python 3.9+ and SymPy 1.14+. Optional NumPy/SciPy/Matplotlib for lambdify examples; C/Fortran compiler for autowrap/codegen.
-description: Perform symbolic mathematics with SymPy. Use when deriving, simplifying, or verifying analytical expressions.
+description: 使用 SymPy 推导、化简和验证符号数学表达式。
 license: https://github.com/sympy/sympy/blob/master/LICENSE
 metadata:
     github-path: skills/sympy

@@ -1,6 +1,6 @@
 ---
 name: mineru-file-processing
-description: Extract text, tables, formulas, or structure and run OCR on PDFs, images, and Office documents when the task needs document parsing.
+description: 解析 PDF、图片和 Office 文档，提取文字、表格、公式与 OCR。
 ---
 
 # MinerU File Processing

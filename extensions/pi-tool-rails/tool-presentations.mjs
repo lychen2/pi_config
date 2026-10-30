@@ -146,8 +146,7 @@ export function shortToolName(name) {
 export function toolEmoji(name) {
   const normalized = normalizeToolName(name);
   const mcp = mcpPresentation(normalized);
-  return TOOL_PRESENTATIONS[normalized]?.emoji
-    ?? (mcp ? TOOL_PRESENTATIONS[mcp.iconKey]?.emoji ?? "🔌" : "🧩");
+  return TOOL_PRESENTATIONS[normalized]?.emoji ?? (mcp ? TOOL_PRESENTATIONS[mcp.iconKey]?.emoji ?? "🔌" : "🧩");
 }
 
 

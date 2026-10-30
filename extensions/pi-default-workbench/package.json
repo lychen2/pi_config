@@ -21,7 +21,7 @@
     "session-tools",
     "code-outline",
     "bash-guard.ts",
-    "model-advisor.ts",
+    "action-fusion",
     "deferred-tools",
     "browser",
     "todo",

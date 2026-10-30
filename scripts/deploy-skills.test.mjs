@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, writeFile, readFile, access, rm, cp, readdir, symlink } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { spawnSync } from 'node:child_process';
 import { deploySkills, installedSkills } from './deploy-skills.mjs';
 
 test('fresh install, migration, second install and dry run preserve user skills', async () => {
@@ -15,6 +16,7 @@ test('fresh install, migration, second install and dry run preserve user skills'
     await put(path.join(agentDir, 'skills', 'litho-paper-radar', 'SKILL.md'), 'protected facts');
     await put(path.join(agentDir, 'skills', 'air.academic-plotting', 'SKILL.md'), 'legacy facts');
     await put(path.join(shared, 'sympy', 'SKILL.md'), 'old');
+    await put(path.join(agentDir, 'skills', 'review-animations', 'SKILL.md'), 'previous animation entry');
     for (const name of ['manim-composer', 'manimce-best-practices', 'manimgl-best-practices']) {
       await put(path.join(shared, name, 'SKILL.md'), `legacy ${name}`);
       const linkTarget = process.platform === 'win32' ? path.join(shared, name) : path.relative(path.join(agentDir, 'skills'), path.join(shared, name));
@@ -26,6 +28,8 @@ test('fresh install, migration, second install and dry run preserve user skills'
     const result = await deploySkills(options);
     assert.equal(await readFile(path.join(result.archive, '0', 'air.academic-plotting', 'SKILL.md'), 'utf8'), 'legacy facts');
     await assert.rejects(access(path.join(shared, 'sympy')));
+    assert.equal(await readFile(path.join(result.archive, '0', 'review-animations', 'SKILL.md'), 'utf8'), 'previous animation entry');
+    await assert.rejects(access(path.join(agentDir, 'skills', 'review-animations')));
     for (const name of ['manim-composer', 'manimce-best-practices', 'manimgl-best-practices']) {
       for (const index of ['0', '1']) {
         assert.equal(await readFile(path.join(result.archive, index, name, 'SKILL.md'), 'utf8'), `legacy ${name}`);
@@ -76,6 +80,40 @@ test('all release skill files survive deployment and preserve user-owned files',
       }
     }
     assert.equal(await readFile(custom, 'utf8'), 'Keep my skill unchanged.');
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('huashu-motion runs from the deployed bundle without npm installation', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'motion-skill-test-'));
+  try {
+    const repoDir = fileURLToPath(new URL('../', import.meta.url));
+    const agentDir = path.join(root, 'agent');
+    await deploySkills({ repoDir, agentDir, only: ['huashu-motion'], log: () => {} });
+    const skill = path.join(agentDir, 'skills', 'huashu-motion');
+    const run = (...args) => {
+      // Windows uses the same bundled CLI directly; POSIX exercises the skill launcher.
+      const command = process.platform === 'win32' ? process.execPath : path.join(skill, 'bin', 'om');
+      const prefix = process.platform === 'win32' ? [path.join(skill, '.runtime', 'cli', 'om.js')] : [];
+      const result = spawnSync(command, [...prefix, ...args], {
+        cwd: root, encoding: 'utf8', env: { ...process.env, OM_HOME: path.join(root, 'experience') },
+      });
+      assert.equal(result.status, 0, result.stderr || String(result.error));
+      return result.stdout;
+    };
+    assert.equal(run('version').trim(), '0.3.1');
+    const project = path.join(root, 'film');
+    run('new', project);
+    const scene = JSON.parse(run('scan', project));
+    assert.equal(scene.width, 1920);
+    assert.equal(scene.height, 1080);
+    assert.ok(scene.variables.some(variable => variable.id === 'title'));
+    await access(path.join(project, 'vendor', 'om.js'));
+    await access(path.join(project, 'vendor', 'gsap.min.js'));
+    assert.match(run('learn'), /Three traps met while rebuilding a launch film/);
+    const { cases } = await import(pathToFileURL(path.join(skill, '.runtime', 'cli', 'lib', 'soundprint.js')).href);
+    const scores = (await readdir(path.join(skill, 'references', 'scores'))).filter(name => name.endsWith('.abc'));
+    assert.ok(scores.length > 0);
+    assert.deepEqual(cases().map(score => score.name).sort(), scores.sort());
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 

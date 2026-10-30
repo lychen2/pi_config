@@ -1,6 +1,6 @@
 ---
 name: workflow-skill-creator
-description: Distill a completed user workflow into a reusable skill when asked to capture, package, or create a skill from worked examples.
+description: 将已完成的工作流程整理成可复用技能。
 ---
 
 # Workflow-to-Skill Distiller

@@ -33,13 +33,13 @@ function argumentRecord(args: string): Record<string, unknown> | undefined {
   } catch {
     // Pi truncates compact arguments mid-object. Extract only complete display fields.
     const fields: Record<string, unknown> = {};
-    for (const key of ["path", "command", "pattern", "query", "reasoning", "description", "summary", "action", "id", "goal", "owner", "repo", "ref", "sha", "tag", "method", "object_name", "filepath", "doi", "key", "collection", "asset_id", "model_id", "uid", "bl_idname", "request_id", "job_id", "name", "url", "org", "user", "server", "uri"]) {
+    for (const key of ["path", "command", "pattern", "query", "reasoning", "description", "summary", "action", "id", "goal", "owner", "repo", "ref", "sha", "tag", "method", "object_name", "filepath", "doi", "key", "collection", "asset_id", "model_id", "uid", "bl_idname", "request_id", "job_id", "name", "url", "org", "user", "server", "uri", "title", "window_title", "app_name_or_bundle_identifier", "app_id", "wm_class", "role", "direction"]) {
       const match = args.match(new RegExp(`"${key}"\\s*:\\s*("(?:[^"\\\\]|\\\\.)*")`));
       if (match) {
         try { fields[key] = JSON.parse(match[1]!); } catch { /* Incomplete string. */ }
       }
     }
-    for (const key of ["issue_number", "pullNumber"]) {
+    for (const key of ["issue_number", "pullNumber", "window_id", "pid", "element_index", "x", "y", "width", "height"]) {
       const match = args.match(new RegExp(`"${key}"\\s*:\\s*(\\d+)(?=\\s*[,}])`));
       if (match && Number.isSafeInteger(Number(match[1]))) fields[key] = Number(match[1]);
     }

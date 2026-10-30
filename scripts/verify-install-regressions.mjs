@@ -50,7 +50,6 @@ try {
   const installMjsSource = await readFile(installMjs, "utf8");
   console.log("  package all external Pi dependencies from config/external-packages.txt with unversioned npm sources");
   assert.match(installMjsSource, /installRuntimeGitSources/);
-  assert.match(installMjsSource, /config", "sol-pi\.json"/);
   assert.match(installMjsSource, /\["merge", "--ff-only", defaultRef\]/);
   assert.match(installMjsSource, /\["update", "--extension", packageSource\]/);
   const externalPackages = (await readFile(path.join(repoRoot, "config", "external-packages.txt"), "utf8"))
@@ -73,7 +72,9 @@ try {
   await mkdir(migrationAgent);
   const retainedPackages = ["npm:pi-btw", { source: "npm:custom-tools", skills: [] }];
   await writeFile(path.join(migrationAgent, "settings.json"), JSON.stringify({
-    packages: [...retainedPackages, "git:github.com/ayghri/i-have-adhd", { source: "git:github.com/ayghri/i-have-adhd", skills: [] }],
+    packages: [...retainedPackages, "git:github.com/ayghri/i-have-adhd", { source: "git:github.com/ayghri/i-have-adhd", skills: [] },
+      "git:github.com/NVlabs/SoL-Pi", { source: "git:github.com/NVlabs/SoL-Pi@legacy", skills: [] },
+      "/fixture/.pi/agent/git/github.com/NVlabs/SoL-Pi", "/fixture/pi_config/vendor/sol-pi"],
     defaultModel: "keep-current-model",
   }));
   const migration = spawnSync(process.execPath, ["--input-type=module", "-e",

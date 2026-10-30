@@ -1,6 +1,6 @@
 ---
 name: fuck-my-shit-mountain
-description: Use for codebase audits, repository health reviews, or scoped PR reviews. Produces evidence-based findings, risk and coverage assessments, and actionable reports.
+description: 审查代码库或 PR，输出有证据的问题、风险和修复建议。
 ---
 
 # Fuck My Shit Mountain — Skill Definition

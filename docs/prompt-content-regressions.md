@@ -2,8 +2,10 @@
 
 ## Ownership
 
-`config/model-system-prompt/gpt-overrides.md` owns local GPT content-placement refinements.
-The npm model preset loader injects them only for a matching GPT preset. Skill entrypoints
+`extensions/pi-context-bridge/taste/main.md` owns shared narration guidance for every model.
+`config/model-system-prompt/gpt-overrides.md` maintains compatible local GPT content-placement refinements.
+The npm model preset loader injects those refinements for matching GPT presets while preserving upstream preset text.
+Shared Markdown changes apply after `/reload`; local preset changes apply on the next run. Skill entrypoints
 add domain-specific decisions; references and templates must agree with those decisions.
 The installer configures model presets and deploys curated skills through
 `scripts/deploy-skills.mjs`. Reload after package installation. Preset edits apply to the

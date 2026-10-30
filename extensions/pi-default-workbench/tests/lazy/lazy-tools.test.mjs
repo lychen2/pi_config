@@ -38,10 +38,12 @@ test("registers lazy tool definitions without loading their runtime handlers", a
     "bash_bg",
     "code_outline",
     "conflict",
+    "edit",
     "fffind",
     "ffgrep",
     "preview_export",
     "search_skill_bm25",
+    "write",
   ]);
   assert.equal(pi.commands.has("large"), false, "retired Large command must not be registered");
   assert.equal(pi.handlers.has("session_shutdown"), false);

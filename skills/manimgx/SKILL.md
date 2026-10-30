@@ -1,6 +1,6 @@
 ---
 name: manimgx
-description: Plan and render mathematical or educational animations with ManimGX. Use for new Manim videos, scene storyboards, and migrations from Manim CE or ManimGL. Includes layout inspection before video rendering.
+description: 使用 ManimGX 制作数学与教学动画，规划分镜并检查布局。
 ---
 
 # ManimGX

@@ -6,8 +6,8 @@ The default profile targets **Pi 1.0.x** and is verified against Pi 1.0.0. `inst
 
 | Package | Responsibility | Entry points |
 | --- | --- | --- |
-| `pi-context-bridge` | SoL registration, Web Access, provider-model refresh, context continuity, wire compatibility, RTK and bounded teammate contracts | `pi-context-bridge/index.ts`, `rtk.ts`, `teammate.ts` |
-| `pi-default-workbench` | Project tool policy, skill search, lazy implementation modules, session helpers, guards, background shell and preview | `pi-default-workbench/index.ts` |
+| `pi-context-bridge` | Web Access, provider-model refresh, context continuity, wire compatibility, RTK and bounded teammate contracts | `pi-context-bridge/index.ts`, `rtk.ts`, `teammate.ts` |
+| `pi-default-workbench` | Project tool policy, `edit`/`write` follow-up commands, skill search, lazy implementation modules, session helpers, guards, background shell and preview | `pi-default-workbench/index.ts` |
 | `pi-slim-skills` | Compressed skill metadata and explicitly configured body injection | `pi-slim-skills/index.ts` |
 | `pi-tool-rails` | Tool cards, actual call trees, thinking presentation, prompt frame, brand header and plan/agent panels | Manifest entries in `pi-tool-rails/package.json` |
 | `pi-cache-drop-guard` | Session-scoped checks for consecutive prompt-cache drops | `pi-cache-drop-guard/index.ts` |
@@ -32,7 +32,6 @@ The default injection allowlist is empty. Skill search, tool discovery and the g
 | --- | --- |
 | `pi-web-access` | `pi-context-bridge` |
 | `pi-rtk-optimizer` | Bridge compatibility wrapper |
-| SoL-Pi runtime checkout | Bridge factory; avoid simultaneous standalone registration |
 | `pi-maestro-teammate` | Bridge teammate contract and policy wrapper |
 | `pi-markdown-preview` | Workbench lazy preview entry |
 

@@ -9,12 +9,13 @@ Collapsed cards show purpose, target, status and a short result, normally in two
 Background teammate dispatch is labeled `已派发`; its compact card shows task names and goals. SoL `obs_recall` shows the observation ID, offsets and available line count; recovered evidence appears on expansion. `update_plan` keeps the active-step view and pinned Plan widget. Action-fusion edits retain their proportional diff bars, and a failed `then_run` marks both the header and summary as failed. Measured savings and live sleep progress remain visible.
 
 
+
 Native image results keep their text card, with images displayed below it. Kitty and iTerm2 image rows retain native spacing across expansion and resizing. Background images are temporarily hidden while an overlay, including `/btw`, is visible. Closing the overlay restores them.
 
 Quiet TUI styling for Pi:
 
 - short top-edge tool labels with adjacent icons and a separate truthful status badge; below 48 columns, compact rails put status first. Material Symbols Rounded glyphs remain available via `PI_TOOL_RAILS_ICON_STYLE=material`
-- a verified registry of compact Chinese labels and purpose-specific emoji for 55 known tool names
+- a verified registry of compact Chinese labels and purpose-specific emoji for known tool names
 - shared rounded frames with theme-colored status, a consistent left rail and a right gutter
 - reason-first built-in tool calls that show `goal → concrete target` on one line and a useful result on the next
 - concise folded summaries across third-party tools, with bounded task rows and expandable raw details
@@ -69,7 +70,7 @@ Supported operands include positive decimal seconds, `s`/`m`/`h`/`d` suffixes, a
 
 ## Tool labels
 
-`tool-presentations.mjs` is the single runtime registry. It verifies 55 known names, including compatibility and optional entries. Every text label stays within the rail's eight-column text budget; an unknown third-party tool uses `🧩` until it is added explicitly. `PI_TOOL_RAILS_ICON_STYLE=material` switches the emoji rail to Material Symbols Rounded codepoints; `text` is a plain-glyph diagnostic mode.
+`tool-presentations.mjs` is the single runtime registry. It verifies known names, including desktop, compatibility, and optional entries. Every text label stays within the rail's eight-column text budget; an unknown third-party tool uses `🧩` until it is added explicitly. `PI_TOOL_RAILS_ICON_STYLE=material` switches the emoji rail to Material Symbols Rounded codepoints; `text` is a plain-glyph diagnostic mode.
 
 | Group | Display labels | Tool identifiers |
 | --- | --- | --- |

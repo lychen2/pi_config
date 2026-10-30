@@ -1,6 +1,6 @@
 ---
 name: emil-design-eng
-description: Polish UI components and purposeful motion using Emil Kowalski's design engineering principles. Use for feedback, transitions, popovers, tooltips, and gestures.
+description: 打磨 UI 组件反馈、过渡、弹层、提示和手势细节。
 license: MIT; see LICENSE
 ---
 
@@ -39,4 +39,5 @@ Use slower playback to inspect origins, timing drift, and overlapping states whe
 For performance findings, cite observed behavior or a trace from the affected browser.
 Report each actionable issue with its location, observed behavior, proposed change, and reason.
 A short Before / After / Why table works when comparing several concrete changes.
-Use /skill:review-animations for a user-requested animation audit.
+Use this workflow for a user-requested interface animation audit.
+Use /skill:huashu-motion for motion graphics, launch films, or explainer videos.

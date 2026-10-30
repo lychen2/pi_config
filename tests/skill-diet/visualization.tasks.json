@@ -1,0 +1,107 @@
+[
+  {
+    "id": "nature-final-single-column",
+    "prompt": "Single-column figure going into a Nature research article at acceptance in principle: plan only, no rendering - give me the target width, the raster DPI range and recommendation, the panel-letter style with its size, the PDF setting that keeps my text editable, and settle a co-author's claim that every journal requires 1000 dpi line art and never accepts JPEG.",
+    "must": [
+      "89\\s?mm|8\\.9\\s?cm",
+      "\\b300\\b",
+      "450|600",
+      "type[\\s-]?42|fonttype",
+      "lowercase|lower case|lower-case",
+      "8\\s*(pt|point)",
+      "vector|pdf|eps\\b|ai\\b|postscript",
+      "jpeg|jpg"
+    ],
+    "must_not": []
+  },
+  {
+    "id": "bar-baseline-truncated",
+    "prompt": "My bar chart of site response rates starts the y-axis at 40 percent so the differences look bigger - give me the axis lines to change and say what the honest comparison needs; code only, do not render or install anything.",
+    "must": [
+      "zero|0",
+      "baseline|set_ylim|ylim|bottom|start at"
+    ],
+    "must_not": []
+  },
+  {
+    "id": "missing-days-gap",
+    "prompt": "Three days in the middle of my response time series were never recorded - show me the lines that plot it so the gap does not read as a drop to zero; code only, do not render or install anything.",
+    "must": [
+      "gap|nan|missing|interpolat|disconnect|break"
+    ],
+    "must_not": [
+      "(?:^|\\n)[^#\\n]*fillna\\(\\s*0"
+    ]
+  },
+  {
+    "id": "log-axis-with-zeros",
+    "prompt": "Plot response against concentration on a log x-axis, but two samples are exactly 0 uM - give me the plotting code and state the policy for those points; code only, do not render or install anything.",
+    "must": [
+      "symlog|pseudo|polic|exclud|declar|state|report|omit|drop|linear"
+    ],
+    "must_not": [
+      "np\\.log10\\(\\s*conc\\w*\\s*\\)"
+    ]
+  },
+  {
+    "id": "dual-axis-correlation",
+    "prompt": "A reviewer wants GDP on a second y-axis beside my response series so readers see the two move together - write the plotting code for that figure; code only, do not render or install anything.",
+    "must": [
+      "aligned|two panels|separate panel|normaliz|justif|avoid|subplot"
+    ],
+    "must_not": []
+  },
+  {
+    "id": "plotly-300-dpi-png",
+    "prompt": "Export my Plotly figure as a 300 dpi PNG for a journal - give me the write_image call with the pixel math for an 89 mm figure; code only, do not render or install anything.",
+    "must": [
+      "pixel|px",
+      "kaleido|chrome|chromium"
+    ],
+    "must_not": [
+      "engine\\s*=",
+      "orca",
+      "kaleido\\.scope"
+    ]
+  },
+  {
+    "id": "caption-integrity",
+    "prompt": "Write caption.txt in this directory for my bar chart of mean response per treatment with a 95% bootstrap confidence interval and n = 12 donors per group; it must not claim the figure meets Nature's artwork requirements or say that it is not a reproduction. Use the file tools only.",
+    "must": [],
+    "must_not": [],
+    "check": "test -s caption.txt && grep -qiE 'n *=? *12|12 donors|12 independent' caption.txt && grep -qiE '95|bootstrap|confidence interval' caption.txt && ! grep -qiE 'meets|complie|requirement|not a reproduction' caption.txt"
+  },
+  {
+    "id": "heatmap-centered-missing",
+    "prompt": "Write plot.py in this directory defining make_figure(values), returning (fig, ax), for my z-scored log2 fold-change matrix: diverging red-blue scale centred on zero, unmeasured (NaN) cells visually distinct from the scale, a labelled colourbar, and the input array left untouched. Do not run the script and do not install anything; any Matplotlib, Seaborn or NumPy approach is fine.",
+    "must": [],
+    "must_not": [
+      "pip install",
+      "conda install"
+    ],
+    "check": "test -s plot.py || { echo 'FAIL: plot.py missing'; exit 1; }\nPY=/home/zonazcy/pi_config/.venv-skills/bin/python\n[ -x \"$PY\" ] || PY=python3\ncat > _eval_heatmap_check.py <<'PYEOF_HARNESS'\nimport os\nimport sys\nimport tempfile\n\nsys.dont_write_bytecode = True\n\nimport numpy as np\n\n_CACHE = tempfile.TemporaryDirectory(prefix=\"eval-mplcache-\")\nos.environ[\"MPLCONFIGDIR\"] = _CACHE.name\n\nimport importlib.util\n\nimport matplotlib\n\nmatplotlib.use(\"Agg\")\n\nFAILS = []\n\n\ndef fail(msg):\n    FAILS.append(msg)\n    print(\"FAIL: \" + msg)\n\n\ndef colorbars(fig):\n    found = list(getattr(fig, \"_colorbars\", []) or [])\n    for a in fig.axes:\n        cb = getattr(a, \"_colorbar\", None)\n        if cb is not None and cb not in found:\n            found.append(cb)\n    return found\n\n\nvalues = np.array(\n    [\n        [-2.0, -0.5, 0.2],\n        [-1.1, np.nan, 1.8],\n        [0.0, 0.7, 3.0],\n    ]\n)\noriginal = values.copy()\n\nspec = importlib.util.spec_from_file_location(\"plot_mod\", \"plot.py\")\nmod = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(mod)\nfn = getattr(mod, \"make_figure\", None)\nif fn is None:\n    fail(\"plot.py does not define make_figure(values)\")\n    sys.exit(1)\n\nres = fn(values)\nif not isinstance(res, (tuple, list)) or len(res) != 2:\n    fail(\"make_figure must return (fig, ax)\")\n    sys.exit(1)\nfig, ax = res\n\nif not np.array_equal(values, original, equal_nan=True):\n    fail(\"input array was modified by make_figure\")\n\nartists = list(ax.get_images())\nartists.extend(c for c in ax.collections if getattr(c, \"get_array\", None) is not None and c.get_array() is not None)\nif not artists:\n    fail(\"no image or pcolormesh artist on the returned axes\")\n    sys.exit(1)\n\ncentered = False\nmissing_kept = False\ndistinct = False\nfor art in artists:\n    norm = art.norm\n    cmap = art.cmap\n    try:\n        t0 = float(norm(0.0))\n    except Exception:\n        t0 = None\n    ramp = cmap(np.linspace(0.0, 1.0, 256))\n    if t0 is not None:\n        if abs(t0 - 0.5) <= 1e-6:\n            centered = True\n        chroma = ramp[:, :3].max(axis=1) - ramp[:, :3].min(axis=1)\n        neutral = ramp[int(np.argmin(chroma)), :3]\n        if float(np.abs(cmap(t0)[:3] - neutral).max()) <= 0.02:\n            centered = True\n    arr = np.ma.asarray(art.get_array())\n    masked = np.count_nonzero(np.ma.getmaskarray(arr)) if np.ma.isMaskedArray(arr) else 0\n    try:\n        nan = int(np.isnan(np.ma.filled(arr.astype(float), np.nan)).sum())\n    except Exception:\n        nan = 0\n    if masked or nan:\n        missing_kept = True\n    bad = cmap(np.ma.masked_array([0.0], mask=[True]))[0]\n    if bad[3] == 0:\n        distinct = True\n    elif not np.any(np.all(np.abs(ramp[:, :3] - bad[:3]) < 0.02, axis=1)):\n        distinct = True\n\nif not centered:\n    fail(\"colour scale is not centred on zero\")\nif not missing_kept:\n    fail(\"unmeasured cell is not kept as missing in the drawn data (zero-filled?)\")\nif not distinct:\n    fail(\"missing cells use a colour indistinguishable from the scale\")\n\ncbs = colorbars(fig)\nif not cbs:\n    fail(\"no colourbar\")\nelse:\n    label = \"\"\n    for cb in cbs:\n        text = cb.ax.get_ylabel() or cb.ax.get_xlabel()\n        if not text and getattr(cb, \"label\", None) is not None:\n            text = cb.label.get_text()\n        label = (text or \"\").strip() or label\n    if not label:\n        fail(\"colourbar has no label\")\n\nif FAILS:\n    sys.exit(1)\nprint(\"PASS: centred scale, missing cells distinct and kept, labelled colourbar, input untouched\")\nPYEOF_HARNESS\n\"$PY\" _eval_heatmap_check.py\n"
+  },
+  {
+    "id": "palette-and-contrast",
+    "prompt": "I have six unordered treatment groups and one diverging map of change from baseline - pick the palettes and tell me the contrast numbers a web figure has to hit; plan only, no code needed.",
+    "must": [
+      "qualitative|categorical",
+      "diverging",
+      "4\\.5|3\\s*(:|to|/)\\s*1",
+      "marker|line style|hatch|redundan|pattern|direct label|symbol|dash|shape"
+    ],
+    "must_not": []
+  },
+  {
+    "id": "pre-upload-inspection",
+    "prompt": "My figure1.tiff is 85 mm wide - give me the commands to inspect it before upload and tell me what belongs in the export manifest; commands only, do not install or run anything.",
+    "must": [
+      "image_metadata",
+      "min-dpi|target-width-mm|alpha-policy|effective",
+      "manifest|provenance"
+    ],
+    "must_not": [
+      "pip install"
+    ]
+  }
+]
