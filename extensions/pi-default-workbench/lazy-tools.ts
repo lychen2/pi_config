@@ -7,15 +7,6 @@ import { Type } from "typebox";
 
 // Keep these definitions dependency-light. The implementation modules are imported only
 // after the corresponding tool is executed.
-const BashBgParams = Type.Object({
-  action: Type.Union([Type.Literal("run"), Type.Literal("start"), Type.Literal("status"), Type.Literal("wait"), Type.Literal("kill"), Type.Literal("list")]),
-  command: Type.Optional(Type.String({ minLength: 1, description: "Shell command, required for run and start" })),
-  jobId: Type.Optional(Type.String({ description: "Job identifier, required for status, wait, and kill" })),
-  cwd: Type.Optional(Type.String({ description: "Working directory for run and start" })),
-  timeout: Type.Optional(Type.Integer({ minimum: 1, maximum: 3600, description: "Seconds to wait for run or wait; default 30" })),
-  tail: Type.Optional(Type.Integer({ minimum: 1, maximum: 500, description: "Output tail lines; default 20" })),
-});
-
 const FffGrepParams = Type.Object({
   pattern: Type.String({ minLength: 1, description: "Literal text to search for" }),
   context: Type.Optional(Type.Integer({ minimum: 0, maximum: 20, description: "Context lines before and after each match" })),
@@ -147,16 +138,6 @@ export function registerLazyTools(pi: ExtensionAPI): void {
   }, async (runtimePi) => {
     const module = await import("./maestro/src/fff.ts");
     module.registerFff(runtimePi);
-  });
-
-  registerLazyTool(pi, {
-    name: "bash_bg",
-    label: "Background Bash",
-    description: "Run shell commands with adaptive foreground/background execution.",
-    parameters: BashBgParams,
-  }, async (runtimePi) => {
-    const module = await import("./maestro/src/bash-bg.ts");
-    module.registerBashBg(runtimePi);
   });
 
   registerLazyTool(pi, {

@@ -54,6 +54,7 @@
 | `@juicesharp/rpiv-ask-user-question` | 有选项、可结构化回答的问题组件 | 模型在需要澄清时调用 `ask_user_question` |
 | `pi-workspace-history` | 工作区级撤销与重做 | 在需要回退文件改动时调用其命令；先查看 `/hotkeys` 中实际注册键位 |
 | `pi-rtk-optimizer` | RTK 命令改写和通用工具输出压缩 | `/rtk verify`；需要安装 `rtk` binary |
+| `@aliou/pi-processes` | 后台进程管理：启动后立即返回，退出或日志命中时唤醒，并拒绝 `&`/`nohup`/`setsid` | `process`；`/ps` 面板，`/ps:logs` 查看输出 |
 | `@victor-software-house/pi-curated-themes` | 额外终端主题资源 | `/settings` 中选择主题 |
 | `git:github.com/BevalZ/pi-provider` | 配置与检查自定义 provider | `/provider add`，再用 `/model` 选择模型 |
 

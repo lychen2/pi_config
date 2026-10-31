@@ -106,7 +106,7 @@ pi
 /tools reset    # 清空显式禁用规则并进入 full
 ```
 
-adaptive/fast 的严格 core 是 `read`、`bash`、`write`、`edit`、`grep`、`fffind`、`ffgrep`、`todo`、`ask_user_question`、`bash_bg`；原生 `ls/find` 和其他能力工具只在 adaptive 按需激活或 full 中出现。
+adaptive/fast 的严格 core 是 `read`、`bash`、`write`、`edit`、`grep`、`fffind`、`ffgrep`、`todo`、`ask_user_question`、`process`；原生 `ls/find` 和其他能力工具只在 adaptive 按需激活或 full 中出现。
 
 ```json
 {
@@ -143,7 +143,7 @@ adaptive/fast 的严格 core 是 `read`、`bash`、`write`、`edit`、`grep`、`
 
 ## 4. 文件、搜索与执行
 
-默认模式保留 Pi 原生 `read`、`write`、`edit`、`grep` 和 `bash`。`pi-context-bridge` 统一加载 Web Access、manager 模型目录和 continuity；`pi-default-workbench` 提供 `fffind`、`ffgrep`、`bash_bg`、`conflict`、`browser`、`todo` 和 Preview；独立的 `execute_command` 扩展负责命令/消息调度。对大文件优先要求读取相关符号或范围，不要无边界读取整份文件。跨文件重命名前先预览范围，再运行项目编译或相关测试。
+默认模式保留 Pi 原生 `read`、`write`、`edit`、`grep` 和 `bash`。`pi-context-bridge` 统一加载 Web Access、manager 模型目录和 continuity；`pi-default-workbench` 提供 `fffind`、`ffgrep`、`conflict`、`browser`、`todo` 和 Preview；独立的 `execute_command` 扩展负责命令/消息调度。对大文件优先要求读取相关符号或范围，不要无边界读取整份文件。跨文件重命名前先预览范围，再运行项目编译或相关测试。
 
 ```text
 读取 src/service.py 中 UserStore 的定义和全部引用；只读返回最安全的修改入口。
@@ -210,7 +210,7 @@ pdfs
 /rtk verify
 ```
 
-RTK 压缩通用工具结果；长命令由原生 `bash` 或 `bash_bg` 返回。用 `/rtk verify` 检查 RTK binary。
+RTK 压缩通用工具结果；长命令由原生 `bash` 或 `process` 返回。用 `/rtk verify` 检查 RTK binary。
 
 ### 上下文压缩
 

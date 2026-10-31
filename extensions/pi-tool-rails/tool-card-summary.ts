@@ -16,7 +16,8 @@ const ANSI = /\x1B(?:\][^\x07\x1B]*(?:\x07|\x1B\\)|\[[0-?]*[ -/]*[@-~]|[@-Z\\-_]
 const MUTATIONS = /^(?:edit|write|replace|readSeek_(?:edit|write|rename))$/;
 const READS = /^(?:read|readSeek_(?:view|def|digest)|code_outline|obs_recall|ctx_expand)$/;
 const SEARCHES = /^(?:grep|find|ls|ffgrep|fffind|readSeek_(?:grep|search|refs)|web_search|tool_search|search_(?:tool|skill)_bm25|ctx_search)$/;
-const BACKGROUND = /^(?:teammate|bash_bg|bash_watch|bash_status|observe)$/;
+const BACKGROUND = /^(?:teammate|observe)$/;
+const PROCESS_TARGETS: Record<string, string> = { list: "进程列表", clear: "清理已完成" };
 const INTERNAL = /(?:correlationId\s*=|<\/?sol-pi-|<\/?[a-z][^>]*>|Money saved\s*·|teammate-complete notification|completion durability|Do NOT poll|Tool calls made before|Script completed|^\[then_run:)/i;
 
 function record(value: unknown): Record<string, unknown> {
@@ -97,7 +98,8 @@ function targetFor(name: string, args: Record<string, unknown>): string | undefi
   const mcp = mcpToolTarget(name, args);
   if (mcp !== undefined) return mcp || undefined;
   if (name === "obs_recall" && typeof args.id === "string") return `#${cleanCodemodeText(args.id)}`;
-  if (/^(?:bash|powershell|bash_bg|bash_write)$/.test(name)) return summarizeShellCommand(args.command) ?? readable(args.action);
+  if (name === "process") return processTarget(args);
+  if (/^(?:bash|powershell)$/.test(name)) return summarizeShellCommand(args.command) ?? readable(args.action);
   const path = shortPath(args.path ?? args.file ?? args.filePath);
   if (path) {
     const start = count(args.offset ?? args.startLine);
@@ -105,12 +107,75 @@ function targetFor(name: string, args: Record<string, unknown>): string | undefi
   }
   return readable(args.query ?? args.pattern ?? args.action ?? args.name ?? args.id);
 }
+function processTarget(args: Record<string, unknown>): string | undefined {
+  const action = readable(args.action);
+  if (action === "start") return [readable(args.name), summarizeShellCommand(args.command)].filter(Boolean).join(" · ") || undefined;
+  if (action && Object.hasOwn(PROCESS_TARGETS, action)) return PROCESS_TARGETS[action];
+  return readable(args.id) ?? action;
+}
+
+/** Summary line for one `process` action, read from its structured details. */
+function processSummary(execution: ToolCardExecution): string | undefined {
+  const data = facts(execution);
+  const action = readable(data.action) ?? readable(execution.args?.action);
+  const running = record(data.process);
+  if (action === "start") {
+    const status = readable(running.status);
+    if (status === "running" || status === "terminating") {
+      const watches = record(data.notify).logMatches;
+      const watchCount = Array.isArray(watches) ? watches.length : 0;
+      return watchCount ? `后台运行 · ${watchCount} 个监视` : "后台运行";
+    }
+    if (status === "killed") return "已终止";
+    const exitCode = count(running.exitCode);
+    if (exitCode !== undefined) return `退出码 ${exitCode}`;
+    return readable(running.errorMessage) ?? "已启动";
+  }
+  if (action === "list") {
+    const counts = record(data.counts);
+    const total = count(counts.total);
+    if (total === undefined) return undefined;
+    const active = count(counts.running) ?? 0;
+    const failed = count(counts.failed) ?? 0;
+    return [`${total} 个进程`, `${active} 运行`, failed ? `${failed} 失败` : undefined]
+      .filter(Boolean).join(" · ");
+  }
+  if (action === "stop") {
+    const result = record(data.result);
+    if (result.ok === true) return "已停止";
+    const reason = readable(result.reason);
+    return reason ? `未停止 · ${reason}` : "未停止";
+  }
+  if (action === "output") {
+    const lines = count(record(data.truncation).outputLines);
+    return lines === undefined ? undefined : `${lines} 行输出`;
+  }
+  if (action === "write") {
+    const bytes = count(data.bytes);
+    if (bytes === undefined) return undefined;
+    return `写入 ${bytes} 字节${data.end === true ? " · 关闭 stdin" : ""}`;
+  }
+  if (action === "update") {
+    const applied = count(record(data.watches).count);
+    return [data.renamed === true ? "已重命名" : undefined, applied !== undefined ? `${applied} 个监视` : undefined]
+      .filter(Boolean).join(" · ") || "已更新";
+  }
+  if (action === "clear") {
+    const cleared = count(data.cleared);
+    return cleared === undefined ? undefined : `清除 ${cleared} 项`;
+  }
+  return undefined;
+}
+
 function resultSummary(name: string, execution: ToolCardExecution, rendered: readonly string[]): string | undefined {
   if (!execution.result) return "等待结果";
   const mcp = mcpResultSummary(name, execution.result);
   if (mcp !== undefined) return execution.isPartial !== false ? "执行中" : mcp;
   const data = facts(execution);
   const lines = textLines(execution.result).filter(line => line.trim());
+  if (name === "process") {
+    return processSummary(execution) ?? (execution.isPartial !== false ? "执行中" : "结果已返回 · 展开查看");
+  }
   if (READS.test(name)) {
     const lineCount = count(data.lines ?? data.lineCount ?? record(data.truncation).outputLines);
     if (lineCount !== undefined) return `已读取 ${lineCount} 行`;
@@ -123,7 +188,7 @@ function resultSummary(name: string, execution: ToolCardExecution, rendered: rea
     const native = rendered.map(plain).find(line => /^\s*\d+\s*(?:处匹配|项结果|files?|matches?)\s*$/i.test(line));
     return native?.trim() ?? (execution.isPartial !== false ? "正在检索" : "结果已返回 · 展开查看");
   }
-  if (/^(?:bash|bash_bg|powershell)$/.test(name)) {
+  if (/^(?:bash|powershell)$/.test(name)) {
     const exitCode = count(data.exit_code ?? data.exitCode);
     if (exitCode !== undefined) return `退出码 ${exitCode}`;
     const passing = lines.filter(line => /^(?:ℹ\s*)?pass\s+\d+$/i.test(plain(line).trim())).at(-1);

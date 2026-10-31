@@ -59,8 +59,7 @@ const HASHLINE_READ = /^[A-Za-z0-9_-]{3}│(.*)$/;
 const RESULT_PATCH = Symbol.for("pi.toolRails.resultRendererPatch");
 const REPLACE_LINE_NUMBERS = "toolRailsNewLineNumbers";
 const REPLACE_FINAL_LINE_COUNT = "toolRailsFinalLineCount";
-const COMPACT_RESULTS = new Set(["bash", "bash_bg", "bash_status", "bash_watch", "bash_write", "bash_kill", "find", "grep", "fffind", "ffgrep", "ls"]);
-const BACKGROUND_SHELL_TOOLS = new Set(["bash_bg", "bash_status", "bash_watch", "bash_write", "bash_kill"]);
+const COMPACT_RESULTS = new Set(["bash", "find", "grep", "fffind", "ffgrep", "ls"]);
 const PREVIEW_LINES = 5;
 const REPLACE_PREVIEW_ROWS = 10;
 const SPLIT_SEPARATOR = " │ ";
@@ -182,52 +181,6 @@ function conciseLine(line: string, limit = 100): string {
   return compact.length <= limit ? compact : `${compact.slice(0, limit - 1)}…`;
 }
 
-function jsonLine(line: string): RecordLike | undefined {
-  const text = line.trim();
-  if (!text.startsWith("{")) return undefined;
-  try {
-    const parsed: unknown = JSON.parse(text);
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? parsed as RecordLike
-      : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-export function summarizeBackgroundShell(lines: string[]): string[] {
-  const summary: string[] = [];
-  const add = (line: string | undefined) => {
-    const value = line ? conciseLine(line, 140) : "";
-    if (value && !summary.includes(value)) summary.push(value);
-  };
-
-  for (const line of lines) {
-    const text = line.trim();
-    if (/^Task\s+\S+:/i.test(text)) add(text);
-    else if (/^Waited\s+.*;\s*matched\s+/i.test(text)) add(text);
-    else if (/^(?:PTY task is still running|background task .* (?:completed|failed))/i.test(text)) add(text);
-
-    const event = jsonLine(text);
-    if (!event) continue;
-    if (event.type === "extension_ui_request") {
-      const message = event.message;
-      if (event.method === "notify" && typeof message === "string") add(message);
-      if (event.method === "setStatus") {
-        const status = record(event).statusText;
-        if (typeof status === "string") add(status.replace(/\x1B\[[0-9;]*m/g, ""));
-      }
-    }
-    if (event.type === "agent_settled") add("agent settled");
-  }
-
-  if (summary.length > 0) return summary.slice(0, 3);
-  return lines
-    .filter((line) => line.trim() && !jsonLine(line))
-    .slice(0, 2)
-    .map((line) => conciseLine(line, 140));
-}
-
 function renderBashSummary(
   result: unknown,
   options: ResultOptions,
@@ -237,8 +190,6 @@ function renderBashSummary(
 ): Component {
   const details = record(record(result).details);
   const bashLines = lines.length === 1 && /^\(?no output\)?$/i.test(lines[0]!.trim()) ? [] : lines;
-  const isBackgroundShell = BACKGROUND_SHELL_TOOLS.has(options.toolName ?? "");
-  const normalizedLines = isBackgroundShell ? summarizeBackgroundShell(bashLines) : bashLines;
   const exitCode = numberDetail(details, "exit_code", "exitCode");
   const duration = numberDetail(details, "duration_ms", "durationMs");
   const taskIdValue = details.task_id ?? details.taskId;
@@ -254,8 +205,8 @@ function renderBashSummary(
 
   if (context.isError) {
     const status = exitCode === undefined ? "命令执行失败" : `退出码 ${exitCode}`;
-    const errorLine = (isBackgroundShell ? normalizedLines : bashLines).find((line) => /(?:error|failed|fatal|exception|denied|not found|invalid)/i.test(line))
-      ?? (isBackgroundShell ? normalizedLines : bashLines).find((line) => line.trim());
+    const errorLine = bashLines.find((line) => /(?:error|failed|fatal|exception|denied|not found|invalid)/i.test(line))
+      ?? bashLines.find((line) => line.trim());
     const summary = styledSummary(theme, [
       { color: "error", text: status },
       ...(errorLine ? [{ color: "toolOutput" as const, text: conciseLine(errorLine) }] : []),
@@ -278,9 +229,6 @@ function renderBashSummary(
     ...(details.truncated === true ? [{ color: "error" as const, text: "输出已截断" }] : []),
   ]);
   if (!options.expanded || bashLines.length === 0) {
-    if (isBackgroundShell && normalizedLines.length > 0) {
-      return reusableText(context, `${summary}\n${normalizedLines.map((line) => theme.fg("toolOutput", line)).join("\n")}`);
-    }
     return reusableText(context, summary);
   }
   return reusableText(context, `${summary}\n${preview(bashLines, options, theme, context)}`);
@@ -295,7 +243,7 @@ export function compactResult(
 ): Component {
   const lines = outputLines(result);
 
-  if (name === "bash" || BACKGROUND_SHELL_TOOLS.has(name)) {
+  if (name === "bash") {
     return renderBashSummary(result, { ...options, toolName: name }, theme, context, lines);
   }
 

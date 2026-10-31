@@ -42,10 +42,7 @@ export const TOOL_PRESENTATIONS = Object.freeze({
   ctx_expand: { label: "展开", emoji: "🔬" },
   ctx_reduce: { label: "压缩", emoji: "🗜️" },
 
-  bash_status: { label: "状态", emoji: "📊" },
-  bash_watch: { label: "监视", emoji: "👁️" },
-  bash_write: { label: "输入", emoji: "⌨️" },
-  bash_kill: { label: "停止", emoji: "🛑" },
+  process: { label: "后台进程", emoji: "🖥️" },
 
   readSeek_edit: { label: "编辑", emoji: "✏️" },
   readSeek_grep: { label: "搜索", emoji: "🔎" },
@@ -58,7 +55,6 @@ export const TOOL_PRESENTATIONS = Object.freeze({
   readSeek_view: { label: "查看", emoji: "🔬" },
   fffind: { label: "文件", emoji: "🗂️" },
   ffgrep: { label: "文本", emoji: "🔎" },
-  bash_bg: { label: "后台命令", emoji: "💻" },
   conflict: { label: "冲突", emoji: "⚔️" },
   list_mcp_resources: { label: "MCP资源", emoji: "📁" },
   list_mcp_resource_templates: { label: "MCP资源模板", emoji: "📁" },
@@ -120,7 +116,7 @@ const MCP_ACTIONS = Object.freeze({
   delete: ["删除", "edit"], remove: ["移除", "edit"], execute: ["执行", "bash"],
   run: ["运行", "bash"], generate: ["生成", "write"], download: ["下载", "fetch_content"],
   import: ["导入", "write"], export: ["导出", "preview_export"], check: ["检查", "source_check"],
-  poll: ["查询进度", "bash_status"],
+  poll: ["查询进度", "process"],
 });
 
 function mcpPresentation(name) {
@@ -192,10 +188,6 @@ const MATERIAL_ICONS = Object.freeze({
   ctx_note: 0xe06f,
   ctx_expand: 0xe8b6,
   ctx_reduce: 0xe94d,
-  bash_status: 0xe8b6,
-  bash_watch: 0xe8b6,
-  bash_write: 0xe150,
-  bash_kill: 0xe047,
   readSeek_edit: 0xe150,
   readSeek_grep: 0xe8b6,
   readSeek_search: 0xe97a,
@@ -207,7 +199,7 @@ const MATERIAL_ICONS = Object.freeze({
   readSeek_view: 0xe8b6,
   fffind: 0xe8b6,
   ffgrep: 0xe8b6,
-  bash_bg: 0xeb8e,
+  process: 0xeb8e,
   conflict: 0xe000,
   list_mcp_resources: 0xe2c7,
   list_mcp_resource_templates: 0xe2c7,

@@ -39,7 +39,7 @@ Exact dependency versions belong in the owning package manifest and lockfile. Ex
 
 ## External packages and resources
 
-The configured sources include notification, persistent knowledge, plan mode, structured questions, terminal review, side conversations, provider configuration and curated themes. Consult `config/external-packages.txt` for the authoritative list.
+The configured sources include notification, persistent knowledge, plan mode, structured questions, terminal review, side conversations, background processes, provider configuration and curated themes. Consult `config/external-packages.txt` for the authoritative list.
 
 Workspace History, Large-profile packages and Ponytail are absent from the default source list. Installing an optional package separately does not make it part of the default profile. Curated themes are resource-only; they do not register an extension entry point.
 

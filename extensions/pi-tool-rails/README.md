@@ -66,7 +66,7 @@ On Linux, the locally owned built-in `bash` tool shows an in-place progress row 
 
 The observer passes a per-call environment marker (`PI_TOOL_RAILS_SLEEP_ID`) through Pi's native spawn hook and reads descendant process metadata from `/proc` every 250 ms while calls are active. It does not rewrite commands or add output to tool results. Elapsed time starts at the first observation, so remaining time is approximate and may lag by a polling interval or scheduling delay. A live process never displays completed progress; its row disappears after process exit, cancellation, timeout, or session cleanup.
 
-Supported operands include positive decimal seconds, `s`/`m`/`h`/`d` suffixes, and additive durations. Multiple observed waits share one row showing their count and the longest remaining wait. Unsupported durations, inaccessible process metadata, remote/container waits, cleared environments, and non-Linux hosts retain normal Bash behavior without a countdown. Very short sleeps may finish between polls. This does not instrument third-party Bash owners, `bash_bg`, user `!` commands, or fused `then_run` execution.
+Supported operands include positive decimal seconds, `s`/`m`/`h`/`d` suffixes, and additive durations. Multiple observed waits share one row showing their count and the longest remaining wait. Unsupported durations, inaccessible process metadata, remote/container waits, cleared environments, and non-Linux hosts retain normal Bash behavior without a countdown. Very short sleeps may finish between polls. This does not instrument third-party Bash owners, the `process` tool, user `!` commands, or fused `then_run` execution.
 
 ## Tool labels
 
@@ -82,7 +82,7 @@ Supported operands include positive decimal seconds, `s`/`m`/`h`/`d` suffixes, a
 | Context | `🔭 recall`, `🧠 memory`, `🗒️ note`, `🔬 expand`, `🗜️ reduce` | `ctx_search`, `ctx_memory`, `ctx_note`, `ctx_expand`, `ctx_reduce` |
 | Background shell | `📊 status`, `👁️ watch`, `⌨️ input`, `🛑 stop` | `bash_status`, `bash_watch`, `bash_write`, `bash_kill` |
 | Discovery | `🧰 找工具`, `📚 找技能`, `🗂️ 代码结构` | `search_tool_bm25`, `tool_search`, `search_skill_bm25`, `code_outline` |
-| Readseek and local tools | `✏️ edit`, `📝 write`, `🔎 grep`, `🌳 search`, `🧭 def`, `🕸️ refs`, `♻️ rename`, `🩺 digest`, `🔬 view`, `🗂️ files`, `🔎 literal`, `💻 bg shell`, `⚔️ conflict` | `readSeek_*`, `fffind`, `ffgrep`, `bash_bg`, `conflict` |
+| Readseek and local tools | `✏️ edit`, `📝 write`, `🔎 grep`, `🌳 search`, `🧭 def`, `🕸️ refs`, `♻️ rename`, `🩺 digest`, `🔬 view`, `🗂️ files`, `🔎 literal`, `🖥️ process`, `⚔️ conflict` | `readSeek_*`, `fffind`, `ffgrep`, `process`, `conflict` |
 
 ## Install
 

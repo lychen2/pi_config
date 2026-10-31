@@ -34,9 +34,6 @@ const TOOL_POSES = new Map<string, EmoteState>([
   ...["write", "readSeek_write"].map(name => [name, "create_file"] as const),
   ["undo_last_replace", "undo_change"],
   ...["bash", "powershell"].map(name => [name, "run_command"] as const),
-  ...["bash_status", "bash_watch"].map(name => [name, "monitor_task"] as const),
-  ["bash_write", "terminal_input"],
-  ["bash_kill", "stop_process"],
   ...["codemode", "multi_tool_use_parallel"].map(name => [name, "orchestrate"] as const),
   ["teammate", "delegate_task"],
   ["teammate_send", "message_teammate"],
@@ -53,15 +50,16 @@ const TOOL_POSES = new Map<string, EmoteState>([
 /** Args arrive with execution_start; streamed tool names may precede them. */
 export function toolNameToState(toolName: string, args?: { action?: string }): EmoteState {
   const name = normalizeToolName(toolName);
-  if (name === "bash_bg") {
+  if (name === "process") {
     switch (args?.action) {
-      case "run":
       case "start": return "run_command";
-      case "status":
-      case "wait":
-      case "list": return "monitor_task";
-      case "kill": return "stop_process";
-      default: return "bash";
+      case "list":
+      case "output":
+      case "update": return "monitor_task";
+      case "stop": return "stop_process";
+      case "write": return "terminal_input";
+      case "clear": return "tool";
+      default: return "monitor_task";
     }
   }
   if (name === "ctx_memory") {

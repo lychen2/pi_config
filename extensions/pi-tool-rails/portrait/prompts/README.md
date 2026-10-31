@@ -21,7 +21,7 @@ Cells 1, 3, 4, 5, 8, 10, 16, 24, 26, and 29 remain unused.
 Their tool behavior remains unchanged.
 
 `src/tool-states.ts` owns tool routing and each new state's fallback for older image and ASCII sets.
-`bash_bg` and `ctx_memory` select poses from their actual action arguments.
+`process` and `ctx_memory` select poses from their actual action arguments.
 `codemode` selects `orchestrate`; nested tool execution events select the actual child activity.
 UI prompts select `ask_user` and resume the preceding activity when they close.
 
@@ -62,10 +62,10 @@ Rows follow the prompt order.
 
 | Cell | Proposed state | Candidate trigger |
 | --- | --- | --- |
-| 11 | `run_command` | `bash`, `powershell`, or `bash_bg` with `action: "run"` or `"start"` |
-| 12 | `monitor_task` | `bash_status`, `bash_watch`, or `bash_bg` with `action: "status"` or `"wait"` |
-| 13 | `terminal_input` | `bash_write` |
-| 14 | `stop_process` | `bash_kill` or `bash_bg` with `action: "kill"` |
+| 11 | `run_command` | `bash`, `powershell`, or `process` with `action: "start"` |
+| 12 | `monitor_task` | `process` with `action: "list"`, `"output"`, or `"update"` |
+| 13 | `terminal_input` | `process` with `action: "write"` |
+| 14 | `stop_process` | `process` with `action: "stop"` |
 | 15 | `orchestrate` | `codemode` or `multi_tool_use.parallel` |
 
 ### Planning and collaboration

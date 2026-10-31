@@ -99,9 +99,69 @@ test("mutation ratio bar and all summaries respect narrow widths and CJK display
 });
 
 test("background state needs confirmed result evidence and never infers from arguments", () => {
-  assert.equal(backgroundToolStatus({ toolName: "bash_bg", args: { command: "sleep 9", task_id: "x" } }), undefined);
-  assert.equal(backgroundToolStatus({ toolName: "bash_bg", args: {}, result: output("Task abc: started") }), "已派发");
-  assert.equal(backgroundToolStatus({ toolName: "bash_watch", result: output("PTY task is still running") }), "后台运行");
-  assert.equal(backgroundToolStatus({ toolName: "bash_bg", result: { isError: true, content: [{ type: "text", text: "Task abc: started" }] } }), undefined);
+  assert.equal(backgroundToolStatus({ toolName: "teammate", args: { command: "sleep 9", task_id: "x" } }), undefined);
+  assert.equal(backgroundToolStatus({ toolName: "teammate", args: {}, result: output("Task abc: started") }), "已派发");
+  assert.equal(backgroundToolStatus({ toolName: "teammate", result: output("still running") }), "已派发");
+  assert.equal(backgroundToolStatus({ toolName: "teammate", result: { isError: true, content: [{ type: "text", text: "Task abc: started" }] } }), undefined);
   assert.equal(backgroundToolStatus({ toolName: "bash", result: output("Task abc: started") }), undefined);
+  // process reports its own lifecycle through structured details, not this heuristic.
+  assert.equal(backgroundToolStatus({ toolName: "process", result: output("running") }), undefined);
+});
+
+test("process cards summarize each action from structured details", () => {
+  const running = collapsedToolCard({
+    toolName: "process",
+    args: { action: "start", name: "dev-server", command: "pnpm dev" },
+    result: output("Started", {
+      action: "start",
+      process: { id: "proc_ab12", name: "dev-server", pid: 4242, status: "running", exitCode: null },
+      notify: { logMatches: [{ pattern: "ready" }] },
+    }),
+  }, [], theme, 100);
+  assert.match(plain(running), /dev-server/);
+  assert.match(plain(running), /pnpm dev/);
+  assert.match(plain(running), /后台运行 · 1 个监视/);
+
+  const exited = collapsedToolCard({
+    toolName: "process",
+    args: { action: "start", name: "build", command: "pnpm build" },
+    result: output("Exited", {
+      action: "start",
+      process: { id: "proc_cd34", name: "build", status: "exited", exitCode: 0 },
+      notify: {},
+    }),
+  }, [], theme, 100);
+  assert.match(plain(exited), /退出码 0/);
+
+  const list = collapsedToolCard({
+    toolName: "process",
+    args: { action: "list" },
+    result: output("2 processes", {
+      action: "list",
+      counts: { running: 1, exited: 1, failed: 0, killed: 0, total: 2 },
+    }),
+  }, [], theme, 100);
+  assert.match(plain(list), /进程列表/);
+  assert.match(plain(list), /2 个进程 · 1 运行/);
+
+  const stopped = collapsedToolCard({
+    toolName: "process",
+    args: { action: "stop", id: "proc_ab12" },
+    result: output("Stopped", { action: "stop", result: { ok: true, info: { id: "proc_ab12" } } }),
+  }, [], theme, 100);
+  assert.match(plain(stopped), /已停止/);
+
+  const written = collapsedToolCard({
+    toolName: "process",
+    args: { action: "write", id: "proc_ab12", input: "y\n", end: true },
+    result: output("Wrote", { action: "write", bytes: 2, end: true, ok: true }),
+  }, [], theme, 100);
+  assert.match(plain(written), /写入 2 字节 · 关闭 stdin/);
+
+  const cleared = collapsedToolCard({
+    toolName: "process",
+    args: { action: "clear" },
+    result: output("Cleared", { action: "clear", cleared: 3 }),
+  }, [], theme, 100);
+  assert.match(plain(cleared), /清除 3 项/);
 });

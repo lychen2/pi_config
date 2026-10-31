@@ -59,6 +59,7 @@ try {
     "npm:@cortexkit/pi-magic-context", "npm:@narumitw/pi-plan-mode",
     "npm:@juicesharp/rpiv-ask-user-question", "npm:pi-btw",
     "npm:@victor-software-house/pi-curated-themes",
+    "npm:@aliou/pi-processes",
   ]);
   assert.ok(!externalPackages.some(entry => /^npm:.*@\d/.test(entry)), "npm sources must not pin a version");
   const runtimeSources = (await readFile(path.join(repoRoot, "config", "runtime-git-sources.txt"), "utf8"))

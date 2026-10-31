@@ -43,7 +43,7 @@ export const TOOL_CAPABILITY_GROUPS = {
     "todo",
     "ask_user_question",
     "search_skill_bm25",
-    "bash_bg",
+    "process",
   ],
   web: ["source_check", "fetch_content", "get_search_content"],
   memory: ["ctx_search", "ctx_memory", "ctx_note", "ctx_expand", "ctx_reduce"],
@@ -53,6 +53,9 @@ export const TOOL_CAPABILITY_GROUPS = {
 } as const;
 
 export const FAST_TOOL_NAMES: readonly string[] = TOOL_CAPABILITY_GROUPS.core;
+// Core tools that an installed Pi package registers, not this extension. Fast mode keeps
+// them active, but their absence must not fail startup when that package is not installed.
+const EXTERNAL_CORE_TOOL_NAMES = new Set<string>(["process"]);
 const ALWAYS_ON_TOOL_NAMES = new Set<string>(["codemode", ...TOOL_CAPABILITY_GROUPS.memory]);
 
 export function capabilityToolsForMatches(
@@ -65,7 +68,7 @@ export function capabilityToolsForMatches(
 
 export function missingCoreToolNames(registeredNames: readonly string[]): string[] {
   const registered = new Set(registeredNames);
-  return FAST_TOOL_NAMES.filter((name) => !registered.has(name));
+  return FAST_TOOL_NAMES.filter((name) => !registered.has(name) && !EXTERNAL_CORE_TOOL_NAMES.has(name));
 }
 
 export function assertCoreToolsRegistered(registeredNames: readonly string[]): void {

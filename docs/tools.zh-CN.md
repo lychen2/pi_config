@@ -6,11 +6,11 @@
 
 | 数字 | 含义 |
 | ---: | --- |
-| 默认模式 | Web Access、FFF、后台 Shell、冲突处理和本地工作台。 |
-| 大型模式 | `/large on` 在当前会话加载固定上游 Flow、teammate 与 Cockpit，恢复 GUI、MCP、LSP、browser/web search、FFF、conflict、root `bash_bg`、Goal、Todo、Plan、Loop 与 Maestro skills。 |
+| 默认模式 | Web Access、FFF、后台进程、冲突处理和本地工作台。 |
+| 大型模式 | `/large on` 在当前会话加载固定上游 Flow、teammate 与 Cockpit，恢复 GUI、MCP、LSP、browser/web search、FFF、conflict、root `process`、Goal、Todo、Plan、Loop 与 Maestro skills。 |
 | 项目实际工具数 | 会随 `pi list`、`/tools`、启动参数、信任状态和已安装 package 变化；用 `/tools list` 核对。 |
 
-`multi_tool_use.parallel` 是外层并行调用包装器。`pi-default-workbench` 默认使用 `adaptive`：首轮严格保留 read/bash/write/edit/grep/fffind/ffgrep/todo/ask_user_question/bash_bg 和 `search_tool_bm25`，不包含原生 `ls/find`；缺少能力时按 capability group 追加注册工具。`/tools fast` 固定最小集合，`/tools full` 启用未显式禁用的直接工具；`deferred` 和 `codemode` 工具保留宿主的按需加载方式，通过原生 `tool_search` 明确加载后会保持启用，`hidden` 工具保持不可用，`/tools reset` 清空禁用规则后进入 full。
+`multi_tool_use.parallel` 是外层并行调用包装器。`pi-default-workbench` 默认使用 `adaptive`：首轮严格保留 read/bash/write/edit/grep/fffind/ffgrep/todo/ask_user_question/process 和 `search_tool_bm25`，不包含原生 `ls/find`；缺少能力时按 capability group 追加注册工具。`/tools fast` 固定最小集合，`/tools full` 启用未显式禁用的直接工具；`deferred` 和 `codemode` 工具保留宿主的按需加载方式，通过原生 `tool_search` 明确加载后会保持启用，`hidden` 工具保持不可用，`/tools reset` 清空禁用规则后进入 full。
 
 ## 文件、搜索与执行（6）
 
@@ -53,24 +53,24 @@
 
 `ctx_memory` 记录稳定事实；`ctx_note` 记录以后处理的事项；当前任务不要用 note 代替 Todo。
 
-## 后台 shell 任务（1）
+## 后台进程（1）
 
-`bash_bg` 自主管理其任务 ID。
+`process` 由 `@aliou/pi-processes` 提供，进程 ID 由它生成。启动后不要等待、不要 sleep 轮询，退出或日志监视命中会把你叫回来。
 
 | 工具 | 用途 | 使用示例 |
 | --- | --- | --- |
-| `bash_bg` | 通过 `run`/`start` 启动任务，通过 `status`/`wait`/`kill`/`list` 管理任务 | `启动构建；若转入后台，使用返回的任务 ID 调用 bash_bg(action="wait")，不要轮询 observe。` |
+| `process` | `start` 启动，`list`/`output` 查看，`update` 改监视，`write` 写 stdin，`stop` 停止，`clear` 清理已完成条目 | `process start name="dev-server" command="pnpm dev" notify={"logMatches":[{"pattern":"ready"}]}；返回后继续其他工作，等唤醒。` |
 
-普通短命令优先直接同步执行；服务器、watcher 或耗时不确定的命令才使用 `bash_bg`。
+普通短命令优先直接同步执行；服务器、watcher 或耗时不确定的命令才使用 `process`。`&`、`nohup`、`disown`、`setsid` 会被工具边界拒绝并指向 `process`。
 
-## FFF、后台 Shell 与冲突处理
+## FFF、后台进程与冲突处理
 
-Pi 原生 `read` 读取普通文件和图片，`bash` 负责命令执行；`write`、`edit`、`grep` 保持 Pi 原生实现。`fffind` 只查找当前工作区的模糊路径，`ffgrep` 做字面内容搜索，`bash_bg` 管理长任务，`conflict` 读取并解析 Git 冲突。
+Pi 原生 `read` 读取普通文件和图片，`bash` 负责命令执行；`write`、`edit`、`grep` 保持 Pi 原生实现。`fffind` 只查找当前工作区的模糊路径，`ffgrep` 做字面内容搜索，`process` 管理长任务，`conflict` 读取并解析 Git 冲突。
 
 | 工具 | 用途 | 使用示例 |
 | --- | --- | --- |
 | `fffind` / `ffgrep` | 模糊文件发现和快速字面内容搜索 | `在当前工作区找名称接近 auth callback 的文件，并搜索 literal “redirect_uri”。` |
-| `bash_bg` | 管理长时间运行的 Shell 任务 | `启动测试命令；若转入后台，使用 bash_bg(action="wait") 等待。` |
+| `process` | 管理长时间运行的进程 | `process start name="tests" command="pnpm test"；完成后由通知送回结果。` |
 | `conflict` | 读取并解析 Git 冲突；编号是 `list` 返回的短期句柄，解析前重验原始 hunk | `先 list，再复制当前 conflict://N 调用 diff；不要猜固定编号。` |
 
 跨文件重命名前先预览范围，应用后运行项目的编译或相关测试。

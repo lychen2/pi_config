@@ -354,7 +354,7 @@ function semanticResultLine(lines: string[], selection: ContentSelection): strin
     const mutation = matching(/^\+\d+\/-\d+(?:\s|$)|^(?:created|updated|written|applied|deleted|restored|no net change)\b/i);
     if (mutation) return mutation;
   }
-  if (/^(?:bash|bash_bg|bash_status|bash_watch|bash_kill)$/.test(name)) {
+  if (/^(?:bash|process)$/.test(name)) {
     const command = matching(/^(?:completed|running|background task|task\s+\S+|exit\s+\d+|command failed)\b/i);
     if (command) return command;
   }
@@ -380,6 +380,11 @@ export function visibleToolContentLines(
 
 export function isStandaloneToolNameLine(line: string, name: string): boolean {
   return plain(line).trim().toLowerCase() === name.toLowerCase();
+}
+
+/** pi-processes titles its own body; the card frame already labels the call. */
+export function isProcessActionTitleLine(line: string): boolean {
+  return /^Process:\s+\S/.test(plain(line).trim());
 }
 
 /** chalk.bold / nested theme.fg can emit full SGR reset and drop the tool-row background mid-line. */
@@ -666,7 +671,8 @@ function installLabeledShell(theme: ToolTheme): () => void {
     const framedBody = filterSoLStaticSavingsLines(
       contentLines.filter((line) => !isFrameLine(line)),
     );
-    const withoutHeader = framedBody[0] && isStandaloneToolNameLine(framedBody[0], name)
+    const withoutHeader = framedBody[0] && (isStandaloneToolNameLine(framedBody[0], name)
+      || (name === "process" && isProcessActionTitleLine(framedBody[0])))
       ? framedBody.slice(1)
       : framedBody;
     const selection = {

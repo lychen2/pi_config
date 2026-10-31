@@ -3,7 +3,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 /**
  * Structured failure shape shared by the default-mode custom tools
- * (fffind/ffgrep, bash_bg, conflict). A tool returns this as a normal result;
+ * (fffind/ffgrep, conflict). A tool returns this as a normal result;
  * {@link installToolFailureMarker} then marks it as an error via the
  * `tool_result` event. This mirrors the ReadSeek `{ ok: false, error }`
  * convention so the model sees a stable, machine-readable error instead of a

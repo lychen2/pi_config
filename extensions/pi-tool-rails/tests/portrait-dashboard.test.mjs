@@ -162,8 +162,8 @@ test("selected tool poses render through actual extension events and resume afte
   const cases = [
     ["functions.ls", {}, "browse_files"], ["edit", {}, "edit_patch"],
     ["write", {}, "create_file"], ["undo_last_replace", {}, "undo_change"],
-    ["powershell", {}, "run_command"], ["bash_bg", { action: "status" }, "monitor_task"],
-    ["bash_write", {}, "terminal_input"], ["bash_bg", { action: "kill" }, "stop_process"],
+    ["powershell", {}, "run_command"], ["process", { action: "output" }, "monitor_task"],
+    ["process", { action: "write" }, "terminal_input"], ["process", { action: "stop" }, "stop_process"],
     ["codemode", {}, "orchestrate"], ["teammate", {}, "delegate_task"],
     ["teammate_send", {}, "message_teammate"], ["teammate_list", {}, "monitor_team"],
     ["ask_user_question", {}, "ask_user"], ["web_search", {}, "search_web"],
@@ -175,7 +175,7 @@ test("selected tool poses render through actual extension events and resume afte
     await app.emit("tool_execution_start", { toolCallId: state, toolName, args });
     expectFrame(`${state}/${state}.png`);
   }
-  await app.emit("tool_execution_start", { toolCallId: "background", toolName: "bash_bg", args: { action: "wait" } });
+  await app.emit("tool_execution_start", { toolCallId: "background", toolName: "process", args: { action: "list" } });
   await app.emit("ui_prompt_start");
   expectFrame("ask_user/ask_user.png");
   await app.emit("ui_prompt_end");

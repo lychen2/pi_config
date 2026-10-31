@@ -73,61 +73,8 @@ async function makeTwoConflictWorkspace() {
 test("registers the focused replacement tools", () => {
   const pi = fakePi();
   register(pi);
-  assert.deepEqual([...pi.tools.keys()].sort(), ["bash_bg", "conflict", "fffind", "ffgrep"]);
-  assert.equal(pi.handlers.get("session_shutdown").length, 3);
-});
-
-test("bash_bg sends a completion wake-up for background jobs", async () => {
-  const pi = fakePi();
-  register(pi);
-  const tool = pi.tools.get("bash_bg");
-  const result = await tool.execute("id", {
-    action: "start",
-    command: "printf completed",
-    cwd: process.cwd(),
-  }, undefined, undefined, { cwd: process.cwd() });
-  const jobId = result.details.jobId;
-  assert.match(result.content[0].text, /^Started /);
-  const deadline = Date.now() + 2000;
-  while (pi.messages.length === 0 && Date.now() < deadline) {
-    await new Promise((resolve) => setTimeout(resolve, 10));
-  }
-  assert.equal(pi.messages.length, 1);
-  assert.equal(pi.messages[0].details.jobId, jobId);
-  assert.match(pi.messages[0].content, /completed/);
-  await Promise.all(pi.handlers.get("session_shutdown").map((handler) => handler()));
-});
-
-test("bash_bg run promotes a long command to the background", async () => {
-  const pi = fakePi();
-  register(pi);
-  const tool = pi.tools.get("bash_bg");
-  const result = await tool.execute("id", {
-    action: "run",
-    command: "sleep 5",
-    timeout: 1,
-    cwd: process.cwd(),
-  }, undefined, undefined, { cwd: process.cwd() });
-  assert.match(result.content[0].text, /Moved to background/);
-  await Promise.all(pi.handlers.get("session_shutdown").map((handler) => handler()));
-});
-
-test("bash_bg resolves relative cwd from the session workspace", async () => {
-  const cwd = await mkdtemp(join(tmpdir(), "pi-maestro-tools-cwd-test-"));
-  const nested = join(cwd, "nested");
-  await mkdir(nested);
-  const pi = fakePi();
-  register(pi);
-  const tool = pi.tools.get("bash_bg");
-  const command = process.platform === "win32" ? "ver" : "true";
-  const result = await tool.execute("id", {
-    action: "run",
-    command,
-    cwd: "nested",
-    timeout: 2,
-  }, undefined, undefined, { cwd });
-  assert.match(result.content[0].text, new RegExp(`cwd: ${nested.replace(/[\\^$.*+?()[\\]{}|]/g, "\\\\$&")}`));
-  await Promise.all(pi.handlers.get("session_shutdown").map((handler) => handler()));
+  assert.deepEqual([...pi.tools.keys()].sort(), ["conflict", "fffind", "ffgrep"]);
+  assert.equal(pi.handlers.get("session_shutdown").length, 2);
 });
 
 test("conflict schema requires a numbered handle for diff", () => {
@@ -181,31 +128,6 @@ test("conflict rolls back earlier files when a multi-file resolve is aborted", a
   );
   assert.equal(await readFile(join(cwd, "file.txt"), "utf8"), "<<<<<<< HEAD\nours\n=======\ntheirs\n>>>>>>> theirs\n");
   assert.equal(await readFile(join(cwd, "second.txt"), "utf8"), "<<<<<<< HEAD\nours-second\n=======\ntheirs-second\n>>>>>>> theirs\n");
-});
-
-test("bash_bg returns a structured failure for a missing command", async () => {
-  const pi = fakePi();
-  register(pi);
-  const tool = pi.tools.get("bash_bg");
-  const result = await tool.execute("id", { action: "run" }, undefined, undefined, { cwd: process.cwd() });
-  assert.equal(result.details.ok, false);
-  assert.equal(result.details.code, "INVALID_ARGUMENT");
-  assert.equal(result.details.field, "command");
-
-  const marker = pi.handlers.get("tool_result")[0];
-  assert.equal(marker({ details: result.details }).isError, true);
-});
-
-test("bash_bg caps completed job history", async () => {
-  const pi = fakePi();
-  register(pi);
-  const tool = pi.tools.get("bash_bg");
-  for (let index = 0; index < 35; index += 1) {
-    await tool.execute(`job-${index}`, { action: "run", command: "true", timeout: 2 }, undefined, undefined, { cwd: process.cwd() });
-  }
-  const list = await tool.execute("list", { action: "list" }, undefined, undefined, { cwd: process.cwd() });
-  assert.ok(list.content[0].text.split("\n").length <= 32);
-  await Promise.all(pi.handlers.get("session_shutdown").map((handler) => handler()));
 });
 
 test("conflict returns a structured failure for a missing URI", async () => {

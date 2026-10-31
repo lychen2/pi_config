@@ -14,7 +14,6 @@ import resultBridge, {
   renderAftEditResult,
   renderAftWriteBridgeResult,
   renderAftWriteResult,
-  summarizeBackgroundShell,
 } from "../result-bridge.ts";
 
 const theme = {
@@ -57,23 +56,6 @@ test("installs the result bridge during extension load for hot reloads", () => {
   assert.equal(ToolExecutionComponent.prototype.getResultRenderer, original);
 });
 
-test("normalizes background watcher JSONL into readable status rows", () => {
-  assert.deepEqual(
-    summarizeBackgroundShell([
-      "Task bash-test: running",
-      'Waited 46ms; matched "background-task" at offset 997.',
-      '{"type":"extension_ui_request","method":"notify","message":"Background task stored."}',
-      '{"type":"agent_settled"}',
-      "PTY task is still running.",
-    ]),
-    [
-      "Task bash-test: running",
-      'Waited 46ms; matched "background-task" at offset 997.',
-      "Background task stored.",
-    ],
-  );
-});
-
 test("colors non-empty grep summaries as success", () => {
   initTheme("dark");
   const colors = [];
@@ -91,26 +73,6 @@ test("colors non-empty grep summaries as success", () => {
   colors.length = 0;
   compactResult("grep", { content: [] }, { expanded: false }, semanticTheme, {}).render(100);
   assert.deepEqual(colors, ["muted"]);
-});
-
-test("renders normalized watcher details only when collapsed", () => {
-  const watchResult = {
-    content: [{
-      type: "text",
-      text: [
-        "Task bash-test: running",
-        'Waited 46ms; matched "background-task" at offset 997.',
-        '{"type":"extension_ui_request","method":"notify","message":"Task stored."}',
-      ].join("\n"),
-    }],
-  };
-  const collapsed = compactResult("bash_watch", watchResult, { expanded: false }, theme, {}).render(100);
-  assert.ok(collapsed.some((line) => line.includes("Task bash-test: running")));
-  assert.ok(collapsed.some((line) => line.includes("Task stored.")));
-  assert.ok(!collapsed.some((line) => line.includes('"type":"extension_ui_request"')));
-
-  const expanded = compactResult("bash_watch", watchResult, { expanded: true }, theme, {}).render(100);
-  assert.ok(expanded.some((line) => line.includes('"type":"extension_ui_request"')));
 });
 
 test("renders AFT edit counts from structured diff metadata", () => {

@@ -121,7 +121,7 @@ test("fast preset keeps core tools including default web search", () => {
         { name: "web_search" },
       ],
     },
-    { id: "local:pi-maestro-tools", tools: [{ name: "fffind" }, { name: "ffgrep" }, { name: "bash_bg" }, { name: "conflict" }] },
+    { id: "local:pi-maestro-tools", tools: [{ name: "fffind" }, { name: "ffgrep" }, { name: "process" }, { name: "conflict" }] },
     { id: "local:pi-maestro-todo", tools: [{ name: "todo" }] },
   ];
 
@@ -131,7 +131,7 @@ test("fast preset keeps core tools including default web search", () => {
     disabledExtensions: [],
     disabledTools: ["conflict"],
   });
-  for (const name of ["write", "edit", "grep", "fffind", "web_search", "bash_bg"]) {
+  for (const name of ["write", "edit", "grep", "fffind", "web_search", "process"]) {
     assert.equal(isToolDisabled(config, "local:pi-context-bridge", name), false);
     assert.equal(config.disabledTools.includes(name), false);
   }
@@ -150,7 +150,7 @@ test("fast core registration rejects silent tool-name drift", () => {
     "todo",
     "ask_user_question",
     "search_skill_bm25",
-    "bash_bg",
+    "process",
   ];
   assert.doesNotThrow(() => assertCoreToolsRegistered(registered));
   assert.throws(

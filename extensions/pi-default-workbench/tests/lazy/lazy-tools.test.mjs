@@ -35,7 +35,6 @@ test("registers lazy tool definitions without loading their runtime handlers", a
   const pi = fakePi();
   register(pi);
   assert.deepEqual([...pi.tools.keys()].sort(), [
-    "bash_bg",
     "code_outline",
     "conflict",
     "edit",
