@@ -2,23 +2,23 @@ import { access, cp, lstat, mkdir, rename, unlink } from 'node:fs/promises';
 import path from 'node:path';
 
 export const installedSkills = [
-  'uncertainty-and-units', 'lab-hardware-cad', 'experimental-design',
-  'statistical-analysis', 'statistical-power', 'scientific-visualization',
-  'research-decision',
-  'sympy', 'paper-lookup', 'citation-management', 'scientific-writing',
-  'venue-templates', 'scientific-slides', 'agents-progressive-disclosure',
+  'lab-hardware-cad', 'research', 'scientific-visualization',
+  'sympy', 'scientific-slides', 'agents-progressive-disclosure',
   'find-skills', 'humanizer-zh', 'mineru-file-processing', 'workflow-skill-creator', 'cad',
-  'pi-learn', 'optics-research', 'fuck-my-shit-mountain', 'manimgx',
-  'design-ui', 'frontend-design', 'ui-ux-pro-max', 'emil-design-eng', 'huashu-motion',
+  'pi-learn', 'fuck-my-shit-mountain', 'manimgx',
+  'design-ui', 'ui-ux-pro-max', 'huashu-motion', 'niri-agent',
 ];
 // Only known legacy distribution directories are retired; user skills are preserved.
 export const retiredSkills = [
+  'research-decision', 'experimental-design', 'statistical-analysis',
+  'statistical-power', 'uncertainty-and-units', 'optics-research',
+  'paper-lookup', 'citation-management', 'scientific-writing', 'venue-templates',
   'academic-plotting', 'air.academic-plotting', 'sa.citation-management', 'sa.sympy',
   'academic-paper', 'academic-paper-reviewer', 'deep-research',
   'literature-search-openalex', 'nature-skills', 'pubmed-database', 'docx', 'pdfs',
   'claude-science/figure-style', 'mineru', 'humanizer',
   'manim-composer', 'manimce-best-practices', 'manimgl-best-practices',
-  'review-animations',
+  'review-animations', 'frontend-design', 'emil-design-eng',
 ];
 const exists = async p => { try { await access(p); return true; } catch { return false; } };
 

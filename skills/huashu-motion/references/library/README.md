@@ -11,7 +11,8 @@ fits it instead of the house style everyone else's agent produces.
 | **Look & sound** | Palette, type, material, music, hits | each language file + [../sound.md](../sound.md); art styles via huashu-art-motion |
 
 The [director](../director.md) picks them; [product-fit.md](product-fit.md) shows what real products
-used, with evidence.
+used, with evidence. When a single move is still under-specified, [shotcraft-index.md](shotcraft-index.md)
+points the same idea at video-shotcraft's 124 measured shot cards on this machine.
 
 ## Languages
 

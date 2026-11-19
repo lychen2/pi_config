@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { mkdtemp, mkdir } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -24,6 +24,9 @@ test("shared taste survives model switches, routes input/completion hooks, and r
     api: "taste-test-api",
     models: [{ id: "gpt-fixture" }, { id: "claude-fixture" }, { id: "gemini-fixture" }],
   });
+  const main = await readFile(new URL('../taste/main.md', import.meta.url), 'utf8');
+  const hero = main.slice(main.indexOf('=== SCOPE LIMITS')).trim();
+  assert.ok(hero.startsWith('=== SCOPE LIMITS'));
   const requests = [];
   const capture = context => {
     requests.push(structuredClone(context));
@@ -71,6 +74,8 @@ test("shared taste survives model switches, routes input/completion hooks, and r
       const system = getSystemMessageText(request.messages[0]);
       assert.equal(system.split(section).length - 1, 1);
       assert.ok(system.includes("EXISTING MODEL PRESET"));
+      assert.ok(system.includes(hero), 'complete HERO core reaches every model, including tool continuations');
+      assert.equal(system.split('=== SCOPE LIMITS').length - 1, 1);
       assert.ok(request.messages[0].toolsAdded?.some(tool => tool.name === "taste_probe"), "native tool declarations are preserved");
     }
     assert.ok(text(requests[2]).includes(userSteer));
@@ -104,6 +109,7 @@ test("shared taste survives model switches, routes input/completion hooks, and r
     const snapshot = structuredClone(payload);
     const guarded = await session.extensionRunner.emitBeforeProviderRequest(payload);
     assert.ok(guarded.instructions.includes(section));
+    assert.ok(guarded.instructions.includes(hero), 'final payload recovery preserves full HERO');
     assert.ok(guarded.instructions.includes("HOST PERMISSIONS"));
     assert.deepEqual(guarded.tools, payload.tools);
     assert.deepEqual(payload, snapshot);

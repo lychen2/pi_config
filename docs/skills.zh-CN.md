@@ -2,9 +2,9 @@
 
 本页提供技能使用示例。仓库管理的安装清单以 `scripts/deploy-skills.mjs` 的 `installedSkills` 为准。Skill 是按需加载的工作流说明；使用 `/skill:<名称> <任务>` 时，给出目标、输入文件和验收条件。
 
-UI 任务统一从 `/skill:design-ui <任务>` 进入。入口先读取项目设计系统，再按需加载 `frontend-design`、`ui-ux-pro-max` 和 `emil-design-eng`。动效、产品发布片和解说视频使用 `/skill:huashu-motion <任务>`；界面动效审查继续使用 `emil-design-eng`。安装、搜索和验收方式见 [UI design workflow](ui-design-skills.md)。
+UI 任务统一从 `/skill:design-ui <任务>` 进入。入口先读取项目设计系统，再按任务读一份参考：视觉方向、质感规格或动效反馈。界面动效审查也在 `design-ui` 内完成，不再单独加载技能。动效、产品发布片和解说视频使用 `/skill:huashu-motion <任务>`。安装、搜索和验收方式见 [UI design workflow](ui-design-skills.md)。
 
-科研决策涉及选择下一项实验、解释意外结果或检验项目记录中的既有判断时，搜索并按需加载 [`research-decision`](../skills/research-decision/SKILL.md)。需要保存关键证据来源、替代解释和切换条件时，调用 `research_decision`。
+科研工作统一从 [`research`](../skills/research/SKILL.md) 进入；数据图和示意图使用 [`scientific-visualization`](../skills/scientific-visualization/SKILL.md)。文献、实验、统计、光学和写作方法按任务加载，不再各占一个技能入口。见 [科研工作流](research-skills.md)。
 
 ## 统计口径
 
@@ -18,69 +18,24 @@ Pi 会递归发现嵌套目录中的 `SKILL.md`；安装器复制完整技能目
 
 | Skill | 用途 | 使用示例 |
 | --- | --- | --- |
-| [`design-ui`](../skills/design-ui/SKILL.md) | UI 统一入口，先读取项目设计系统 | `/skill:design-ui`；改进设置页，沿用现有 token 和组件，并检查桌面及手机布局。 |
-| [`frontend-design`](../skills/frontend-design/SKILL.md) | 新界面或改版的视觉方向 | `/skill:frontend-design`；根据博物馆藏品和受众设计首页，先确定内容层级与排版。 |
+| [`design-ui`](../skills/design-ui/SKILL.md) | UI 统一入口，先读取项目设计系统，再选方向、写规格或打磨动效 | `/skill:design-ui`；改进设置页，沿用现有 token 和组件，并检查桌面及手机布局。 |
 | [`ui-ux-pro-max`](../skills/ui-ux-pro-max/SKILL.md) | 检索本地设计建议或生成设计系统草稿 | `/skill:ui-ux-pro-max`；检索表单键盘焦点建议，按项目规范筛选。 |
-| [`emil-design-eng`](../skills/emil-design-eng/SKILL.md) | 组件反馈、动效与手势细节 | `/skill:emil-design-eng`；改进抽屉关闭反馈，检查连续操作与减少动态效果模式。 |
 | [`huashu-motion`](../skills/huashu-motion/SKILL.md) | 可编辑动效、产品发布片与解说视频 | `/skill:huashu-motion`；用现有产品截图制作 30 秒发布片，在本地预览、批注修改并导出。 |
 | [`agents-progressive-disclosure`](../skills/agents-progressive-disclosure/SKILL.md) | 拆分过大的 `AGENTS.md`、`CLAUDE.md` 或规则文件 | `/skill:agents-progressive-disclosure`；把 900 行项目规则拆成入口、路由和按需参考文档，保持规则语义不变。 |
 | [`fuck-my-shit-mountain`](../skills/fuck-my-shit-mountain/SKILL.md) | 对代码库进行跨质量维度的证据化审计 | `/skill:fuck-my-shit-mountain`；先选择审计维度、语言、输出格式和范围，再生成结构化报告。 |
 | `grill-with-docs`（本机安装） | 在需求边界不清时进行访谈，并随过程维护决策文档 | `/skill:grill-with-docs`；先确认目标、约束、验收标准和不可接受的方案，再确定实现边界。 |
 | [`find-skills`](../skills/find-skills/SKILL.md) | 查找适合当前任务的已有 skill | `/skill:find-skills`；查找一个能把论文 PDF 转成带页码证据的 Markdown reader。 |
-| [`humanizer`](../skills/humanizer/SKILL.md) | 去除英文文本的 AI 写作痕迹，同时保留事实和术语 | `/skill:humanizer`；润色这封英文 cover letter，使语气自然但不要改变数字、引用和承诺。 |
-| [`humanizer-zh`](../skills/humanizer-zh/SKILL.md) | 去除中文文本的 AI 写作痕迹 | `/skill:humanizer-zh`；把这段产品说明改成自然、具体、少套话的中文，保留 API 名称。 |
+| [`humanizer-zh`](../skills/humanizer-zh/SKILL.md) | 中英文润色、中文成稿诊断与前后对比，保留事实和作者风格 | `/skill:humanizer-zh`；按作者样本润色中文说明或英文 cover letter；整篇先给诊断，明确要求直接改稿时同轮完成。 |
 | [`workflow-skill-creator`](../skills/workflow-skill-creator/SKILL.md) | 把完成过的工作流程整理成可复用 Agent Skill | `/skill:workflow-skill-creator`；根据本次 PDF 审阅流程生成新的 `SKILL.md`，包含触发条件、步骤、失败路径和验收。 |
 
-## 论文、文献、数学和文件处理（12）
+## 科研、绘图和文件处理
 
-| Skill | 用途 | 使用示例 |
-| --- | --- | --- |
-| [`academic-paper`](../skills/academic-paper/SKILL.md) | 以多代理流程规划、起草、修订和检查学术论文 | `/skill:academic-paper`；根据给定 claims、结果和参考文献先建立论证结构，再起草方法和结果，最后运行引文一致性检查。 |
-| [`academic-paper-reviewer`](../skills/academic-paper-reviewer/SKILL.md) | 从多个评审角色审阅论文并综合编辑决定 | `/skill:academic-paper-reviewer`；审阅这篇稿件，分别检查新颖性、方法、统计、写作和引用，按严重程度给出可执行意见。 |
-| [`academic-plotting`](../skills/air.academic-plotting/SKILL.md) | 根据论文语境选择图型并生成论文图或架构图 | `/skill:academic-plotting`；读取实验结果 CSV 和方法段，选择图型，生成一张带图注草稿的论文图。 |
-| [`ara-research-manager`](../skills/air.research-manager/SKILL.md) | 在会话结束时记录决策、证据、实验和死路 | `/skill:ara-research-manager`；只在任务收尾时扫描本次会话，把关键决定和证据来源写入 `ara/`，不要在执行中调用。 |
-| [`citation-management`](../skills/sa.citation-management/SKILL.md) | 搜索文献、提取元数据、校验引用并生成 BibTeX | `/skill:citation-management`；核对这些 DOI 的作者、年份和期刊信息，输出经过验证的 APA7 BibTeX。 |
-| [`deep-research`](../skills/deep-research/SKILL.md) | 进行多来源、带证据和风险控制的深度研究 | `/skill:deep-research`；研究某技术的近五年进展，只使用可追溯来源，标注冲突证据和结论置信度。 |
-| [`literature-search-openalex`](../skills/literature-search-openalex/SKILL.md) | 通过 OpenAlex 检索论文、作者和引用关系 | `/skill:literature-search-openalex`；按主题、年份和领域筛选 OpenAlex 论文，输出 DOI、引用数和候选阅读顺序。 |
-| [`mineru`](../skills/mineru/SKILL.md)（根定义） | 使用 MinerU 解析 PDF、Office、图片、表格和公式 | `/skill:mineru`；解析 `paper.pdf`，输出带表格、公式和页码的 Markdown；大文件先说明 token 和页数限制。 |
-| [`mineru-file-processing`](../skills/mineru-file-processing/SKILL.md) | 将 PDF、Office、图片和 OCR 任务路由到适当解析流程 | `/skill:mineru-file-processing`；读取这个扫描 PDF，提取正文、表格、公式和页码证据，并说明是否需要 OCR。 |
-| [`pubmed-database`](../skills/pubmed-database/SKILL.md) | 检索 PubMed/PMC 生物医学文献和数据库关联 | `/skill:pubmed-database`；检索过去五年关于某疾病的随机对照试验，返回 PMID、DOI 和纳入理由。 |
-| [`scientific-visualization`](../skills/scientific-visualization/SKILL.md) | 生成可投稿的 matplotlib、seaborn 或 plotly 科学图 | `/skill:scientific-visualization`；用现有数据做一张色盲友好多面板图，包含误差线、显著性标记，并导出 PDF/TIFF。 |
-| [`sympy`](../skills/sa.sympy/SKILL.md) | 做精确符号代数、微积分、方程求解和 LaTeX 生成 | `/skill:sympy`；用 SymPy 推导这个方程的闭式解，并用代入检查结果，不要用浮点近似替代符号推导。 |
-
-## Claude Science 工作流（15）
-
-这些 skill 多数依赖其自身的 Python 环境、connector 或远程服务。未配置运行环境时只要求它检查前置条件，不要假设远程作业已经执行。
-
-| Skill | 用途 | 使用示例 |
-| --- | --- | --- |
-| [`figure-style`](../skills/claude-science/figure-style/SKILL.md) | 执行科研图可读性、数据忠实性和投稿样式检查 | `/skill:figure-style`；绘图前加载规则，检查标题是否与数据一致、字体和 bbox 是否可读，再渲染后复核。 |
-
-## Nature 论文工作流（17）
-
-| Skill | 用途 | 使用示例 |
-| --- | --- | --- |
-| [`nature-academic-search`](../skills/nature-skills/skills/nature-academic-search/SKILL.md) | 多源学术检索、候选筛选和引文核验 | `/skill:nature-academic-search`；围绕研究问题检索多个数据库，去重候选文献，输出可核验 DOI 和纳入理由。 |
-| [`nature-citation`](../skills/nature-skills/skills/nature-citation/SKILL.md) | 为长段落逐句匹配严格的 Nature/CNS 引用 | `/skill:nature-citation`；给这段 Results 文本逐个可证实主张添加引用，不能用一篇综述覆盖所有句子。 |
-| [`nature-data`](../skills/nature-skills/skills/nature-data/SKILL.md) | 起草和审计 Data Availability、数据仓库与 FAIR 说明 | `/skill:nature-data`；根据现有数据、代码和仓库链接写 Data Availability 声明，并列出缺失的 accession。 |
-| [`nature-literature-pipeline`](../skills/nature-skills/skills/nature-literature-pipeline/SKILL.md) | 执行检索、六维评分、精读、交付和归档的文献流水线 | `/skill:nature-literature-pipeline`；从研究问题开始，完成候选发现、评分、精读和带格式引用的归档报告。 |
-| [`nature-paper-to-patent`](../skills/nature-skills/skills/nature-paper-to-patent/SKILL.md) | 将论文或技术报告转成有证据链的中文发明专利草案 | `/skill:nature-paper-to-patent`；从论文提取可专利技术特征，逐项映射原文证据，生成权利要求、流程图和支持性审计。 |
-| [`nature-paper2ppt`](../skills/nature-skills/skills/nature-paper2ppt/SKILL.md) | 将论文制作成 Nature 风格中文 PPTX | `/skill:nature-paper2ppt`；把这篇论文做成组会 PPT，按证据重建故事，挑选关键图，并为每页生成 speaker notes。 |
-| [`nature-polishing`](../skills/nature-skills/skills/nature-polishing/SKILL.md) | 以 Nature 取向润色、重构或翻译学术英文及 LaTeX 排版 | `/skill:nature-polishing`；润色这段 Discussion，保留统计数字和引用，减少空泛过渡，并修复 LaTeX 排版问题。 |
-| [`researchwrite`](../skills/nature-skills/skills/nature-proposal-writer/SKILL.md) | 以证据、论证地图和 section contract 为核心写 proposal | `/skill:researchwrite`；先建立研究问题、证据表和论证地图，再按 compose/revise/hybrid 模式生成 proposal。 |
-| [`nature-reader`](../skills/nature-skills/skills/nature-reader/SKILL.md) | 生成中英对照、图表就位、带来源锚点的全文 reader | `/skill:nature-reader`；读取这篇 PDF，生成中英对照 Markdown，把图表放在相关段落附近，并为每个区块保留来源锚点。 |
-| [`nature-ref-verifier`](../skills/nature-skills/skills/nature-ref-verifier/SKILL.md) | 多源逐字段核验参考文献真实性和一致性 | `/skill:nature-ref-verifier`；逐条检查作者、题目、年份、卷期、页码和 DOI，标出冲突字段，不要猜缺失信息。 |
-| [`nature-response`](../skills/nature-skills/skills/nature-response/SKILL.md) | 起草、审计和修订审稿回复与返修信 | `/skill:nature-response`；根据 reviewer comments 和修订证据写逐点回复，区分已修改、无法修改和新增实验。 |
-| [`nature-reviewer`](../skills/nature-skills/skills/nature-reviewer/SKILL.md) | 模拟 Nature 风格审稿并给出编辑建议 | `/skill:nature-reviewer`；从审稿人角度评估主张、方法、统计、图表和可重复性，最后给出 major/minor decision。 |
-| [`nature-statistics`](../skills/nature-skills/skills/nature-statistics/SKILL.md) | 审计统计设计、报告、图例和显著性表述 | `/skill:nature-statistics`；检查样本量、重复、随机化、盲法、多重比较、置信区间和图例中的统计信息。 |
-| [`nature-writing`](../skills/nature-skills/skills/nature-writing/SKILL.md) | 从 claims、结果、图表或中文草稿起草 Nature 风格段落 | `/skill:nature-writing`；根据结果和图注重写 Introduction 与 Results，先建立段落目的和论证顺序，再写正文。 |
-
-## 组合示例
-
-| 目标 | 推荐顺序 |
+| 入口 | 使用示例 |
 | --- | --- |
-| 论文写作后模拟评审并回复 | `academic-paper` → `academic-paper-reviewer` → `nature-response` |
-| 复杂需求先澄清再实现 | `grill-with-docs` → 普通编码工具 → `todo` |
-| 论文转专利或汇报 | `nature-reader` → `nature-paper-to-patent` 或 `nature-paper2ppt` |
+| [`research`](../skills/research/SKILL.md) | `/skill:research`；根据现有 FDTD 数据选择下一组实验，分析结果并起草论文。也可直接要求检索文献、处理统计问题或修改稿件。 |
+| [`scientific-visualization`](../skills/scientific-visualization/SKILL.md) | `/skill:scientific-visualization`；把结果画成多面板 PDF，沿用现有配色与尺寸；或绘制可编辑 SVG 方法流程图。 |
+| [`sympy`](../skills/sympy/SKILL.md) | `/skill:sympy`；推导方程的闭式解并代回原式。 |
+| [`scientific-slides`](../skills/scientific-slides/SKILL.md) | `/skill:scientific-slides`；根据论文制作组会报告。 |
+| [`mineru-file-processing`](../skills/mineru-file-processing/SKILL.md) | `/skill:mineru-file-processing`；从扫描 PDF 提取正文、表格和公式。 |
 
-PDF、Office、OCR 和表格任务可使用 `mineru` 或 `mineru-file-processing`。技能不会替代工具：需要读取文件、联网、执行脚本或验证输出时，仍要在请求中写清输入、权限和验收命令。
+旧的科研入口不再部署，原安装保存在 `~/.pi/agent/skill-archives/`。需要统计、单位、文献或投稿方法时，直接描述任务即可，由 `research` 加载对应参考。

@@ -1,7 +1,7 @@
 ---
 allowed-tools: Read Write Edit Bash Glob Grep
-compatibility: Requires Python 3.11+ and uv for pinned examples. Bundled CLIs are network-free and load Matplotlib, Pillow, or pypdf only when needed. Plotly static export with Kaleido v1 requires a compatible Chrome/Chromium installation.
-description: 将分析结果绘制成适合论文发表的科研图表。
+compatibility: Requires Python 3.11+ and uv for pinned examples. Bundled CLIs are network-free and load Matplotlib, Pillow, or pypdf only when needed. Plotly static export with Kaleido v1 requires a compatible Chrome/Chromium installation. The optional schematic renderer is standard-library-only; SVG-to-PDF/PNG conversion needs rsvg-convert.
+description: 将分析结果绘制成适合论文发表的科研图表（数据图；可选确定性 SVG 示意图渲染）。
 license: MIT
 metadata:
     github-path: skills/scientific-visualization
@@ -16,6 +16,14 @@ name: scientific-visualization
 # Scientific Visualization
 
 Build figures that preserve scientific meaning before optimizing appearance. Separate universal principles from dated publisher rules, preserve raw data and transformations, use color redundantly, and inspect delivered files rather than trusting plotting defaults.
+
+## Route selection
+
+- **Data figures (default):** measured values, distributions, and model output. Follow the workflow below.
+- **Schematic figures (optional):** architecture, workflow, pipeline, and topology diagrams. Read `references/schematic_figures.md` and use `scripts/figure_spec_renderer.py` for this route only; it cannot encode measured data.
+- **Optical systems / laser direct writing:** read `references/optical_system_figures.md`
+  before choosing panels. Prefer optical paths, spot/PSF/MTF or wavefront results, spectra
+  and beam/mode maps where relevant, then metrology and dose/process evidence.
 
 ## Figure integrity and delivery
 
@@ -173,10 +181,39 @@ Use an opaque explicit background unless transparency is required; blending agai
 
 1. Inspect file metadata.
 2. Audit palette contrast/grayscale separation.
-3. Compare against a dated publisher snapshot.
-4. View at final size in the manuscript/web context.
-5. Manually review fonts, embedded rasters, clipping, legends, scale bars, image integrity, caption, alt text, and source data.
-6. Re-check the live target-journal page immediately before upload.
+3. View at final size in the manuscript/web context.
+4. Manually review fonts, embedded rasters, clipping, legends, scale bars, image integrity, caption, alt text, and source data.
+5. For a named journal submission, compare against that journal's dated snapshot and re-check the live page before upload (see below).
+
+### Journal submission checks (conditional)
+
+Only when the destination is a named journal, article type, and submission phase: read `references/journal_requirements.md`, screen with `scripts/export_plan.py` (see below), and re-check the live target-journal page immediately before upload. General figures do not need this audit; neither the snapshot nor the planner certifies compliance.
+
+## Schematic figures (optional route)
+
+Load `references/schematic_figures.md` only when the figure is conceptual: architecture, workflow/pipeline, audit cascade, or topology. It documents the FigureSpec schema, layout patterns, planning guidance, and provenance.
+
+```bash
+python3 scripts/figure_spec_renderer.py validate spec.json
+python3 scripts/figure_spec_renderer.py render spec.json --output figures/fig_arch.svg
+rsvg-convert -f pdf figures/fig_arch.svg -o figures/fig_arch.pdf
+```
+
+The renderer is local and deterministic (same spec plus installed fonts produces the same SVG) and writes editable SVG; convert it to vector PDF with the existing `rsvg-convert` dependency. Keep the spec JSON beside the output and edit the spec, never the generated SVG. For paper figures, run the reference's C/R/S review loop with an independent host reviewer when the figure can be shared; keep scores and fixes in a working record, never in the figure or caption. It inherits the session's provider/model; do not switch implicitly.
+
+## Plan the figure set and include it in LaTeX
+
+For a paper, give each figure one line: the claim it supports, panels, data sources, and intended final width. Order figures in argument order, keep one message per figure, and use a schematic only where a data panel cannot show the mechanism. Keep specs/scripts beside outputs so the figure and caption can be regenerated.
+
+Include vector output at the final physical width; do not upscale a small export. Use `\linewidth` for a single-column figure and `\textwidth` for a two-column span.
+
+```latex
+\usepackage{graphicx}
+% ...
+\includegraphics[width=\linewidth]{figures/fig1.pdf}
+```
+
+Check typography and panel labels at that final width, not at export size.
 
 ## Pinned snapshot
 
@@ -197,7 +234,7 @@ This is a dated direct-dependency snapshot, not a transitive lock. Use the proje
 
 ## Bundled CLIs
 
-All helpers are deterministic, network-free, bounded, reject symlink inputs/destinations where relevant, and refuse overwrite unless `--force` is explicit.
+The data-figure helpers are deterministic, network-free, bounded, reject symlink inputs/destinations where relevant, and refuse overwrite unless `--force` is explicit.
 
 ### Inspect raster/vector metadata
 
@@ -275,10 +312,11 @@ Matplotlib style files omit `#` in hex colors because `#` begins comments in `.m
 - `references/publication_guidelines.md`: integrity, deceptive encodings, accessibility, static/interactive output.
 - `references/color_palettes.md`: palette semantics, exact values, WCAG contrast, grayscale caveats, color management.
 - `references/journal_requirements.md`: phase-specific official publisher snapshots.
+- `references/schematic_figures.md`: optional FigureSpec schematic renderer, schema, layouts, planning, provenance/license.
 - `references/matplotlib_examples.md`: current, runnable Matplotlib/Seaborn/Plotly patterns.
 - `references/sources.md`: official URLs, dates, versions, and research basis.
 
-## Final review checklist
+## Universal final checklist
 
 - [ ] Raw data/images and transformation code are preserved.
 - [ ] Missing values, exclusions, bins, normalization, and uncertainty are explicit.
@@ -286,5 +324,8 @@ Matplotlib style files omit `#` in hex colors because `#` begins comments in `.m
 - [ ] Color is redundant and rendered contrast was reviewed.
 - [ ] Figure has an accessible description/data alternative where applicable.
 - [ ] Physical dimensions, DPI, format, fonts, transparency, and file size were inspected after export.
-- [ ] Publisher rules were verified for the exact journal and phase.
 - [ ] No automated report is presented as a scientific, accessibility, or compliance certification.
+
+When a specific journal/phase applies, also:
+
+- [ ] Publisher rules were verified against the live page for that exact journal, article type, and phase.

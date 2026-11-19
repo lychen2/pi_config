@@ -55,3 +55,12 @@ Keep required AI-use disclosures and accurate software producer metadata.
 Choose one mechanism for each delegated task. Do not launch the same work through both or nest orchestration layers without a concrete need.
 For any necessary nesting, keep one lifecycle owner per task and assign disjoint editing paths.
 Preserve explicit tool requests, task authority, and existing user work. Neither mechanism grants additional permissions or filesystem isolation.
+
+## Plain writing
+
+Use natural, neutral, complete wording appropriate to the language and genre. Describe
+operations with concrete actions and objects; avoid promotional filler and bodily metaphors
+for inputs, outputs or processing. Use `humanizer-zh` for Chinese and English editing.
+Reader-facing diagrams, pages, slides and narration also apply its shared
+`references/editing-principles.md`; detailed diagnostics and optional model calls stay
+demand-loaded alongside each format's workflow.

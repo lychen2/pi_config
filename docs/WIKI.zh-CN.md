@@ -112,7 +112,7 @@ Pi 是终端编码代理。它将当前目录、`AGENTS.md`、已启用技能和
 
 1. PDF、表格和公式抽取：`/skill:mineru-file-processing`；任务中说明是否需要页码和 OCR。
 2. 科学图表：加载 `/skill:scientific-visualization`，只用已有数据。
-3. 中文润色使用 `/skill:humanizer-zh`；科研写作使用 `/skill:scientific-writing`，保留术语和引用。
+3. 中英文语言润色使用 `/skill:humanizer-zh`；科研写作使用 `/skill:research`，保留术语和引用。
 4. 其他技能可让模型通过 `search_skill_bm25` 搜索元数据，再按需读取所选正文；也可显式调用 `/skill:<名称>`。
 
 ### 联网资料

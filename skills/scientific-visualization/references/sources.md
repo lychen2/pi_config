@@ -68,6 +68,10 @@ All rules were accessed 2026-07-23. Pages without a displayed update date are la
 - **[BMC-BIOINFO]** [BMC Bioinformatics: preparing your manuscript](https://bmcbioinformatics.biomedcentral.com/submission-guidelines/preparing-your-manuscript) — journal-specific formats, 85/170 mm, approximately 300 dpi, 10 MB, embedded fonts.
 - **[ACS-GRAPHICS]** [ACS Preparing Manuscript Graphics](https://pubs.acs.org/page/4authors/submission/graphics_prep.html) — general dimensions and typography; no page update date displayed.
 
+## Schematic renderer (ARIS FigureSpec)
+
+- **[ARIS-FIGSPEC]** [ARIS: Auto-claude-code-research-in-sleep](https://github.com/wanshuiyin/Auto-claude-code-research-in-sleep) — source commit `c485faa59a68e51c6575dea67ca57abc7a6a2b9c`; `skills/figure-spec/scripts/figure_renderer.py` (blob `11e226560961262587c76d6e1a8ce1d1ac48c754`). MIT License, Copyright (c) 2026 wanshuiyin. Vendored as `scripts/figure_spec_renderer.py`; provenance, local changes, and the full notice are in `schematic_figures.md`.
+
 ## Optional inspection backends
 
 - **[PIL-PYPI]** [Pillow on PyPI](https://pypi.org/project/Pillow/) — 12.3.0 package metadata; released 2026-07-01.

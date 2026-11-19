@@ -163,21 +163,10 @@ Default 已包含委派、计划、浏览器、后台命令和工具搜索，大
 
 ### Skills
 
-当前有效清单以仓库 34 个唯一 `SKILL.md` 名称为基线；本机外部 package 还可能提供额外 skill。安装器递归同步完整 skill 树。默认 slim-skills allowlist 使用 [`../config/slim-skills-whitelist.json`](../config/slim-skills-whitelist.json) 中的入口：
-
-```text
-humanizer
-humanizer-zh
-mineru
-mineru-file-processing
-literature-search-openalex
-academic-paper
-academic-paper-reviewer
-deep-research
-scientific-visualization
-docx
-pdfs
-```
+当前安装清单以 `scripts/deploy-skills.mjs` 为准，使用示例见 [技能目录](skills.zh-CN.md)。
+默认只发现元数据，按需加载正文，不把完整技能内容放进全局上下文。
+中英文润色统一使用 `/skill:humanizer-zh`；中文成稿诊断、英文规则和可选模型调用
+由该入口按任务加载，不再单独调用 `humanizer`。
 
 调用例子：
 

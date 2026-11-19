@@ -2,11 +2,24 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   isEmptyBlock,
+  planImageBudget,
   registerWireGuard,
   resetWireGuardStats,
   sanitizeProviderPayload,
   wireGuardStats,
 } from "../wire-guard.ts";
+
+const IMAGE_BYTES = 400_000;
+/** Stand-in for base64 payload: the guard measures length, never decodes. */
+const fakeBase64 = (bytes = IMAGE_BYTES) => "A".repeat(bytes);
+const anthropicImage = (data = fakeBase64()) => ({
+  type: "image",
+  source: { type: "base64", media_type: "image/png", data },
+});
+const openaiImage = (data = fakeBase64()) => ({
+  type: "image_url",
+  image_url: { url: `data:image/png;base64,${data}` },
+});
 
 const EMPTY_M0 = {
   model: "claude-opus-5",
@@ -135,7 +148,124 @@ test("recognizes only zero-length text and thinking blocks as empty", () => {
   assert.equal(isEmptyBlock("text"), false);
 });
 
-test("registers a provider-request handler and a diagnostics command", () => {
+test("drops the oldest images over the request budget and keeps the newest", () => {
+  resetWireGuardStats();
+  const payload = {
+    messages: [
+      { role: "user", content: [{ type: "text", text: "first screenshot" }, anthropicImage()] },
+      { role: "assistant", content: [{ type: "text", text: "ok" }] },
+      { role: "user", content: [{ type: "text", text: "second screenshot" }, anthropicImage()] },
+      { role: "user", content: [{ type: "text", text: "third screenshot" }, anthropicImage()] },
+    ],
+  };
+  const sanitized = sanitizeProviderPayload(payload, { requestBytes: 1_000_000 });
+  assert.ok(sanitized, "three 400 KB images cannot fit a 1 MB request budget");
+
+  const blocks = sanitized.messages.map((message) => message.content.map((block) => block.type));
+  assert.deepEqual(blocks, [["text", "text"], ["text"], ["text", "image"], ["text", "image"]]);
+  assert.match(sanitized.messages[0].content[1].text, /^\[image omitted: image\/png, 391 KB of base64/);
+
+  // The original payload keeps its images; only the returned copy is trimmed.
+  assert.equal(payload.messages[0].content[1].type, "image");
+  assert.equal(wireGuardStats().droppedImages, 1);
+  assert.equal(wireGuardStats().droppedImageBytes, IMAGE_BYTES);
+});
+
+test("records every image it has to drop, in encounter order", () => {
+  resetWireGuardStats();
+  const payload = {
+    messages: [
+      { role: "user", content: [anthropicImage()] },
+      { role: "user", content: [anthropicImage()] },
+      { role: "user", content: [anthropicImage()] },
+    ],
+  };
+  const sanitized = sanitizeProviderPayload(payload, { requestBytes: 700_000 });
+  assert.ok(sanitized);
+  assert.deepEqual(
+    sanitized.messages.map((message) => message.content[0].type),
+    ["text", "text", "image"],
+  );
+  assert.equal(wireGuardStats().droppedImages, 2);
+  assert.equal(wireGuardStats().droppedImageBytes, IMAGE_BYTES * 2);
+});
+
+test("leaves images alone while they fit the request budget", () => {
+  resetWireGuardStats();
+  const payload = {
+    messages: [{ role: "user", content: [{ type: "text", text: "one shot" }, anthropicImage()] }],
+  };
+  assert.equal(sanitizeProviderPayload(payload, { requestBytes: 4_000_000 }), undefined);
+  assert.equal(wireGuardStats().droppedImages, 0);
+});
+
+test("trims OpenAI data URLs and ignores images that cost no body bytes", () => {
+  resetWireGuardStats();
+  const payload = {
+    messages: [
+      { role: "user", content: [{ type: "text", text: "old" }, openaiImage()] },
+      { role: "user", content: [{ type: "text", text: "new" }, openaiImage()] },
+      { role: "user", content: [{ type: "image_url", image_url: { url: "https://example.test/shot.png" } }] },
+    ],
+  };
+  const sanitized = sanitizeProviderPayload(payload, { requestBytes: 700_000 });
+  assert.ok(sanitized);
+  assert.equal(sanitized.messages[0].content[1].type, "text");
+  assert.equal(sanitized.messages[1].content[1].type, "image_url");
+  assert.equal(sanitized.messages[2].content[0].type, "image_url");
+  assert.equal(wireGuardStats().droppedImages, 1);
+});
+
+test("trims images nested in Anthropic tool results", () => {
+  resetWireGuardStats();
+  const toolResult = (id) => ({
+    role: "user",
+    content: [
+      {
+        type: "tool_result",
+        tool_use_id: id,
+        content: [{ type: "text", text: "Read image" }, anthropicImage()],
+      },
+    ],
+  });
+  const payload = { messages: [toolResult("t1"), toolResult("t2")] };
+  const sanitized = sanitizeProviderPayload(payload, { requestBytes: 700_000 });
+  assert.ok(sanitized);
+  const [oldResult, newResult] = sanitized.messages;
+  assert.deepEqual(oldResult.content[0].content.map((block) => block.type), ["text", "text"]);
+  assert.equal(oldResult.content[0].tool_use_id, "t1");
+  assert.deepEqual(newResult.content[0].content.map((block) => block.type), ["text", "image"]);
+});
+
+test("uses the text block type of the surrounding array for the placeholder", () => {
+  resetWireGuardStats();
+  const responsesImage = () => ({ type: "input_image", image_url: `data:image/png;base64,${fakeBase64()}` });
+  const payload = {
+    input: [
+      { role: "user", content: [{ type: "input_text", text: "old" }, responsesImage()] },
+      { role: "user", content: [{ type: "input_text", text: "new" }, responsesImage()] },
+    ],
+  };
+  const sanitized = sanitizeProviderPayload(payload, { requestBytes: 700_000 });
+  assert.ok(sanitized);
+  assert.equal(sanitized.input[0].content[1].type, "input_text");
+  assert.equal(sanitized.input[1].content[1].type, "input_image");
+});
+
+test("keeps the newest image even when text alone fills the budget", () => {
+  const scan = {
+    refs: [
+      { kind: "base64", bytes: 1_000, label: "image/png" },
+      { kind: "base64", bytes: 1_000, label: "image/png" },
+    ],
+    nonImageBytes: 10_000_000,
+  };
+  const plan = planImageBudget(scan, 1_000_000);
+  assert.equal(plan.dropBefore, 2);
+  assert.equal(plan.droppedBytes, 2_000);
+});
+
+test("registers a provider-request handler, a session reset and a diagnostics command", () => {
   const handlers = new Map();
   const commands = [];
   registerWireGuard({
@@ -146,12 +276,13 @@ test("registers a provider-request handler and a diagnostics command", () => {
       commands.push(name);
     },
   });
-  assert.equal(handlers.size, 1);
+  assert.deepEqual([...handlers.keys()].sort(), ["before_provider_request", "session_start"]);
   const handler = handlers.get("before_provider_request");
   assert.ok(handler);
   assert.ok(commands.includes("wire-guard"));
 
+  const ctx = { ui: { notify() {} } };
   resetWireGuardStats();
-  assert.equal(handler({ type: "before_provider_request", payload: EMPTY_M0 }).messages.length, 3);
-  assert.equal(handler({ type: "before_provider_request", payload: { messages: [] } }), undefined);
+  assert.equal(handler({ type: "before_provider_request", payload: EMPTY_M0 }, ctx).messages.length, 3);
+  assert.equal(handler({ type: "before_provider_request", payload: { messages: [] } }, ctx), undefined);
 });

@@ -6,6 +6,7 @@ import { registerResearchDecision } from "./research-decision.ts";
 import { registerSolCacheCompatibility } from "./sol-cache-compat.ts";
 import registerTeammate from "./teammate.ts";
 import registerTaste from "./taste.ts";
+import { registerBashBackground } from "./bash-background.ts";
 
 type ExtensionFactory = (pi: ExtensionAPI) => void | Promise<void>;
 
@@ -22,6 +23,7 @@ async function loadExtension(specifier: string): Promise<ExtensionFactory> {
 
 export default async function contextBridge(pi: ExtensionAPI): Promise<void> {
   registerTaste(pi);
+  registerBashBackground(pi);
   registerResearchDecision(pi);
   await registerTeammate(pi);
 

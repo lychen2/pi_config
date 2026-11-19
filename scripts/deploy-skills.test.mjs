@@ -117,31 +117,30 @@ test('huashu-motion runs from the deployed bundle without npm installation', asy
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 
-test('optics-research metadata and references survive installation and redeployment', async () => {
-  assert.ok(installedSkills.includes('optics-research'));
-  const root = await mkdtemp(path.join(os.tmpdir(), 'optics-research-test-'));
+test('research consolidation archives former entries and deploys one research entry', async () => {
+  const retired = ['research-decision', 'experimental-design', 'statistical-analysis',
+    'statistical-power', 'uncertainty-and-units', 'optics-research',
+    'paper-lookup', 'citation-management', 'scientific-writing', 'venue-templates'];
+  assert.ok(installedSkills.includes('research'));
+  for (const name of retired) assert.ok(!installedSkills.includes(name));
+  const root = await mkdtemp(path.join(os.tmpdir(), 'research-migration-test-'));
   try {
-    const repoDir = path.join(root, 'repo'), agentDir = path.join(root, 'agent');
-    const source = fileURLToPath(new URL('../skills/optics-research/', import.meta.url));
-    for (const name of installedSkills) {
-      const dir = path.join(repoDir, 'skills', name);
+    const repoDir = fileURLToPath(new URL('../', import.meta.url));
+    const agentDir = path.join(root, 'agent');
+    for (const name of retired) {
+      const dir = path.join(agentDir, 'skills', name);
       await mkdir(dir, { recursive: true });
-      if (name === 'optics-research') await cp(source, dir, { recursive: true });
-      else await writeFile(path.join(dir, 'SKILL.md'), name);
+      await writeFile(path.join(dir, 'SKILL.md'), 'original ' + name);
     }
-    const options = { repoDir, agentDir, log: () => {} };
-    await deploySkills(options);
-    const target = path.join(agentDir, 'skills', 'optics-research');
-    const skill = await readFile(path.join(target, 'SKILL.md'), 'utf8');
-    assert.match(skill, /^---\nname: optics-research\ndescription: [^\n]+\n---\n/);
-    const references = [...skill.matchAll(/\]\((references\/[^)]+\.md)\)/g)].map(match => match[1]);
-    assert.deepEqual(references.sort(), ['references/literature.md', 'references/verification.md']);
-    const result = await deploySkills(options);
-    for (const file of ['SKILL.md', ...references]) {
-      const expected = await readFile(path.join(source, file), 'utf8');
-      assert.equal(await readFile(path.join(target, file), 'utf8'), expected);
-      assert.equal(await readFile(path.join(result.archive, '0', 'optics-research', file), 'utf8'), expected);
+    const result = await deploySkills({ repoDir, agentDir,
+      only: ['research', 'scientific-visualization', ...retired], log: () => {} });
+    for (const name of retired) {
+      await assert.rejects(access(path.join(agentDir, 'skills', name)));
+      assert.equal(await readFile(path.join(result.archive, '0', name, 'SKILL.md'), 'utf8'), 'original ' + name);
     }
+    await access(path.join(agentDir, 'skills/research/SKILL.md'));
+    await access(path.join(agentDir, 'skills/scientific-visualization/scripts/figure_export.py'));
+    assert.deepEqual((await readdir(path.join(agentDir, 'skills'))).sort(), ['research', 'scientific-visualization']);
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 

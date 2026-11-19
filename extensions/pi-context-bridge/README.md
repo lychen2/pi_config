@@ -5,7 +5,7 @@ Default-profile bridge for the locked upstream implementations:
 - `pi-web-access@0.22.0`
 - `pi-manager-models` 的 provider 模型目录刷新
 - bounded `checkpoint` entries and a hidden, capped `context` continuity snapshot
-- `wire-guard.ts`: last-mile 清理出站 provider payload 里的空内容块
+- `wire-guard.ts`: 出站 provider payload 的最后一道防线，清理空内容块并限制图片占用的请求体积
 - `taste.ts`: shared GPT with Taste guidance and input/completion reminders for every model
 
 Workbench owns `edit` and `write` follow-up commands. Magic Context owns session compaction. Pi owns peer-module resolution. This package loads `pi-rtk-optimizer@0.9.0` through the first-party `rtk.ts` compatibility entry. Checkpoints are stored in the Pi session branch and only the latest bounded snapshot is added before a model call; they do not replace Pi or Magic Context compaction and do not append to the global system prompt.
@@ -13,6 +13,14 @@ Workbench owns `edit` and `write` follow-up commands. Magic Context owns session
 Use `checkpoint` for a meaningful verified decision, failed approach, or phase handoff. Do not use it for every tool call.
 
 Load the `research-decision` skill when planning experiments or interpreting research results. It describes when to discover and call the deferred `research_decision` tool. The tool records evidence sources, interpretations, alternatives, measurement checks, predictions, switch conditions, and reversibility in the current session branch. Text fields accept up to 420 characters; invalid or oversized fields are rejected. Each request restores complete records from the latest four checkpoints, newest first, within 6,000 characters. This preserves their conditions after compaction and excludes abandoned branches. The tool stores agent-supplied judgments; research workflow instructions remain in the skill.
+
+## Automatic Bash background handoff
+
+`bash-background.ts` yields Bash calls after 30 seconds through the installed `@aliou/pi-processes` adoption protocol. The same child continues running. The result reports `status: "background"`, `exit_code: null`, `process_id`, PID and log paths. Direct calls and codemode calls use the same wrapper.
+
+Use `process output` or `process stop` with the returned ID. `/ps` shows adopted commands. Completion notifications use the process extension defaults. Explicit Bash timeouts still terminate the process, including after handoff. Cancellation before handoff kills the foreground process group. After handoff, use `process stop`.
+
+The wrapper preserves short-command output, exit codes, session environment, shell path and command prefix. Without the process extension, Bash uses Pi's native backend. Reload or restart Pi to activate the wrapper. Already-running Bash calls cannot be transferred retroactively. Adopted processes follow the process extension lifecycle and stop on session shutdown or reload.
 
 ## Shared taste guidance
 
@@ -54,13 +62,15 @@ To upgrade upstream, review the routing and execution code, update the exact dep
 
 The companion dashboard lives in `pi-tool-rails/teammate-panel.ts`; it does not require `pi-cockpit`. Restart Pi after installing to discover the new bridge entrypoint.
 
-## Empty-content wire guard
+## Empty-content and image-budget wire guard
 
 Magic Context 注入的合成记忆基线 `m[0]` 在基线为空时仍会作为 user 消息进入消息列表，Pi 会把它序列化成 `[{ type: "text", text: "" }]`。Anthropic 格式的中转对此返回 `400 messages.0: user messages must have non-empty content`，OpenAI 格式的网关同样不接受空块。
 
-`wire-guard.ts` 在 `before_provider_request`（即所有消息变换之后、请求发出之前）只删除不携带信息的内容：长度为 0 的 `text`/`input_text`/`output_text` 块、`thinking` 文本为空的块、清理后已无内容的 user/developer/system/assistant 消息，以及空的顶层 `system` 字段。工具调用、工具结果、图片和所有非空文本一律保留；payload 不会被原地修改，无需改动时返回 `undefined`，因此序列化字节与 prompt cache 都不受影响。Magic Context 自己的账本（`syntheticLeadingCount`、m[0]/m[1] 缓存）建立在这个钩子之前的消息数组上，所以不会被改写。
+`wire-guard.ts` 在 `before_provider_request`（即所有消息变换之后、请求发出之前）只删除不携带信息的内容：长度为 0 的 `text`/`input_text`/`output_text` 块、`thinking` 文本为空的块、清理后已无内容的 user/developer/system/assistant 消息，以及空的顶层 `system` 字段。工具调用、工具结果和所有非空文本一律保留；payload 不会被原地修改，无需改动时返回 `undefined`，因此序列化字节与 prompt cache 都不受影响。Magic Context 自己的账本（`syntheticLeadingCount`、m[0]/m[1] 缓存）建立在这个钩子之前的消息数组上，所以不会被改写。
 
-用 `/wire-guard` 可以查看已检查的请求数、丢弃的块/消息数。无法在不破坏缓存的前提下完全避免注入时，这一层是最后一道防线，而不是替代 Magic Context 的修复。
+同一个钩子还按请求体积限制历史图片。base64 图片保存在会话记录里，之后每个请求都要重新发送全部图片。Pi 按 token 估算上下文，一张图片固定约 1.2k token，但它在请求体里是 2-3 MB 的 base64；截图密集的会话因此远未触及上下文窗口，却会超过 provider 的请求体上限（`413 request_too_large`，32 MiB）。守卫按出现顺序保留能装进预算的最新图片，把更早的图片替换成一行占位文本。丢弃顺序是从旧到新，与 Magic Context 的对账逻辑（`piRemainingImages`、`trimPreparedImageRows`）一致。
+
+默认请求预算 20 MiB，可通过 `PI_WIRE_GUARD_REQUEST_BYTES` 调整。预算只按字节约束图片；文本超长仍由上下文压缩处理。用 `/wire-guard` 可以查看已检查的请求数、丢弃的块/消息数和丢弃的图片数及字节数。无法在不破坏缓存的前提下完全避免注入时，这一层是最后一道防线，而不是替代 Magic Context 的修复。
 
 ## Sol cache compatibility
 

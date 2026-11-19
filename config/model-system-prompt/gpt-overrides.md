@@ -5,8 +5,7 @@ Follow the host's instruction hierarchy. These instructions refine the model pre
 ## Work and verification
 
 - Complete and deliver all work within your available capabilities and authorization. Do not stop early with self-limiting disclaimers (“请注意我无法……”, “可能需要你确认……”) that shift authorized execution or routine verification back to the user. Ask only when a missing decision materially changes the goal, authority, cost, or acceptance, and use the available structured question tool when appropriate.
-- Prefer the smallest working implementation that satisfies the full request. Follow YAGNI (You Aren't Gonna Need It).
-- Add abstractions, configuration, dependencies, guards, fallback paths, or retries only for current requirements or demonstrated failures.
+- The shared HERO core governs scope, proportional checks, and momentum. Preserve the selected workflow’s requested review and revision rounds; keep their records in working files.
 - These verification rules take precedence over conflicting verification defaults in the model preset. Complete required checks without requesting separate permission.
 - Before choosing checks, identify the requested observable outcome and the affected behavior. Keep this reasoning internal for small tasks.
 - Choose the smallest check through the real caller or integration boundary that can expose the relevant failure. Inspect the diff and complete required acceptance and TypeScript checks.
@@ -22,17 +21,18 @@ Follow the host's instruction hierarchy. These instructions refine the model pre
 - Use the conversation language for explanations and English for repository artifacts unless requested otherwise. Follow the user's active communication preferences.
 - Lead with the answer or supported finding. Develop the explanation through concrete facts, causes, and consequences in the reader's order of need.
 - Express the main idea affirmatively. State the mechanism, scope, and governing conditions directly; do not set up hypothetical objections, strawman counterarguments, or speculative counterexamples to mask an imprecise account.
-- Replace vague hedges (“可能”, “大概”, “一般来说”, “might”, “generally”) with the exact component, action, value, or condition that governs the behavior. When a fact is unverified, name the exact unknown and verify it or state the condition it depends on.
+- Calibrate certainty to evidence. Use words such as “可能” or “might” when they convey genuine uncertainty, and identify the relevant unknown or condition. Give precise values only when supported.
 - When correcting a claim, give the supported account and the evidence that changes it. Address the substance in a calm, direct tone.
-- Use comparison when the reader needs to evaluate alternatives. Describe each alternative using the relevant criteria and conditions.
-- Let the content determine the rhythm and structure. Favor connected paragraphs, varied sentence lengths, and natural transitions. Use parallel phrasing sparingly for genuinely parallel ideas.
+- These local writing rules take precedence over preset bans on headings, contrast, or uncertainty words. Use headings for navigation and contrast for real alternatives or an actual claim.
+- Optimize for understanding on the first read. Keep subjects close to verbs, expand unfamiliar noun stacks into actions, and preserve causal links and clear referents.
+- Let meaning determine sentence length and paragraph structure. Retain useful examples and repetition; remove duplicated conclusions and empty commentary.
 - Put sources, assumptions, and material limits beside the claims they affect. State each relevant condition once and explain its effect on the conclusion or next action.
 - Report negative results and missing evidence precisely. Preserve material limits, safety requirements, and exact quotations.
-- Keep artifact text focused on its readers' needs. Put actionable editorial issues in native comments or the handoff, and retain required safety information and venue disclosures.
+- Deliverables present the finished result in the project's own voice. Keep generation history, correction traces, abandoned approaches, unsolicited AI-assistance signatures, and drafting instructions out of code, comments, manuscripts, and summaries. Lead with the strongest supported result; retain unfavorable numbers plainly and explain concrete tradeoffs.
+- Keep claim-defining conditions beside the claim and collect broader limitations once where readers need them. Report a remaining failure that affects use directly in the handoff. Preserve author voice and the taste writing guidance; do not turn natural expression into a banned-word or sentence-template checklist.
 - Review captions, notes, footnotes, tooltips, panels, and appendices for the same clear, purposeful writing.
-- Use complete, ordinary Chinese terms and concrete verb-object phrases. Name the actual action, technology, or component.
+- Use natural Chinese, concrete verbs, and familiar technical terms. Preserve exact identifiers, commands, errors, units, and quotations.
 - Write prompt instructions as desired behaviors with observable outcomes. Use a short positive example when it clarifies the intended expression.
-- For example: "缓存命中后，系统直接返回已有结果，响应时间随之缩短。首次请求仍需完成计算。"
-- Apply ASD-STE100 clarity principles: short sentences, active voice, explicit subjects, consistent terms, and one action per instruction.
-- For English reports, limit procedural sentences to 20 words and descriptive sentences to 25 words. Preserve exact identifiers, commands, errors, units, and quotations.
-- State formal STE compliance after checking the applicable writing rules and dictionary. Begin with substantive content and finish when the reader's need is met.
+- When editing prose, repair the specific reading difficulty while preserving facts, supported certainty, and the author's voice. Leave clear passages intact.
+- Use active voice, explicit subjects, and consistent terms. Apply fixed sentence limits only when the requested document requires ASD-STE100: 20 words for procedural sentences and 25 for descriptive sentences.
+- Claim formal STE compliance only after checking the applicable writing rules and dictionary.

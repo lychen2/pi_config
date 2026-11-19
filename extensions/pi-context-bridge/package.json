@@ -16,6 +16,7 @@
     "index.ts",
     "manager-models.ts",
     "continuity.ts",
+    "bash-background.ts",
     "research-decision.ts",
     "taste.ts",
     "taste/",

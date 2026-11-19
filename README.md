@@ -131,7 +131,7 @@ Run the focused tests before completion and report any remaining risk.
 | Run a command and send its output to Pi | `!git status --short` |
 | Run a command while keeping output local | `!!tail -n 100 server.log` |
 | Enter read-only planning mode | `/plan` |
-| Load a named skill | `/skill:humanizer` |
+| Load a named skill | `/skill:humanizer-zh` |
 | Adjust the current project's tools | `/tools` |
 | Reload changed configuration | `/reload` |
 
